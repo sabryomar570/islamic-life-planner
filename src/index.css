@@ -1,0 +1,225 @@
+/* DO NOT CHANGE */
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+
+/* DO NOT CHANGE */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* CHANGE VALUES FOR THEME */
+/* Light Glassmorphism — Apple (iOS/macOS light) palette with cool tinted greys. */
+:root {
+  --radius: 1.125rem;
+  --background: oklch(0.982 0.006 250);
+  --foreground: oklch(0.24 0.02 265);
+  --card: oklch(0.995 0.003 250);
+  --card-foreground: oklch(0.24 0.02 265);
+  --popover: oklch(0.995 0.004 250);
+  --popover-foreground: oklch(0.24 0.02 265);
+  --primary: oklch(0.615 0.192 257);
+  --primary-foreground: oklch(0.995 0.002 250);
+  --secondary: oklch(0.955 0.012 252);
+  --secondary-foreground: oklch(0.34 0.03 264);
+  --muted: oklch(0.955 0.01 252);
+  --muted-foreground: oklch(0.55 0.02 262);
+  --accent: oklch(0.945 0.03 232);
+  --accent-foreground: oklch(0.3 0.04 255);
+  --destructive: oklch(0.62 0.212 25);
+  --border: oklch(0.905 0.014 250);
+  --input: oklch(0.925 0.012 250);
+  --ring: oklch(0.615 0.192 257);
+  --chart-1: oklch(0.615 0.192 257);
+  --chart-2: oklch(0.72 0.176 150);
+  --chart-3: oklch(0.77 0.16 65);
+  --chart-4: oklch(0.58 0.19 300);
+  --chart-5: oklch(0.76 0.12 220);
+  --sidebar: oklch(0.988 0.005 250);
+  --sidebar-foreground: oklch(0.24 0.02 265);
+  --sidebar-primary: oklch(0.615 0.192 257);
+  --sidebar-primary-foreground: oklch(0.995 0.002 250);
+  --sidebar-accent: oklch(0.955 0.012 252);
+  --sidebar-accent-foreground: oklch(0.3 0.03 264);
+  --sidebar-border: oklch(0.915 0.012 250);
+  --sidebar-ring: oklch(0.615 0.192 257);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  /* Bright, layered light background — soft light through frosted glass. */
+  body {
+    @apply text-foreground;
+    font-family: "IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont,
+      "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--background);
+    background-image:
+      radial-gradient(1100px 620px at 88% -12%, oklch(0.86 0.09 250 / 0.55), transparent 62%),
+      radial-gradient(820px 520px at 6% 4%, oklch(0.9 0.075 195 / 0.5), transparent 60%),
+      radial-gradient(760px 560px at 50% 108%, oklch(0.93 0.06 85 / 0.42), transparent 62%),
+      linear-gradient(180deg, oklch(0.995 0.004 250) 0%, oklch(0.972 0.01 245) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Core frosted surface: translucent white panel, controlled blur, edge highlight. */
+  .glass {
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow:
+      0 18px 40px -22px oklch(0.42 0.05 255 / 0.38),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(26px) saturate(180%);
+    -webkit-backdrop-filter: blur(26px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 24px 60px -28px oklch(0.42 0.05 255 / 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .glass-soft {
+    background: rgba(255, 255, 255, 0.42);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  /* Inner translucent tile used inside glass panels. */
+  .glass-tile {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.72) 0%,
+      rgba(255, 255, 255, 0.48) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .glass-hover {
+    transition:
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 220ms ease,
+      background 220ms ease;
+  }
+  .glass-hover:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow:
+      0 26px 50px -24px oklch(0.42 0.06 255 / 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  /* Subtle top edge highlight for large panels. */
+  .edge-light {
+    position: relative;
+  }
+  .edge-light::before {
+    content: "";
+    position: absolute;
+    inset-inline: 12%;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.95),
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  .quran-text {
+    font-family: "Amiri", "Scheherazade New", "Traditional Arabic", serif;
+    line-height: 2.35;
+    letter-spacing: 0.2px;
+  }
+
+  .poetry-text {
+    font-family: "Amiri", "Scheherazade New", serif;
+    line-height: 2.1;
+  }
+}
