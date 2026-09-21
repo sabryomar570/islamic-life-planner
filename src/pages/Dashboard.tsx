@@ -47,11 +47,11 @@ import {
   clearQuranCache,
   downloadFullQuran,
 } from "@/lib/quran-store";
-import { dateKey, formatArabicTime } from "@/lib/time";
+import { dateKey } from "@/lib/time";
 import { SURAH_COUNT } from "@/data/quran";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMutation, useQuery } from "convex/react";
-import { Loader2, LogOut, Smartphone, WifiOff } from "lucide-react";
+import { Loader2, Smartphone, WifiOff } from "lucide-react";
 import { PRAYERS } from "@/lib/prayers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
@@ -332,6 +332,7 @@ export default function Dashboard() {
     });
   };
 
+
   const handleToggleFavorite = (itemId: string, kind: string, title: string) => {
     if (!FAVORITE_KINDS.includes(kind as (typeof FAVORITE_KINDS)[number])) return;
     void toggleFavoriteMutation({
@@ -410,7 +411,7 @@ export default function Dashboard() {
   ) : null;
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-28">
       <AppHeader
         view={view}
         onViewChange={changeView}
@@ -433,7 +434,6 @@ export default function Dashboard() {
             onRefreshTimes={times.refresh}
             dayState={state}
             onPrayerStatus={handlePrayerStatus}
-            onAdhkarDone={handleAdhkarDone}
             onOpenAdhkar={setAdhkarGroup}
             plan={plan}
             upcoming={reminders.upcoming}
@@ -573,30 +573,6 @@ export default function Dashboard() {
           </GlassCard>
         ) : null}
       </main>
-
-      <footer className="mx-auto mt-8 w-full max-w-6xl px-4 sm:px-6">
-        <GlassCard soft className="flex flex-wrap items-center justify-between gap-3 p-4 text-[11px] text-muted-foreground">
-          <span>
-            مواقيت اليوم: الفجر {formatArabicTime(times.timings.fajr)} • الظهر{" "}
-            {formatArabicTime(times.timings.dhuhr)} • العصر {formatArabicTime(times.timings.asr)} •
-            المغرب {formatArabicTime(times.timings.maghrib)} • العشاء{" "}
-            {formatArabicTime(times.timings.isha)}
-          </span>
-          <span className="flex items-center gap-2">
-            {times.offlineSaved ? "مواقيت محفوظة (قد تختلف دقائق)" : "مواقيت مباشرة"}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="rounded-full text-[11px]"
-              onClick={handleSignOut}
-            >
-              <LogOut className="size-3.5" />
-              خروج
-            </Button>
-          </span>
-        </GlassCard>
-      </footer>
 
       <AdhkarDialog
         group={getAdhkarGroup(adhkarGroup ?? "morning")}
