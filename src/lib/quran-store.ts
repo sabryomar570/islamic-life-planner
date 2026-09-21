@@ -318,7 +318,7 @@ export const BASMALA = "بِسْمِ اللَّهِ الرَّحْمَٰنِ ا�
 
 /**
  * يفصل «بسم الله الرحمن الرحيم» عن أول آية لأن بعض المصادر تُدمجها مع الآية.
- * سورة الفاتحة وسورة التوبة لهما حكم خاص: الأولى البسملة فيها آية، والثانية بلا بسملة.
+ * سورة الفاتحة البسملة فيها آية مستقلة (تحسب آية ١)، وسورة التوبة بلا بسملة إطلاقًا.
  */
 export function splitBasmala(number: number, ayahs: Ayah[]) {
   const needsSeparateBasmala = number !== 1 && number !== 9;
@@ -328,17 +328,20 @@ export function splitBasmala(number: number, ayahs: Ayah[]) {
   const first = ayahs[0];
   const normalizedBasmala = normalizeArabic(BASMALA);
   const normalizedFirst = normalizeArabic(first.text);
-  if (
-    normalizedFirst.startsWith(normalizedBasmala) &&
-    normalizedFirst.length > normalizedBasmala.length + 2
-  ) {
+
+  // أول آية تبدأ بالبسملة؟ نقصّها منها فورًا — وإلا ستتكرر مرتين (مرة عند العرض ومرة في النص).
+  if (normalizedFirst.startsWith(normalizedBasmala)) {
     const stripped = first.text
-      .replace(/^[\s]*بِ?سْ?مِ?\s*اللَّهِ\s*الرَّحْمَ[ٰا]?نِ\s*الرَّحِيمِ\s*/u, "")
+      .replace(/^[\s\u0640]*بِ?سْ?مِ?\s*اللَّهِ\s*الرَّحْمَ[ٰا]?نِ\s*الرَّحِيمِ\s*/u, "")
       .trim();
-    return {
-      ayahs: [{ ...first, text: stripped.length > 0 ? stripped : first.text }, ...ayahs.slice(1)],
-      basmalaShown: true,
-    };
+    if (stripped.length > 0) {
+      return {
+        ayahs: [{ ...first, text: stripped }, ...ayahs.slice(1)],
+        basmalaShown: true,
+      };
+    }
   }
+  // أول آية لا تحتوي البسملة (بعض المصادر تعرضها في النص مسبقًا في الآية رقم 1)
+  // لكن نعرضها بخط خاص فنعتبرها ظاهرة.
   return { ayahs, basmalaShown: true };
 }

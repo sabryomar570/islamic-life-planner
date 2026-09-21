@@ -330,6 +330,9 @@ export const getStats = query({
       best: null as string | null,
       weakest: null as string | null,
       perPrayer: [] as { key: string; done: number; missed: number }[],
+      daily: [] as { date: string; done: number; logged: number; adhkar: number }[],
+      bestWeekStart: null as string | null,
+      longestRun: 0,
     };
     if (userId === null) return empty;
 
@@ -395,6 +398,42 @@ export const getStats = query({
       (a, b) => b.done / (b.done + b.missed || 1) - a.done / (a.done + a.missed || 1),
     );
 
+    // سجل يومي مُفصّل (٣٠ يومًا) لبناء جدول الإحصاءات في الواجهة.
+    const daily = dates.map((date) => {
+      const day = byDate.get(date) ?? {};
+      const done = PRAYER_KEYS.filter(
+        (key) => day[key] === "jamaah" || day[key] === "ontime",
+      ).length;
+      const logged = PRAYER_KEYS.filter((key) => day[key]).length;
+      const dayAdhkar = adhkarLogs.filter((log) => log.date === date).length;
+      return { date, done, logged, adhkar: dayAdhkar };
+    });
+
+    // أفضل أسبوع: الأسبوع السباعي الأعلى إنجازًا خلال الثلاثين يومًا.
+    let bestWeekRate = -1;
+    let bestWeekStart: string | null = null;
+    for (let index = 0; index + 7 <= daily.length; index += 1) {
+      const window = daily.slice(index, index + 7);
+      const doneSum = window.reduce((sum, day) => sum + day.done, 0);
+      const rate = doneSum / (7 * PRAYER_KEYS.length);
+      if (rate > bestWeekRate) {
+        bestWeekRate = rate;
+        bestWeekStart = window[0].date;
+      }
+    }
+
+    // أطول سلسلة إنجاز كامل خلال الفترة (لا يهم أن تبدأ من اليوم).
+    let longestRun = 0;
+    let run = 0;
+    for (const day of daily) {
+      if (day.done === PRAYER_KEYS.length) {
+        run += 1;
+        longestRun = Math.max(longestRun, run);
+      } else {
+        run = 0;
+      }
+    }
+
     return {
       days: dates.length,
       jamaah,
@@ -407,6 +446,9 @@ export const getStats = query({
       best: ranked[0]?.key ?? null,
       weakest: ranked[ranked.length - 1]?.key ?? null,
       perPrayer,
+      daily,
+      bestWeekStart,
+      longestRun,
     };
   },
 });

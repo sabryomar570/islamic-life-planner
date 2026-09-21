@@ -18,10 +18,19 @@ export function registerServiceWorker() {
 
   const start = () => {
     navigator.serviceWorker
-      .register("/sw.js", { scope: "/" })
+      .register("/sw.js", { scope: "/", updateViaCache: "none" })
       .then((reg) => {
         registration = reg;
         if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        // نفعّل التحديث المكتشف تلقائيًا عندما يصبح جاهزًا.
+        reg.addEventListener("updatefound", () => {
+          const installing = reg.installing;
+          installing?.addEventListener("statechange", () => {
+            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+              installing.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
       })
       .catch(() => {
         /* بعض البيئات تمنع عامل الخدمة (iframe بلا ملفات تعريف مثلًا) */

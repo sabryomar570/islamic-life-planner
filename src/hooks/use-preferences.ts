@@ -1,5 +1,6 @@
 /** تفضيلات المستخدم: الإشعارات، مواقيت التذكير، قراءة المصحف، وعرض التطبيق. */
 import { useCallback, useEffect, useState } from "react";
+import type { RingTone } from "@/lib/notify";
 
 export type Preferences = {
   prayerAlerts: boolean;
@@ -14,6 +15,12 @@ export type Preferences = {
   ramadanReminders: boolean;
   nudgesEnabled: boolean;
   soundOn: boolean;
+  /** رنين عند دخول وقت الصلاة + نوعه. */
+  prayerRing: boolean;
+  ringTone: RingTone;
+  /** رسالة «هل صلّيت؟» بعد كل صلاة مع سطر الصدق. */
+  postPrayerPrompt: boolean;
+  salawatPopup: boolean;
   method: number;
   mushafMode: boolean;
   fontScale: number;
@@ -33,6 +40,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   ramadanReminders: true,
   nudgesEnabled: true,
   soundOn: false,
+  prayerRing: true,
+  ringTone: "chime" as RingTone,
+  postPrayerPrompt: true,
+  salawatPopup: true,
   method: 3,
   mushafMode: true,
   fontScale: 1,

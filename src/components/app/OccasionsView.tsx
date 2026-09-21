@@ -10,8 +10,8 @@ import {
 } from "@/data/occasions";
 import {
   hijriLabel,
-  hijriProgressLabel,
   hijriParts,
+  hijriProgressLabel,
   isLastTenNights,
   isRamadan,
   ramadanDay,
@@ -24,6 +24,7 @@ import {
   Check,
   Clock,
   Droplets,
+  Hourglass,
   Info,
   Moon,
   MoonStar,
@@ -48,35 +49,71 @@ function minutesUntil(time: string, now: Date) {
   return target - current;
 }
 
-function OccasionCard({ occasion, daysAway, dateLabel }: {
+function daysLabel(daysAway: number) {
+  if (daysAway === 0) return "اليوم";
+  if (daysAway === 1) return "غدًا";
+  return `بعد ${arabicNumber(daysAway)} يومًا`;
+}
+
+/** بطاقة مناسبة: خط رقعة للعنوان + عدّاد تنازلي + موعدها + الأعمال بمصدرها. */
+function OccasionCard({
+  occasion,
+  daysAway,
+  dateLabel,
+  accent = false,
+}: {
   occasion: Occasion;
   daysAway?: number;
   dateLabel?: string;
+  accent?: boolean;
 }) {
   return (
-    <GlassCard hover className="flex h-full flex-col p-5">
-      <div className="flex items-start justify-between gap-3">
+    <GlassCard
+      hover
+      className={`relative flex h-full flex-col overflow-hidden p-5 ${
+        accent ? "ring-1 ring-primary/25" : ""
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute -left-10 -top-10 size-32 rounded-full blur-3xl ${
+          occasion.kind === "عيد"
+            ? "bg-emerald-300/35"
+            : occasion.kind === "صيام"
+              ? "bg-sky-300/35"
+              : "bg-amber-200/40"
+        }`}
+      />
+      <div className="relative flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">{occasion.title}</h3>
+          {/* خط رقعة: خط نسخ عريض بحجم كبير مع وزن عالٍ لطابع اللافتات */}
+          <h3 className="ruqaa text-xl leading-relaxed font-bold tracking-wide text-foreground">
+            {occasion.title}
+          </h3>
           <p className="mt-1 text-[11px] text-muted-foreground">{occasion.when}</p>
         </div>
-        <Badge variant="secondary" className="rounded-full text-[10px]">
+        <Badge
+          variant="secondary"
+          className="rounded-full text-[10px] whitespace-nowrap"
+        >
           {occasion.kind}
         </Badge>
       </div>
 
       {daysAway !== undefined ? (
-        <p className="mt-3 text-xs font-semibold text-primary">
-          {daysAway === 0
-            ? "اليوم"
-            : daysAway === 1
-              ? "غدًا"
-              : `بعد ${arabicNumber(daysAway)} يومًا`}
-          {dateLabel ? ` • ${dateLabel}` : ""}
-        </p>
+        <div className="relative mt-3 flex items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+            <Hourglass className="size-5" />
+          </span>
+          <div>
+            <p className="text-sm font-bold text-primary">{daysLabel(daysAway)}</p>
+            {dateLabel ? (
+              <p className="text-[11px] text-muted-foreground">{dateLabel}</p>
+            ) : null}
+          </div>
+        </div>
       ) : null}
 
-      <ul className="mt-3 space-y-1.5">
+      <ul className="relative mt-3 space-y-1.5">
         {occasion.deeds.map((deed) => (
           <li key={deed} className="flex items-start gap-2 text-[11px] leading-5 text-foreground/75">
             <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
@@ -85,7 +122,7 @@ function OccasionCard({ occasion, daysAway, dateLabel }: {
         ))}
       </ul>
 
-      <div className="mt-4 border-t border-white/60 pt-3 text-[10px] leading-5 text-muted-foreground">
+      <div className="relative mt-4 border-t border-white/60 pt-3 text-[10px] leading-5 text-muted-foreground">
         <p>{occasion.evidence}</p>
         {occasion.caveat ? (
           <p className="mt-1.5 flex items-start gap-1.5 text-amber-700/90">
@@ -101,8 +138,20 @@ function OccasionCard({ occasion, daysAway, dateLabel }: {
 export function OccasionsView({ timings }: { timings: Timings }) {
   const now = useMinuteClock();
   const parts = useMemo(() => hijriParts(now), [now]);
-  const today = useMemo(() => todayOccasions(now), [now]);
-  const upcoming = useMemo(() => upcomingOccasions(now, 8), [now]);
+  const today = useMemo(() => {
+    try {
+      return todayOccasions(now);
+    } catch {
+      return [];
+    }
+  }, [now]);
+  const upcoming = useMemo(() => {
+    try {
+      return upcomingOccasions(now, 8);
+    } catch {
+      return [];
+    }
+  }, [now]);
   const ramadan = isRamadan(now);
   const ramadanToday = ramadanDay(now);
 
@@ -125,20 +174,9 @@ export function OccasionsView({ timings }: { timings: Timings }) {
         />
 
         {today.length > 0 ? (
-          <div className="mt-5 space-y-2">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {today.map((occasion) => (
-              <div key={occasion.id} className="glass-tile rounded-2xl p-4">
-                <p className="flex items-center gap-2 text-sm font-semibold">
-                  <Sparkles className="size-4 text-primary" />
-                  {occasion.title}
-                  <span className="text-[11px] font-normal text-muted-foreground">
-                    {occasion.when}
-                  </span>
-                </p>
-                <p className="mt-2 text-[12px] leading-6 text-foreground/75">
-                  {occasion.deeds.join(" • ")}
-                </p>
-              </div>
+              <OccasionCard key={occasion.id} occasion={occasion} accent />
             ))}
           </div>
         ) : (
@@ -150,14 +188,16 @@ export function OccasionsView({ timings }: { timings: Timings }) {
       </GlassCard>
 
       {ramadan ? (
-        <GlassCard strong className="p-6">
+        <GlassCard strong className="relative overflow-hidden p-6">
+          <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-indigo-300/35 blur-3xl" />
+          <div className="pointer-events-none absolute -left-10 bottom-0 size-40 rounded-full bg-violet-300/30 blur-3xl" />
           <SectionTitle
             icon={<MoonStar className="size-5" />}
             title={`رمضان — اليوم ${arabicNumber(ramadanToday ?? 0)}`}
             hint="عدّاد السحور والإفطار بمواقيت مدينتك، ودعاء الإفطار، ومتابعة العشر الأواخر"
           />
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="glass-tile rounded-2xl p-4">
               <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
                 <Moon className="size-4 text-indigo-500" /> السحور ينتهي عند الفجر
@@ -195,7 +235,7 @@ export function OccasionsView({ timings }: { timings: Timings }) {
             </div>
           </div>
 
-          <div className="mt-5 glass-tile rounded-2xl p-4">
+          <div className="relative mt-5 glass-tile rounded-2xl p-4">
             <p className="flex items-center gap-2 text-xs font-semibold">
               <Droplets className="size-4 text-sky-500" />
               دعاء الإفطار
@@ -204,12 +244,12 @@ export function OccasionsView({ timings }: { timings: Timings }) {
               ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              رواه أبو داود عن ابن عمر رضي الله عنهما — ويُستحب الدعاء قبل الفطر.
+              رواه أبو داود عن ابن عمر رضي الله عنهما.
             </p>
           </div>
 
           {isLastTenNights(now) ? (
-            <div className="mt-5 rounded-2xl bg-primary/10 p-4 ring-1 ring-primary/25">
+            <div className="relative mt-5 rounded-2xl bg-primary/10 p-4 ring-1 ring-primary/25">
               <p className="flex items-center gap-2 text-xs font-semibold">
                 <Sparkles className="size-4 text-primary" />
                 أنت في العشر الأواخر — تحرَّ ليلة القدر
@@ -261,8 +301,8 @@ export function OccasionsView({ timings }: { timings: Timings }) {
       <GlassCard className="p-6">
         <SectionTitle
           icon={<CalendarHeart className="size-5" />}
-          title="المناسبات القادمة"
-          hint="العدّ محسوب على تقويم أم القرى مع التاريخ الميلادي، وأثبت الصيام برؤية الهلال"
+          title="المناسبات القادمة — بعدّاد لكل واحدة"
+          hint="العدّ محسوب على تقويم أم القرى، والاعتماد النهائي لرؤية الهلال"
         />
         <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {upcoming.map((occasion) => (

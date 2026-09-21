@@ -1,5 +1,6 @@
 import { AdhkarDialog } from "@/components/app/AdhkarDialog";
 import { AppHeader, type DashView } from "@/components/app/AppHeader";
+import { DuasView } from "@/components/app/DuasView";
 import { GlassCard } from "@/components/app/GlassCard";
 import { HadithView } from "@/components/app/HadithView";
 import { NudgeCenter } from "@/components/app/NudgeCenter";
@@ -8,7 +9,10 @@ import { PlanView } from "@/components/app/PlanView";
 import { PoetryView } from "@/components/app/PoetryView";
 import { PrayerView } from "@/components/app/PrayerView";
 import { QuranView } from "@/components/app/QuranView";
+import { SalawatGreeting } from "@/components/app/SalawatGreeting";
 import { SettingsView } from "@/components/app/SettingsView";
+import { StatsTable } from "@/components/app/StatsTable";
+import { TasbihView } from "@/components/app/TasbihView";
 import { TodayView } from "@/components/app/TodayView";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
@@ -45,8 +49,10 @@ import {
 } from "@/lib/quran-store";
 import { dateKey, formatArabicTime } from "@/lib/time";
 import { SURAH_COUNT } from "@/data/quran";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMutation, useQuery } from "convex/react";
 import { Loader2, LogOut, Smartphone, WifiOff } from "lucide-react";
+import { PRAYERS } from "@/lib/prayers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -55,8 +61,10 @@ const VALID_VIEWS: DashView[] = [
   "today",
   "prayers",
   "plan",
-  "hadith",
   "quran",
+  "hadith",
+  "duas",
+  "tasbih",
   "poetry",
   "occasions",
   "settings",
@@ -438,19 +446,24 @@ export default function Dashboard() {
         ) : null}
 
         {view === "prayers" && answers ? (
-          <PrayerView
-            timings={times.timings}
-            city={answers.city}
-            usingFallback={times.usingFallback}
-            onRefreshTimes={times.refresh}
-            dayState={state}
-            onPrayerStatus={handlePrayerStatus}
-            profile={answers}
-            permission={reminders.permission}
-            onRequestPermission={() => void reminders.requestPermission()}
-            history={history}
-            stats={stats}
-          />
+          <div className="space-y-5">
+            <PrayerView
+              timings={times.timings}
+              city={answers.city}
+              usingFallback={times.usingFallback}
+              onRefreshTimes={times.refresh}
+              dayState={state}
+              onPrayerStatus={handlePrayerStatus}
+              profile={answers}
+              permission={reminders.permission}
+              onRequestPermission={() => void reminders.requestPermission()}
+              history={history}
+              stats={stats}
+            />
+            {stats && stats.days > 0 ? (
+              <StatsTable stats={stats} history={history} />
+            ) : null}
+          </div>
         ) : null}
 
         {view === "plan" && answers ? (
@@ -467,6 +480,15 @@ export default function Dashboard() {
             onToggleFavorite={handleToggleFavorite}
           />
         ) : null}
+
+        {view === "duas" ? (
+          <DuasView
+            favorites={state.favorites.filter((id) => id.startsWith("d"))}
+            onToggleFavorite={handleToggleFavorite}
+          />
+        ) : null}
+
+        {view === "tasbih" ? <TasbihView /> : null}
 
         {view === "quran" && answers ? (
           <QuranView
@@ -592,6 +614,49 @@ export default function Dashboard() {
         onLogPrayer={handlePrayerStatus}
         onRequestNotifications={() => void reminders.requestPermission()}
       />
+
+      <SalawatGreeting enabled={prefs.salawatPopup} />
+
+      {/* رسالة «هل صلّيت؟» بعد دقائق من دخول وقت الصلاة — مع سطر الصدق */}
+      {(() => {
+        const prayerKey = reminders.postPrayerCheck;
+        if (!prayerKey) return null;
+        const prayer = PRAYERS.find((item) => item.key === prayerKey);
+        if (!prayer || state.prayers[prayerKey]) return null;
+        return (
+          <Dialog open onOpenChange={(open) => { if (!open) reminders.clearPostPrayerCheck(); }}>
+            <DialogContent dir="rtl" className="glass-strong max-w-sm rounded-3xl border-white/70 bg-white/92">
+              <DialogHeader className="text-right">
+                <DialogTitle className="text-lg">هل صلّيت {prayer.name}؟</DialogTitle>
+                <DialogDescription className="text-right text-[13px] leading-7">
+                  سجّل الحقيقة فورًا؛ فهذا السجلّ هو مرآتك أمام نفسك، والكذب عليه يُخفي عنك
+                  ما تحتاج إصلاحه. «إنّ الصدق يهدي إلى البرّ».
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { value: "jamaah", label: "في جماعة", tone: "bg-emerald-500 text-white" },
+                  { value: "ontime", label: "في الوقت", tone: "bg-sky-500 text-white" },
+                  { value: "late", label: "متأخرة", tone: "bg-amber-500 text-white" },
+                  { value: "missed", label: "فائتة — سأقضيها", tone: "bg-rose-500 text-white" },
+                ] as const).map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      handlePrayerStatus(prayerKey, option.value);
+                      reminders.clearPostPrayerCheck();
+                    }}
+                    className={`rounded-full px-3.5 py-2 text-xs font-medium transition-transform hover:scale-[1.03] ${option.tone}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }

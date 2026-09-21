@@ -12,8 +12,10 @@ import {
   BookOpen,
   CalendarClock,
   CalendarHeart,
+  CircleDot,
   Clock,
   Feather,
+  HeartHandshake,
   LogOut,
   ScrollText,
   Settings,
@@ -28,8 +30,10 @@ export type DashView =
   | "today"
   | "prayers"
   | "plan"
-  | "hadith"
   | "quran"
+  | "hadith"
+  | "duas"
+  | "tasbih"
   | "poetry"
   | "occasions"
   | "settings";
@@ -38,11 +42,12 @@ export const NAV_ITEMS: { key: DashView; label: string; icon: typeof Sparkles }[
   { key: "today", label: "ذكر اليوم", icon: Sparkles },
   { key: "prayers", label: "صلاتي", icon: Clock },
   { key: "plan", label: "خطّة يومي", icon: CalendarClock },
-  { key: "hadith", label: "الأحاديث", icon: ScrollText },
   { key: "quran", label: "المصحف", icon: BookOpen },
+  { key: "hadith", label: "الأحاديث", icon: ScrollText },
+  { key: "duas", label: "الأدعية", icon: HeartHandshake },
+  { key: "tasbih", label: "المسبحة", icon: CircleDot },
   { key: "poetry", label: "الأبيات", icon: Feather },
   { key: "occasions", label: "المناسبات", icon: CalendarHeart },
-  { key: "settings", label: "الإعدادات", icon: Settings },
 ];
 
 export function AppHeader({
@@ -102,6 +107,15 @@ export function AppHeader({
                 <Smartphone className="size-4" />
               </Button>
             ) : null}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="glass-tile rounded-full"
+              onClick={() => onViewChange("settings")}
+              aria-label="الإعدادات"
+            >
+              <Settings className="size-4" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="glass-tile h-9 gap-2 rounded-full px-3 text-xs">
@@ -162,6 +176,16 @@ export function AppHeader({
               ثبّت التطبيق
             </Button>
           ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => onViewChange("settings")}
+            className="glass-tile rounded-full"
+            aria-label="الإعدادات"
+          >
+            <Settings className="size-4" />
+          </Button>
           <span className="glass-tile flex items-center gap-2 rounded-full px-3.5 py-2 text-xs text-foreground/70">
             <UserRound className="size-4" />
             {userName ?? "مستخدم سكينة"}

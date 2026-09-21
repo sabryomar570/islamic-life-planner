@@ -79,6 +79,117 @@ export function vibrate(pattern: number | number[]) {
 
 let audioContext: AudioContext | null = null;
 
+/** أنواع الرنين المتاحة عند الصلاة — كلها مولّدة محليًا بلا ملفات صوت. */
+export type RingTone = "chime" | "rain" | "nature" | "deep";
+
+export const RING_TONES: { value: RingTone; label: string }[] = [
+  { value: "chime", label: "نغمة هادئة" },
+  { value: "rain", label: "مطر خفيف" },
+  { value: "nature", label: "طبيعة" },
+  { value: "deep", label: "رنين عميق" },
+];
+
+function ensureContext(): AudioContext | null {
+  try {
+    const Ctor =
+      window.AudioContext ??
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) return null;
+    audioContext = audioContext ?? new Ctor();
+    if (audioContext.state === "suspended") void audioContext.resume();
+    return audioContext;
+  } catch {
+    return null;
+  }
+}
+
+/** نغمة مطر خفيفة: ضجيج أبيض مُرشَّح بسرعة تلاشٍ هادئة. */
+function playRain(context: AudioContext) {
+  const duration = 1.6;
+  const sampleRate = context.sampleRate;
+  const buffer = context.createBuffer(1, sampleRate * duration, sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let index = 0; index < data.length; index += 1) {
+    const fade = Math.min(index / (sampleRate * 0.3), 1) *
+      Math.min((data.length - index) / (sampleRate * 0.5), 1);
+    data[index] = (Math.random() * 2 - 1) * 0.05 * fade;
+  }
+  const source = context.createBufferSource();
+  source.buffer = buffer;
+  const filter = context.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 900;
+  const gain = context.createGain();
+  gain.gain.value = 0.8;
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(context.destination);
+  source.start();
+}
+
+/** نغمة طبيعة: نغمات متتابعة هابطة كأنها طيور. */
+function playNature(context: AudioContext) {
+  const now = context.currentTime;
+  [
+    { f: 1046, t: 0 },
+    { f: 1318, t: 0.18 },
+    { f: 988, t: 0.4 },
+  ].forEach(({ f, t }) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "triangle";
+    oscillator.frequency.value = f;
+    gain.gain.setValueAtTime(0.0001, now + t);
+    gain.gain.exponentialRampToValueAtTime(0.05, now + t + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.4);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(now + t);
+    oscillator.stop(now + t + 0.45);
+  });
+}
+
+/** رنين عميق: نغمتان منخفضتان كأذان حديث مطمئن. */
+function playDeep(context: AudioContext) {
+  const now = context.currentTime;
+  [220, 277.2].forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(0.0001, now + index * 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.09, now + index * 0.35 + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.35 + 0.7);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(now + index * 0.35);
+    oscillator.stop(now + index * 0.35 + 0.75);
+  });
+}
+
+/** يشغّل نغمة رنين محددة. */
+export function playRingTone(tone: RingTone = "chime") {
+  const context = ensureContext();
+  if (!context) return;
+  try {
+    switch (tone) {
+      case "rain":
+        playRain(context);
+        break;
+      case "nature":
+        playNature(context);
+        break;
+      case "deep":
+        playDeep(context);
+        break;
+      default:
+        playChime();
+    }
+  } catch {
+    /* الصوت غير متاح */
+  }
+}
+
 /** نغمة تنبيه قصيرة وهادئة (تحتاج تفاعلًا واحدًا من المستخدم على الأقل). */
 export function playChime() {
   try {

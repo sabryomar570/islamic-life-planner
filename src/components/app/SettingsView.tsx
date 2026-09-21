@@ -1,4 +1,5 @@
 import { GlassCard, GlassPill, SectionTitle } from "@/components/app/GlassCard";
+import { RING_TONES, playRingTone, type RingTone } from "@/lib/notify";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,6 +277,59 @@ export function SettingsView({
               checked={prefs.soundOn}
               onCheckedChange={(value) => setPref("soundOn", value)}
               aria-label="نغمة التنبيه"
+            />
+          </Row>
+
+          <Row
+            title="رنين عند دخول وقت الصلاة"
+            hint="اختر النغمة التي تناسبك: هادئة، مطر، طبيعة، أو رنين عميق — جرّبها بالضغط على الزر."
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Switch
+                checked={prefs.prayerRing}
+                onCheckedChange={(value) => setPref("prayerRing", value)}
+                aria-label="رنين الصلاة"
+              />
+              <Select
+                value={prefs.ringTone}
+                onValueChange={(value) => {
+                  setPref("ringTone", value as RingTone);
+                  playRingTone(value as RingTone);
+                }}
+              >
+                <SelectTrigger className="glass-tile h-9 w-36 rounded-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RING_TONES.map((tone) => (
+                    <SelectItem key={tone.value} value={tone.value}>
+                      {tone.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </Row>
+
+          <Row
+            title="رسالة «هل صلّيت؟» بعد الصلاة"
+            hint="رسالة بعد اثنتي عشرة دقيقة من دخول الوقت تسألك بصدق — ويسندها سطر يحثّك على عدم الكذب."
+          >
+            <Switch
+              checked={prefs.postPrayerPrompt}
+              onCheckedChange={(value) => setPref("postPrayerPrompt", value)}
+              aria-label="رسالة ما بعد الصلاة"
+            />
+          </Row>
+
+          <Row
+            title="نافذة «صلِّ على محمد» عند الفتح"
+            hint="نافذة عدّاد صلوات تظهر مرة واحدة كل مرة تفتح فيها التطبيق."
+          >
+            <Switch
+              checked={prefs.salawatPopup}
+              onCheckedChange={(value) => setPref("salawatPopup", value)}
+              aria-label="نافذة الصلاة على النبي"
             />
           </Row>
         </div>

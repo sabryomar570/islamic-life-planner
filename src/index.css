@@ -223,6 +223,12 @@
     line-height: 2.1;
   }
 
+  /* خط رقعة للعناوين الزخرفية (بطاقات المناسبات) — يرتاح على Aref Ruqaa */
+  .ruqaa {
+    font-family: "Aref Ruqaa", "Amiri", "Scheherazade New", serif;
+    line-height: 1.9;
+  }
+
   /* ——— صفحة المصحف: ورق كريمي وإطار مذهّب هادئ يشبه المصحف المطبوع ——— */
   .mushaf-page {
     display: flex;

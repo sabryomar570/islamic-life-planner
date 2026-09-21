@@ -4,7 +4,7 @@
  * - يدعم رسائل: CACHE_URLS (تنزيل مسبق)، NOTIFY (إشعار)، SKIP_WAITING، CLEAR_CACHES.
  */
 
-const VERSION = "sakinah-2026-09-a";
+const VERSION = "sakinah-2026-09-b";
 const SHELL_CACHE = `${VERSION}:shell`;
 const RUNTIME_CACHE = `${VERSION}:runtime`;
 const API_CACHE = `${VERSION}:api`;
@@ -103,7 +103,11 @@ async function handleNavigation(request) {
   const cache = await caches.open(SHELL_CACHE);
   try {
     const response = await fetch(request);
-    if (response && response.ok) cache.put("/index.html", response.clone());
+    if (response && response.ok) {
+      cache.put(request, response.clone());
+      cache.put("/index.html", response.clone());
+      cache.put("/", response.clone());
+    }
     return response;
   } catch {
     const cached =
@@ -131,7 +135,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (url.origin === self.location.origin) {
-    // ملفات التطبيق: الشبكة أولًا حتى لا يظهر بناء قديم بعد أي تعديل.
+    // ملفات البناء (assets باسم مُهاشَّ): كاش أولًا لأن المحتوى لا يتغير لنفس الاسم.
+    if (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/fonts/")) {
+      event.respondWith(
+        cacheFirst(request, RUNTIME_CACHE).catch(() => Response.error()),
+      );
+      return;
+    }
+    // بقية الملفات (index.html وغيره): الشبكة أولًا حتى لا يظهر بناء قديم.
     event.respondWith(
       networkFirst(request, RUNTIME_CACHE).catch(() => Response.error()),
     );

@@ -10,6 +10,7 @@ import {
   notificationPermission,
   notificationsSupported,
   playChime,
+  playRingTone,
   showNotification,
   vibrate,
 } from "@/lib/notify";
@@ -250,19 +251,24 @@ export function useReminderCenter(options: {
 
   const dispatch = useCallback(
     (event: ReminderEvent) => {
-      toast(event.title, { description: event.body, duration: 12_000 });
+      const isPrayerTime = event.kind === "prayer";
+      const body = isPrayerTime && prefs.postPrayerPrompt
+        ? `${event.body}\nبعد الصلاة سنفحص معك: هل صلّيت؟ الصدق هنا سجلّك أمام نفسك — فلا تكذب عليه.`
+        : event.body;
+      toast(event.title, { description: body, duration: isPrayerTime ? 16_000 : 12_000 });
       vibrate([30, 50, 30]);
-      if (prefs.soundOn) playChime();
+      if (isPrayerTime && prefs.prayerRing) playRingTone(prefs.ringTone);
+      else if (prefs.soundOn) playChime();
       if (notificationPermission() === "granted") {
         void showNotification({
           title: event.title,
-          body: event.body,
+          body,
           tag: event.id,
           url: event.url,
         });
       }
     },
-    [prefs.soundOn],
+    [prefs.soundOn, prefs.prayerRing, prefs.ringTone, prefs.postPrayerPrompt],
   );
 
   // إطلاق التذكيرات المستحقة دون تكرار.
@@ -277,6 +283,27 @@ export function useReminderCenter(options: {
       dispatch(event);
     }
   }, [schedule, now, dispatch]);
+
+  /** رسالة «هل صلّيت؟» تظهر بعد دقائق من دخول وقت الصلاة. */
+  const [postPrayerCheck, setPostPrayerCheck] = useState<string | null>(null);
+  const checkedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!prefs.postPrayerPrompt) return;
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    for (const prayer of PRAYERS) {
+      const prayerMinutes = toMinutes(timings[prayer.key]);
+      const passed = minutes - prayerMinutes;
+      const id = `${dateKey(now)}:${prayer.key}`;
+      if (passed >= 12 && passed <= 120 && !checkedRef.current.has(id)) {
+        checkedRef.current.add(id);
+        setPostPrayerCheck(prayer.key);
+        break;
+      }
+    }
+  }, [now, timings, prefs.postPrayerPrompt]);
+
+  const clearPostPrayerCheck = useCallback(() => setPostPrayerCheck(null), []);
 
   const upcoming = nextPrayer(timings, now);
   const current = currentPrayer(timings, now);
@@ -309,6 +336,8 @@ export function useReminderCenter(options: {
     testNotification,
     nextEvent,
     schedule,
+    postPrayerCheck,
+    clearPostPrayerCheck,
     upcomingLabel: nextEvent
       ? `${nextEvent.title} • بعد ${formatDuration(
           Math.max(Math.round((nextEvent.at.getTime() - now.getTime()) / 60_000), 0),

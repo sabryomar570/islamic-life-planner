@@ -232,7 +232,7 @@ export function QuranView({
   };
 
   const copyAyah = async (ayah: Ayah) => {
-    const text = `${ayah.text} ﴿${toArabicDigits(ayah.number)}﴾ — سورة ${surah.name}`;
+    const text = formatAyahMessage(ayah);
     try {
       await navigator.clipboard.writeText(text);
       toast.success("نُسخت الآية.");
@@ -241,8 +241,16 @@ export function QuranView({
     }
   };
 
+  /** رسالة مشاركة جميلة للآية: منسّقة بمصدرها وتوقيع التطبيق. */
+  const formatAyahMessage = (ayah: Ayah) =>
+    `﴿${ayah.text}﴾
+
+[سورة ${surah.name} — الآية ${toArabicDigits(ayah.number)}]
+
+«وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ» — من سكينة 🤍`;
+
   const shareAyah = async (ayah: Ayah) => {
-    const text = `${ayah.text} ﴿${toArabicDigits(ayah.number)}﴾ — سورة ${surah.name}`;
+    const text = formatAyahMessage(ayah);
     if (navigator.share) {
       try {
         await navigator.share({ title: `سورة ${surah.name}`, text });
@@ -439,9 +447,9 @@ export function QuranView({
               />
             ) : (
               <div className="space-y-3">
-                {surah.number !== 1 && surah.number !== 9 ? (
-                  <p className="quran-text text-center text-lg text-primary">{BASMALA}</p>
-                ) : null}
+            {surah.number !== 1 && surah.number !== 9 && !split.basmalaShown ? (
+              <p className="quran-text text-center text-lg text-primary">{BASMALA}</p>
+            ) : null}
                 {split.ayahs.map((ayah) => (
                   <div key={ayah.number} className="rounded-2xl bg-white/55 p-4">
                     <p className="quran-text text-[1.1rem] leading-[2.3]" style={{ fontSize: `${fontScale}rem` }}>
