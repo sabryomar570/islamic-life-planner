@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="سكينة">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ccbff"/>
+      <stop offset="0.55" stop-color="#2f7bf6"/>
+      <stop offset="1" stop-color="#3b49d8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g transform="translate(256 254) scale(0.62) translate(-256 -254)">
+    <path d="M296 118a92 92 0 1 0 0 184 116 116 0 1 1 0-184Z" fill="#ffffff"/>
+    <circle cx="352" cy="150" r="18" fill="#ffe6a7"/>
+    <path d="M188 322c34-18 102-18 136 0 12 7 10 20-6 20H194c-16 0-18-13-6-20Z" fill="#ffffff" opacity="0.9"/>
+    <path d="M188 372c34-14 102-14 136 0" stroke="#ffffff" stroke-opacity="0.7" stroke-width="16" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

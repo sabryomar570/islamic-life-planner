@@ -3,26 +3,36 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f5f7fb" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>سكينة — رفيق الالتزام</title>
   <meta
     name="description"
-    content="سكينة — رفيقك إلى الالتزام: أذكار الصباح والمساء، مواقيت الصلاة، أحاديث في الخشوع، القرآن الكريم، وأبيات تحفّزك."
+    content="مواقيت الصلاة بدقة، أذكار الصباح والمساء والنوم، أحاديث بأسانيدها، مصحف يعمل دون إنترنت، ومواعيد رمضان والأعياد."
   />
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#f4f7fd" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="سكينة" />
+  <meta name="format-detection" content="telephone=no" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://api.aladhan.com" />
+  <link rel="dns-prefetch" href="https://api.alquran.cloud" />
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap"
     rel="stylesheet"
   />
-  <title>سكينة | رفيقك إلى الالتزام</title>
 </head>
-
 
 <body>
   <div id="root"></div>
+  <noscript>يحتاج سكينة إلى تشغيل JavaScript لعرض مواقيت الصلاة والأذكار.</noscript>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

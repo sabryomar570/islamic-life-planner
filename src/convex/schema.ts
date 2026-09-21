@@ -50,6 +50,10 @@ const schema = defineSchema(
       distraction: v.string(),
       mainGoal: v.string(),
       city: v.string(),
+      // إحداثيات اختيارية عند السماح بالموقع — لحساب مواقيت أدق من اسم المدينة.
+      latitude: v.optional(v.number()),
+      longitude: v.optional(v.number()),
+      locationLabel: v.optional(v.string()),
       updatedAt: v.number(),
     }).index("by_user", ["userId"]),
 

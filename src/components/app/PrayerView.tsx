@@ -1,7 +1,9 @@
 import { GlassCard, GlassPill, SectionTitle } from "@/components/app/GlassCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import type { ProfileAnswers } from "@/data/questions";
+import { ADHKAR_GROUPS } from "@/data/adhkar";
 import { PRAYERS, type PrayerStatus, type Timings } from "@/lib/prayers";
 import {
   arabicNumber,
@@ -9,7 +11,21 @@ import {
   formatArabicTime,
   weekdayShort,
 } from "@/lib/time";
-import { Bell, Clock, Flame, MapPin, RefreshCw, Target } from "lucide-react";
+import { Bell, Clock, Flame, MapPin, RefreshCw, Target, TrendingUp } from "lucide-react";
+
+export type PrayerStats = {
+  days: number;
+  jamaah: number;
+  ontime: number;
+  late: number;
+  missed: number;
+  prayerRate: number;
+  adhkarRate: number;
+  streak: number;
+  best: string | null;
+  weakest: string | null;
+  perPrayer: { key: string; done: number; missed: number }[];
+};
 
 const STATUS_TONE: Record<string, string> = {
   jamaah: "bg-emerald-500",
@@ -41,6 +57,7 @@ export function PrayerView({
   permission,
   onRequestPermission,
   history,
+  stats,
 }: {
   timings: Timings;
   city: string;
@@ -52,6 +69,7 @@ export function PrayerView({
   permission: NotificationPermission | "unsupported";
   onRequestPermission: () => void;
   history?: { prayers: Record<string, Record<string, string>>; adhkar: Record<string, string[]> };
+  stats?: PrayerStats;
 }) {
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
@@ -67,6 +85,8 @@ export function PrayerView({
   }
 
   const focusPrayer = PRAYERS.find((prayer) => prayer.key === profile.mostMissedPrayer);
+  const prayerName = (key: string | null) =>
+    PRAYERS.find((prayer) => prayer.key === key)?.name ?? "—";
 
   return (
     <div className="space-y-5">
@@ -76,14 +96,13 @@ export function PrayerView({
             <span className="glass-tile inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] text-foreground/70">
               <MapPin className="size-3.5" />
               {city}
-              {usingFallback ? " • مواقيت تقريبية (تعذّر الاتصال)" : " • حسب رابطة العالم الإسلامي"}
+              {usingFallback ? " • مواقيت تقريبية (تعذّر الاتصال)" : " • بحسب الطريقة المختارة في الإعدادات"}
             </span>
             <h1 className="mt-3 text-2xl font-bold tracking-tight">
               مواقيت اليوم وتذكيرات الصلاة
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-              سجّل حالة كل صلاة لتعرف أثرك في الأسبوع، وستصلك رسالة تنبيه على المتصفح
-              عند دخول وقت الصلاة ما دامت الصفحة مفتوحة.
+              سجّل حالة كل صلاة لتعرف أثرك، وسيصلك إشعار عند دخول الوقت إن سمحت به.
             </p>
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
@@ -137,6 +156,50 @@ export function PrayerView({
           </div>
         </div>
       </GlassCard>
+
+      {stats && stats.days > 0 ? (
+        <GlassCard className="p-6">
+          <SectionTitle
+            icon={<TrendingUp className="size-5" />}
+            title={`أثرك في ${arabicNumber(stats.days)} يومًا`}
+            hint="محسوب من سجلّك الفعلي: جماعة، في الوقت، متأخرة، فائتة"
+          />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="glass-tile rounded-2xl p-4">
+              <p className="text-[11px] text-muted-foreground">نسبة الصلاة في وقتها</p>
+              <p className="mt-1 text-2xl font-bold text-primary">
+                {arabicNumber(stats.prayerRate)}٪
+              </p>
+              <Progress value={stats.prayerRate} className="mt-2 h-1.5 bg-white/60" />
+            </div>
+            <div className="glass-tile rounded-2xl p-4">
+              <p className="text-[11px] text-muted-foreground">أيام فيها أذكار</p>
+              <p className="mt-1 text-2xl font-bold text-primary">
+                {arabicNumber(stats.adhkarRate)}٪
+              </p>
+              <Progress value={stats.adhkarRate} className="mt-2 h-1.5 bg-white/60" />
+            </div>
+            <div className="glass-tile rounded-2xl p-4">
+              <p className="text-[11px] text-muted-foreground">في جماعة</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-600">
+                {arabicNumber(stats.jamaah)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                فائتة: {arabicNumber(stats.missed)} • متأخرة: {arabicNumber(stats.late)}
+              </p>
+            </div>
+            <div className="glass-tile rounded-2xl p-4">
+              <p className="text-[11px] text-muted-foreground">أقوى وأضعف صلاة</p>
+              <p className="mt-1 text-sm font-semibold">
+                {prayerName(stats.best)} ثم {prayerName(stats.weakest)}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                ابدأ بأضعف صلاة: نبّهها في وقتها أسبوعًا كاملًا.
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+      ) : null}
 
       <GlassCard className="p-6">
         <SectionTitle
@@ -224,8 +287,9 @@ export function PrayerView({
       <GlassCard soft className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-[11px] leading-5 text-muted-foreground">
-            الأذكار المنجزة اليوم: {arabicNumber(dayState.adhkar.length)} من ٣ — لا تنسَ
-            أذكار الصباح عند استيقاظك وأذكار النوم قبل فراشك.
+            الأذكار المنجزة اليوم: {arabicNumber(dayState.adhkar.length)} من{" "}
+            {arabicNumber(ADHKAR_GROUPS.length)} — لا تنسَ أذكار الصباح عند استيقاظك وأذكار
+            النوم قبل فراشك.
           </p>
           <GlassPill onClick={onRefreshTimes}>تحديث المواقيت</GlassPill>
         </div>

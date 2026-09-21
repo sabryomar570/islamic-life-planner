@@ -7,6 +7,7 @@ type GlassCardProps = {
   strong?: boolean;
   soft?: boolean;
   hover?: boolean;
+  id?: string;
 };
 
 /** لوح زجاجي فاتح: حدود مضيئة وضباب محسوب دون أي سطح داكن. */
@@ -16,9 +17,11 @@ export function GlassCard({
   strong = false,
   soft = false,
   hover = false,
+  id,
 }: GlassCardProps) {
   return (
     <section
+      id={id}
       className={cn(
         "rounded-3xl edge-light",
         strong ? "glass-strong" : soft ? "glass-soft" : "glass",

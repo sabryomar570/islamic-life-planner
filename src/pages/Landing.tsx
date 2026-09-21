@@ -1,84 +1,93 @@
 import { GlassCard } from "@/components/app/GlassCard";
 import { Button } from "@/components/ui/button";
-import { HADITHS } from "@/data/hadith";
-import { POEMS } from "@/data/poetry";
 import { ADHKAR_GROUPS } from "@/data/adhkar";
+import { HADITHS, HADITH_SECTIONS } from "@/data/hadith";
+import { OCCASIONS } from "@/data/occasions";
+import { POEMS } from "@/data/poetry";
 import { SURAHS } from "@/data/quran";
+import { useInstallPrompt } from "@/lib/pwa";
 import { arabicNumber } from "@/lib/time";
 import { motion } from "framer-motion";
 import {
+  Bell,
   BookOpen,
-  CalendarClock,
+  CalendarHeart,
   Check,
-  Clock,
   Compass,
   Feather,
-  Heart,
-  ListChecks,
+  MapPin,
   Moon,
-  Quote,
   ScrollText,
+  Smartphone,
   Sparkles,
   Sunrise,
   Sunset,
+  WifiOff,
 } from "lucide-react";
 import { Link } from "react-router";
 
 const STEPS = [
   {
-    icon: ListChecks,
-    title: "١٥ سؤالًا عن نظام حياتك",
-    text: "متى تستيقظ وتنام، صلَاتك، عملك، رياضتك، وما يشوّش يومك — إجاباتك هي الأساس.",
+    icon: Compass,
+    title: "خمسة عشر سؤالًا",
+    text: "وقت استيقاظك ونومك، صلاتك، عملك، رياضتك، وما يشوّش يومك.",
   },
   {
-    icon: CalendarClock,
-    title: "خطّة يوم مصمّمة لك",
-    text: "نبني فترات يومك بالدقيقة: الفجر وأذكار الصباح، الرياضة، العمل، ورد القرآن، والعائلة.",
+    icon: Moon,
+    title: "خطّة يوم لك وحدك",
+    text: "فترات مرتّبة على مواقيت مدينتك، مع سبب عملي لكل فترة.",
   },
   {
-    icon: Sparkles,
-    title: "تذكير يُلازمك",
-    text: "تنبيه عند دخول وقت الصلاة، وأذكار المساء وأذكار النوم في مكانها من خطّتك.",
+    icon: Bell,
+    title: "تذكير في وقته",
+    text: "إشعار عند دخول وقت الصلاة، وقبل وردك، وقبل نومك.",
   },
 ];
 
 const FEATURES = [
   {
     icon: Sunrise,
-    title: "أذكار الصباح عند الاستيقاظ",
-    text: "١٦ ذكرًا كاملًا بترتيب حصن المسلم مع عدد التكرار والمصدر والفضل.",
-  },
-  {
-    icon: Sunset,
-    title: "أذكار المساء وأذكار النوم",
-    text: "لا تنم قبل أن تذكر ربك: آية الكرسي والمعوذات وسيد الاستغفار وتسبيح فاطمة.",
-  },
-  {
-    icon: Clock,
-    title: "مواقيت الصلاة والتذكير",
-    text: "مواقيت مدينتك على مدار اليوم، وسجّل لكل صلاة: جماعة، في الوقت، أو متأخرة.",
-  },
-  {
-    icon: ScrollText,
-    title: "أحاديث الخشوع بالراوي والمصدر",
-    text: "كروت تجمع نص الحديث والراوي والمصدر ودرسًا عمليًا يُقوّي قلبك في الصلاة.",
+    title: "أذكار الصباح والمساء والنوم",
+    text: "بعدد التكرار ومصدر كل ذكر، وتُسجّل إنجازك يوميًا.",
   },
   {
     icon: BookOpen,
-    title: "القرآن الكريم كاملًا",        text: "١١٤ سورة بالنص العثماني مع فهرس للبحث وتتبّع آخر ما قرأت ووردك اليومي.",
+    title: "مصحف بصفحات كالورقي",
+    text: "البسملة مفصولة عن السورة، ورقم كل آية في دائرة، وعلامة قراءة.",
+  },
+  {
+    icon: ScrollText,
+    title: "أحاديث مبوّبة على حاجتك",
+    text: "مغفرة الذنوب، استجابة الدعاء، فكّ الكرب، الصبر، الرزق، برّ الوالدين…",
   },
   {
     icon: Feather,
-    title: "أبيات تحفّزك",
-    text: "شعر عربي في العزيمة والشجاعة والرياضة، مع معنى يربط البيت بحياتك اليومية.",
+    title: "شعر جاهلي في العزيمة",
+    text: "من المعلّقات ودواوين الشعراء الجاهليين، ومع كل بيت خطوة عملية.",
+  },
+  {
+    icon: CalendarHeart,
+    title: "رمضان والأعياد والمناسبات",
+    text: "عدّاد لأيام رمضان وعرفة والأيام البيض، وأفضل عمل لكل مناسبة بمصدره.",
+  },
+  {
+    icon: WifiOff,
+    title: "يعمل دون إنترنت",
+    text: "ثبّته على جهازك، ونزّل المصحف مرة واحدة، ثم اقرأ بلا شبكة.",
   },
 ];
 
 const AUDIENCE = [
-  "بدأتَ للتو وتريد ترتيب يومك حول الصلاة دون تعقيد",
-  "تُصلّي لكن قلبك مشغول، وتريد الخشوع لا الحركات فقط",
-  "تريد وردًا ثابتًا من القرآن ولا تعرف من أين تبدأ",
-  "تسهر وتستيقظ متأخرًا، وتريد نظامًا واقعيًا لا مثاليًا",
+  "تبدأ من الصفر وتريد نظامًا واقعيًا لا مثاليًا",
+  "تصلي لكن تريد خشوعًا، لا حركات فقط",
+  "عندك رغبة في ورد ثابت ولا تعرف من أين تبدأ",
+  "تسهر وتصحو متأخرًا، وتريد انتظامًا تدريجيًا",
+];
+
+const HERO_POINTS = [
+  "مواقيت دقيقة بالموقع أو باسم مدينتك",
+  "تذكير يعمل داخل التطبيق وخارجه",
+  "كل نص بمصدره وراويه",
 ];
 
 const fadeUp = {
@@ -88,10 +97,20 @@ const fadeUp = {
   transition: { duration: 0.5 },
 };
 
+const ADHKAR_TOTAL = ADHKAR_GROUPS.reduce((total, group) => total + group.items.length, 0);
+
 export default function Landing() {
+  const install = useInstallPrompt();
+
+  const stats = [
+    { value: arabicNumber(HADITHS.length), label: `حديثًا في ${arabicNumber(HADITH_SECTIONS.length)} بابًا` },
+    { value: arabicNumber(ADHKAR_TOTAL), label: "ذكرًا بمصادرها" },
+    { value: arabicNumber(SURAHS.length), label: "سورة كاملة" },
+    { value: arabicNumber(POEMS.length), label: "بيتًا من الشعر الجاهلي" },
+  ];
+
   return (
     <div className="min-h-screen">
-      {/* الشريط العلوي */}
       <header className="glass-strong sticky top-0 z-40 rounded-none border-x-0 border-t-0 border-b border-white/70">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
@@ -101,7 +120,7 @@ export default function Landing() {
             <span className="leading-tight">
               <span className="block text-base font-bold">سكينة</span>
               <span className="block text-[11px] text-muted-foreground">
-                رفيقك إلى الالتزام
+                ترتيب يومك حول الصلاة
               </span>
             </span>
           </div>
@@ -110,7 +129,7 @@ export default function Landing() {
             {[
               { href: "#how", label: "كيف يعمل" },
               { href: "#features", label: "المزايا" },
-              { href: "#hadith", label: "الأحاديث" },
+              { href: "#content", label: "المحتوى" },
               { href: "#audience", label: "لمن؟" },
             ].map((item) => (
               <a
@@ -124,6 +143,16 @@ export default function Landing() {
           </nav>
 
           <div className="flex items-center gap-2">
+            {install.canInstall ? (
+              <Button
+                variant="ghost"
+                className="hidden rounded-full text-xs sm:flex"
+                onClick={() => void install.promptInstall()}
+              >
+                <Smartphone className="size-3.5" />
+                تثبيت
+              </Button>
+            ) : null}
             <Button asChild variant="ghost" className="rounded-full text-xs">
               <Link to="/auth">تسجيل الدخول</Link>
             </Button>
@@ -134,8 +163,7 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* الواجهة الرئيسية */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-10 pt-14 sm:px-6">
+      <section className="mx-auto w-full max-w-6xl px-4 pb-12 pt-14 sm:px-6">
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -143,19 +171,19 @@ export default function Landing() {
             transition={{ duration: 0.6 }}
           >
             <span className="glass-tile inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-medium text-foreground/75">
-              <Heart className="size-3.5 text-rose-500" />
-              مصمّم للمبتدئين في الالتزام
+              <Moon className="size-3.5 text-primary" />
+              مصمّم لمن يبدأ الالتزام الآن
             </span>
-            <h1 className="mt-5 text-3xl font-bold leading-[1.35] tracking-tight sm:text-[2.7rem] sm:leading-[1.3]">
-              يجيب على ١٥ سؤالًا عن يومك،
+            <h1 className="mt-5 text-3xl font-bold leading-[1.35] tracking-tight sm:text-[2.6rem] sm:leading-[1.3]">
+              يسألك عن يومك أولًا،
               <br />
-              ثم يبني لك يومًا
-              <span className="text-primary"> منظّمًا مليئًا بالذكر</span>
+              ثم يرتّبه حول
+              <span className="text-primary"> الصلاة والذكر</span>
             </h1>
             <p className="mt-5 max-w-xl text-sm leading-7 text-foreground/75">
-              سكينة يسألك أولًا: متى تصحو، متى تنام، كيف صلاتك، وما مواعيدك؟ ثم يُنظّم
-              يومك، ويذكّرك بالصلاة، ويضع أذكار الصباح عند استيقاظك وأذكار المساء قبل
-              نومك، مع أحاديث الخشوع والقرآن الكريم وأبيات تُشعل عزيمتك.
+              مواقيت صلاتك بدقة، أذكار الصباح عند استيقاظك وأذكار النوم قبل فراشك، مصحف
+              يعمل دون إنترنت، أحاديث مبوّبة على ما تحتاجه، ومواعيد رمضان والأعياد.
+              تتذكّر أنت، ويبقى عليك أن تنفّذ.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -166,22 +194,20 @@ export default function Landing() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="rounded-full px-6 text-sm">
-                <Link to="/auth">لدي حساب بالفعل</Link>
+                <Link to="/auth">لدي حساب</Link>
               </Button>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Check className="size-3.5 text-emerald-500" /> يظهر لك «ذكر اليوم» أول ما
-                تفتح
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Check className="size-3.5 text-emerald-500" /> كل نص بمصدره وراويه
-              </span>
-            </div>
+            <ul className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-muted-foreground">
+              {HERO_POINTS.map((point) => (
+                <li key={point} className="flex items-center gap-1.5">
+                  <Check className="size-3.5 text-emerald-500" />
+                  {point}
+                </li>
+              ))}
+            </ul>
           </motion.div>
 
-          {/* نموذج بصري لشاشة «ذكر اليوم» */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -194,8 +220,11 @@ export default function Landing() {
             <GlassCard strong className="relative p-6">
               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>ذكر اليوم</span>
-                <span>الاثنين • ١٠ ربيع الآخر</span>
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="size-3" /> القاهرة
+                </span>
               </div>
+
               <div className="mt-4 rounded-3xl bg-gradient-to-br from-sky-500/12 via-white/40 to-indigo-400/12 p-5 text-center">
                 <p className="quran-text text-[1.15rem] leading-10">
                   ﴿أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ﴾
@@ -207,8 +236,8 @@ export default function Landing() {
                 {[
                   { icon: Moon, title: "صلاة الفجر", time: "٥:١٦ صباحًا" },
                   { icon: BookOpen, title: "ورد القرآن", time: "بعد الفجر" },
-                  { icon: Sparkles, title: "أذكار الصباح", time: "عند الاستيقاظ" },
-                  { icon: Feather, title: "رياضة خفيفة", time: "بعد العصر" },
+                  { icon: Sunrise, title: "أذكار الصباح", time: "عند الاستيقاظ" },
+                  { icon: Sunset, title: "أذكار المساء", time: "قبل النوم" },
                 ].map((row) => (
                   <div
                     key={row.title}
@@ -237,30 +266,33 @@ export default function Landing() {
               transition={{ delay: 0.6 }}
               className="glass-strong absolute -bottom-5 right-6 rounded-2xl px-4 py-2 text-[11px] font-medium"
             >
-              🕌 تذكير عند الأذان
+              🕌 إشعار عند الأذان
             </motion.span>
           </motion.div>
         </div>
       </section>
 
-      {/* كيف يعمل */}
       <section id="how" className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
         <motion.h2 {...fadeUp} className="text-center text-2xl font-bold tracking-tight">
-          كيف يبني سكينة يومك؟
+          ثلاث خطوات فقط
         </motion.h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-6 text-muted-foreground">
-          ثلاث خطوات فقط، بلا إعدادات معقّدة ولا جداول تديرها بنفسك.
+          لا إعدادات معقّدة، ولا جداول تديرها بنفسك.
         </p>
 
         <div className="mt-9 grid gap-5 md:grid-cols-3">
           {STEPS.map((step, index) => (
-            <motion.div key={step.title} {...fadeUp} transition={{ duration: 0.5, delay: index * 0.08 }}>
+            <motion.div
+              key={step.title}
+              {...fadeUp}
+              transition={{ duration: 0.5, delay: index * 0.08 }}
+            >
               <GlassCard hover className="h-full p-6">
                 <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/12 text-primary">
                   <step.icon className="size-5" />
                 </span>
                 <p className="mt-4 text-[11px] font-semibold text-muted-foreground">
-                  الخطوة {index + 1}
+                  الخطوة {arabicNumber(index + 1)}
                 </p>
                 <h3 className="mt-1 text-base font-semibold">{step.title}</h3>
                 <p className="mt-2 text-[13px] leading-6 text-foreground/70">{step.text}</p>
@@ -270,16 +302,12 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* المزايا */}
       <section id="features" className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
         <motion.h2 {...fadeUp} className="text-center text-2xl font-bold tracking-tight">
-          كل ما تحتاجه في مكان واحد
+          ما يوجد داخله
         </motion.h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-6 text-muted-foreground">
-          {arabicNumber(ADHKAR_GROUPS.reduce((total, group) => total + group.items.length, 0))}{" "}
-          ذكرًا بمصادرها، و{arabicNumber(HADITHS.length)} حديثًا، و
-          {arabicNumber(SURAHS.length)} سورة، و{arabicNumber(POEMS.length)} بيتًا من
-          عيون الشعر.
+          ستة أبواب تعمل معًا: الصلاة، الذكر، القرآن، الحديث، الشعر، والمناسبات.
         </p>
 
         <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -294,89 +322,83 @@ export default function Landing() {
                   <feature.icon className="size-5" />
                 </span>
                 <h3 className="mt-4 text-base font-semibold">{feature.title}</h3>
-                <p className="mt-2 text-[13px] leading-6 text-foreground/70">
-                  {feature.text}
-                </p>
+                <p className="mt-2 text-[13px] leading-6 text-foreground/70">{feature.text}</p>
               </GlassCard>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* الأحاديث والشعر */}
-      <section id="hadith" className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
-        <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-          <motion.div {...fadeUp}>
-            <GlassCard strong className="h-full p-6 sm:p-7">
-              <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
-                <ScrollText className="size-5 text-primary" />
-                كروت تُلين قلبك
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                أحاديث في الخشوع والصلاة، مع الراوي والمصدر ودرس عملي بعد كل حديث.
+      <section id="content" className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
+        <GlassCard strong className="p-6 sm:p-9">
+          <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">المحتوى وأرقامه</h2>
+              <p className="mt-3 text-sm leading-7 text-foreground/75">
+                كل نص في التطبيق مذكور معه راويه أو مصدره، وما لم يثبت شرعًا نُبّهن عليه
+                بصراحة بدل تمريره.
               </p>
-
-              <div className="mt-6 space-y-4">
-                {HADITHS.slice(0, 3).map((hadith) => (
-                  <div key={hadith.id} className="glass-tile rounded-2xl p-5">
-                    <Quote className="size-4 text-primary/50" />
-                    <p className="mt-2 text-sm leading-7 font-medium">«{hadith.text}»</p>
-                    <p className="mt-3 text-[11px] text-muted-foreground">
-                      الراوي: {hadith.narrator} — {hadith.source}
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                {stats.map((stat) => (
+                  <div key={stat.label} className="glass-tile rounded-2xl p-4">
+                    <p className="text-xl font-bold text-primary">{stat.value}</p>
+                    <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                      {stat.label}
                     </p>
                   </div>
                 ))}
               </div>
-            </GlassCard>
-          </motion.div>
+            </div>
 
-          <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.1 }}>
-            <GlassCard className="h-full p-6 sm:p-7">
-              <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
-                <Feather className="size-5 text-primary" />
-                أبيات تُشعل عزيمتك
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                في العزيمة والشجاعة والرياضة وطلب العلم — كل بيت بقائله وديوانه.
-              </p>
-
-              <div className="mt-6 space-y-4">
-                {POEMS.slice(0, 3).map((poem) => (
-                  <div key={poem.id} className="glass-tile rounded-2xl p-5 text-center">
-                    <div className="poetry-text text-[1.05rem] leading-9">
-                      {poem.lines.map((line) => (
-                        <p key={line}>{line}</p>
-                      ))}
-                    </div>
-                    <p className="mt-3 text-[11px] font-medium text-primary">
-                      {poem.poet}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">
-                      {poem.source}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </GlassCard>
-          </motion.div>
-        </div>
+            <ul className="space-y-3">
+              {[
+                `مواقيت الصلاة من خدمة مواقيت موثوقة، تُحسب على إحداثياتك أو مدينتك`,
+                `القرآن بالرسم العثماني، مع نسخة محفوظة داخل التطبيق تعمل دون شبكة`,
+                `${arabicNumber(OCCASIONS.length)} مناسبة دينية بمواعيدها الهجرية وبأفضل عمل فيها`,
+                "أحاديث مبوّبة في ١٨ بابًا: من مغفرة الذنوب إلى فكّ الكرب واستجابة الدعاء",
+                "أذكار الصباح والمساء والنوم وبعد الصلاة وعند الهمّ",
+                "تنبيه صريح لما لا يثبت فيه عمل مخصّوص، مثل ليلة النصف من شعبان",
+              ].map((item) => (
+                <li
+                  key={item}
+                  className="glass-tile flex items-start gap-3 rounded-2xl p-4 text-[13px] leading-6"
+                >
+                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+                    <Check className="size-3.5" />
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </GlassCard>
       </section>
 
-      {/* لمن هذا الموقع */}
       <section id="audience" className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
         <GlassCard strong className="p-6 sm:p-9">
           <div className="grid gap-8 lg:grid-cols-2">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">
-                صُنع لك إن كنت في البداية
-              </h2>
+              <h2 className="text-2xl font-bold tracking-tight">صُنع لك إن كنت في البداية</h2>
               <p className="mt-3 text-sm leading-7 text-foreground/75">
-                سكينة لا يطلب منك أن تكون ملتزمًا لتستخدمه، بل يرتّب لك الطريق خطوة
-                خطوة: صلاة واحدة في وقتها، ذكر في مكانه، وورد لا تتركه.
+                لا يطلب منك أن تكون ملتزمًا لتستخدمه؛ يبدأ معك من صلاة واحدة في وقتها،
+                وذكر في مكانه، وورد لا تتركه.
               </p>
-              <Button asChild size="lg" className="mt-7 rounded-full px-7 text-sm">
-                <Link to="/auth?returnTo=%2Fonboarding">ابدأ بخطّتي الآن</Link>
-              </Button>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button asChild size="lg" className="rounded-full px-7 text-sm">
+                  <Link to="/auth?returnTo=%2Fonboarding">ابدأ بخطّتي</Link>
+                </Button>
+                {install.canInstall ? (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="rounded-full px-6 text-sm"
+                    onClick={() => void install.promptInstall()}
+                  >
+                    <Smartphone className="size-4" />
+                    ثبّت التطبيق
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             <ul className="space-y-3">
@@ -396,27 +418,20 @@ export default function Landing() {
         </GlassCard>
       </section>
 
-      {/* الدعوة الأخيرة */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-        <GlassCard
-          strong
-          className="relative overflow-hidden p-8 text-center sm:p-12"
-        >
+        <GlassCard strong className="relative overflow-hidden p-8 text-center sm:p-12">
           <div className="absolute -left-10 top-0 size-52 rounded-full bg-indigo-300/30 blur-3xl" />
           <div className="absolute -right-8 bottom-0 size-52 rounded-full bg-sky-300/30 blur-3xl" />
-          <p className="quran-text relative text-2xl leading-[2.4]">
-            ﴿وَأَقِمِ الصَّلَاةَ لِذِكْرِي﴾
-          </p>
+          <p className="quran-text relative text-2xl leading-[2.4]">﴿وَأَقِمِ الصَّلَاةَ لِذِكْرِي﴾</p>
           <h2 className="relative mt-5 text-2xl font-bold tracking-tight">
-            يومك أفضل يبدأ بذكر اليوم
+            ابدأ بسؤال واحد: متى تستيقظ؟
           </h2>
           <p className="relative mx-auto mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
-            سجّل الدخول، أكمل الأسئلة الخمسة عشر، وسيصلك يوم منظّم مع أذكارك ومواقيت
-            صلاتك ووردك — كل ذلك على شاشة واحدة.
+            أكمل الأسئلة الخمسة عشر، وسيظهر لك «ذكر اليوم» مباشرة مع مواقيتك وأذكارك ووردك.
           </p>
           <Button asChild size="lg" className="relative mt-7 rounded-full px-8 text-sm">
             <Link to="/auth?returnTo=%2Fonboarding">
-              ابدأ الآن مجانًا
+              ابدأ الآن
               <Compass className="size-4" />
             </Link>
           </Button>
@@ -427,12 +442,9 @@ export default function Landing() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/60 pt-6 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-2">
             <Sparkles className="size-3.5 text-primary" />
-            سكينة — رفيقك إلى الالتزام
+            سكينة — ترتيب يومك حول الصلاة
           </span>
-          <span>
-            النصوص الشرعية من مصادرها المذكورة على كل كارت • مواقيت الصلاة بالتوقيت
-            المحلي لمدينتك
-          </span>
+          <span>كل نص بمصدره • مواقيت بحسب مدينتك أو موقعك • يعمل دون إنترنت</span>
         </div>
       </footer>
     </div>

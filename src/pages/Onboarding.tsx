@@ -10,6 +10,8 @@ import {
   type AnswerKey,
   type ProfileAnswers,
 } from "@/data/questions";
+import { askNotificationPermission, notificationPermission } from "@/lib/notify";
+import { useGeolocation } from "@/hooks/use-location";
 import { arabicNumber, formatArabicTime } from "@/lib/time";
 import { useMutation, useQuery } from "convex/react";
 import {
@@ -28,17 +30,17 @@ const HIGHLIGHTS = [
   {
     icon: Clock,
     title: "خطّة يوم كاملة",
-    text: "من وقت استيقاظك حتى نومك، مع فترة للرياضة والقرآن والعمل والعائلة.",
+    text: "من استيقاظك إلى نومك: رياضة، ورد، عمل، عائلة.",
   },
   {
     icon: Sparkles,
     title: "أذكار في وقتها",
-    text: "أذكار الصباح عند الاستيقاظ، وأذكار المساء قبل النوم، بتذكير في مكانها.",
+    text: "أذكار الصباح عند الاستيقاظ، وأذكار النوم قبل الفراش.",
   },
   {
     icon: BookOpen,
-    title: "تذكير الصلاة والخشوع",
-    text: "مواقيت مدينتك مع تنبيه عند الأذان، وأحاديث تُلين قلبك مع الراوي والمصدر.",
+    title: "تذكير الصلاة",
+    text: "مواقيت مدينتك، وتنبيه عند وقت كل صلاة.",
   },
 ];
 
@@ -59,6 +61,13 @@ export default function Onboarding() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [notifyState, setNotifyState] = useState<NotificationPermission | "unsupported">(() =>
+    notificationPermission(),
+  );
+  const [locationAsked, setLocationAsked] = useState(false);
+  const geo = useGeolocation();
+  const setLocation = useMutation(api.planner.setLocation);
 
   useEffect(() => {
     if (profileDoc && !prefilled.current) {
@@ -78,7 +87,7 @@ export default function Onboarding() {
     );
   }
 
-  if (profileDoc && !isEdit) {
+  if (profileDoc && !isEdit && !saved) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -105,7 +114,8 @@ export default function Onboarding() {
     setError(null);
     try {
       await saveProfile({ answers: pickAnswers(answers) });
-      navigate("/dashboard", { replace: true });
+      setSaved(true);
+      setSaving(false);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "تعذّر حفظ إجاباتك، حاول مرة أخرى",
@@ -140,6 +150,92 @@ export default function Onboarding() {
           ) : null}
         </header>
 
+        {saved ? (
+          <GlassCard strong className="p-6 sm:p-8 text-center">
+            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-500/12 text-emerald-600">
+              <CheckCircle2 className="size-7" />
+            </span>
+            <h1 className="mt-4 text-xl font-bold tracking-tight">خطّتك جاهزة</h1>
+            <p className="mx-auto mt-2 max-w-md text-[13px] leading-6 text-muted-foreground">
+              بقي أمران اختياريان يجعلان التطبيق أنفع لك: الإشعارات لتصلك الصلوات في وقتها،
+              والموقع لحساب مواقيت أدق من اسم المدينة.
+            </p>
+
+            <div className="mx-auto mt-6 max-w-lg space-y-3 text-right">
+              <div className="glass-tile flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+                <div className="max-w-sm">
+                  <p className="text-[13px] font-semibold">إشعارات الصلاة والورد</p>
+                  <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">
+                    إشعار عند دخول الوقت، وقبل وردك، وقبل نومك. لا يصل شيء دون إذنك.
+                  </p>
+                </div>
+                {notifyState === "granted" ? (
+                  <span className="rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] text-white">
+                    مفعّلة
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    className="rounded-full"
+                    onClick={async () => {
+                      setNotifyState(await askNotificationPermission());
+                    }}
+                  >
+                    اسمح بالإشعارات
+                  </Button>
+                )}
+              </div>
+
+              <div className="glass-tile flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+                <div className="max-w-sm">
+                  <p className="text-[13px] font-semibold">موقعك لمواقيت أدق</p>
+                  <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">
+                    {locationAsked
+                      ? "يمكنك تفعيله لاحقًا من الإعدادات في أي وقت."
+                      : "يُحفظ على حسابك فقط، ويُستخدم لحساب وقت الصلاة."}
+                  </p>
+                </div>
+                {geo.coords ? (
+                  <span className="rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] text-white">
+                    محفوظ
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={async () => {
+                      const result = await geo.request();
+                      setLocationAsked(true);
+                      if (result) {
+                        try {
+                          await setLocation({
+                            latitude: result.latitude,
+                            longitude: result.longitude,
+                          });
+                        } catch {
+                          /* محفوظ على الجهاز على أي حال */
+                        }
+                      }
+                    }}
+                  >
+                    تحديد موقعي
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              size="lg"
+              className="mt-7 rounded-full px-8 text-sm"
+              onClick={() => navigate("/dashboard", { replace: true })}
+            >
+              <Sparkles className="size-4" />
+              ابدأ يومي
+            </Button>
+          </GlassCard>
+        ) : (
         <GlassCard strong className="p-6 sm:p-8">
           <div className="flex items-center justify-between gap-4 text-xs">
             <span className="glass-tile rounded-full px-3 py-1.5 font-medium">
@@ -272,6 +368,7 @@ export default function Onboarding() {
             )}
           </div>
         </GlassCard>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-3">
           {HIGHLIGHTS.map((item) => (

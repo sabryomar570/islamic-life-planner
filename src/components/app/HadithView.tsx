@@ -1,10 +1,30 @@
 import { GlassCard, GlassPill, SectionTitle } from "@/components/app/GlassCard";
-import { HADITHS, HADITH_TOPICS, type HadithTopic } from "@/data/hadith";
+import { Input } from "@/components/ui/input";
+import {
+  HADITHS,
+  HADITH_SECTIONS,
+  randomHadith,
+  searchHadiths,
+  sectionTitle,
+  type Hadith,
+  type HadithSectionId,
+} from "@/data/hadith";
 import { cn } from "@/lib/utils";
-import { Bookmark, BookmarkCheck, Quote, ScrollText, Sparkles } from "lucide-react";
+import { arabicNumber } from "@/lib/time";
+import {
+  Bookmark,
+  BookmarkCheck,
+  Copy,
+  Dices,
+  Quote,
+  ScrollText,
+  Search,
+  Share2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
-type Filter = HadithTopic | "الكل" | "المحفوظات";
+type Filter = HadithSectionId | "all" | "saved";
 
 export function HadithView({
   favorites,
@@ -13,47 +33,125 @@ export function HadithView({
   favorites: string[];
   onToggleFavorite: (id: string, kind: string, title: string) => void;
 }) {
-  const [filter, setFilter] = useState<Filter>("الكل");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
+  const [highlight, setHighlight] = useState<Hadith | null>(null);
 
-  const filters: Filter[] = useMemo(
-    () => ["الكل", "المحفوظات", ...HADITH_TOPICS],
-    [],
-  );
+  const items = useMemo(() => {
+    const base = query.trim()
+      ? searchHadiths(query)
+      : filter === "saved"
+        ? HADITHS.filter((hadith) => favorites.includes(hadith.id))
+        : filter === "all"
+          ? HADITHS
+          : HADITHS.filter((hadith) => hadith.section === filter);
+    return base;
+  }, [filter, query, favorites]);
 
-  const items = HADITHS.filter((hadith) => {
-    if (filter === "الكل") return true;
-    if (filter === "المحفوظات") return favorites.includes(hadith.id);
-    return hadith.topic === filter;
-  });
+  const copyHadith = async (hadith: Hadith) => {
+    const text = `«${hadith.text}»\n${hadith.narrator} — ${hadith.source}\n(${sectionTitle(hadith.section)})`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("نُسخ الحديث بمصدره.");
+    } catch {
+      toast.error("تعذّر النسخ من المتصفح.");
+    }
+  };
+
+  const shareHadith = async (hadith: Hadith) => {
+    const text = `«${hadith.text}»\n${hadith.narrator} — ${hadith.source}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "حديث", text });
+        return;
+      } catch {
+        /* تراجع */
+      }
+    }
+    await copyHadith(hadith);
+  };
 
   return (
     <div className="space-y-5">
       <GlassCard strong className="p-6">
         <SectionTitle
           icon={<ScrollText className="size-5" />}
-          title="أحاديث تحثّ قلبك على الخشوع"
-          hint="كل كارت يحمل نص الحديث، الراوي، المصدر، ودرسًا عمليًا"
-        />
-        <div className="mt-5 flex flex-wrap gap-2">
-          {filters.map((item) => (
+          title="أحاديث مبوّبة بحسب حاجتك اليوم"
+          hint={`${arabicNumber(HADITHS.length)} حديثًا في ${arabicNumber(
+            HADITH_SECTIONS.length,
+          )} بابًا: مغفرة الذنوب، استجابة الدعاء، فكّ الكرب، الصبر، الرزق… براويه ومصدره`}
+          action={
             <GlassPill
-              key={item}
-              active={filter === item}
-              onClick={() => setFilter(item)}
+              onClick={() => {
+                const next = randomHadith(highlight?.id ?? null);
+                setHighlight(next);
+                document
+                  .getElementById(`hadith-${next.id}`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
             >
-              {item}
-              {item === "المحفوظات" && favorites.length > 0
-                ? ` (${favorites.length})`
-                : ""}
+              <span className="flex items-center gap-1.5">
+                <Dices className="size-3.5" /> حديث عشوائي
+              </span>
+            </GlassPill>
+          }
+        />
+
+        <div className="relative mt-5">
+          <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="ابحث في نص الحديث أو الراوي أو الباب..."
+            className="h-11 rounded-full border-white/70 bg-white/70 pr-10 text-sm"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <GlassPill active={filter === "all" && !query} onClick={() => { setFilter("all"); setQuery(""); }}>
+            كل الأبواب
+          </GlassPill>
+          <GlassPill
+            active={filter === "saved"}
+            onClick={() => {
+              setFilter("saved");
+              setQuery("");
+            }}
+          >
+            محفوظاتي{favorites.length > 0 ? ` (${arabicNumber(favorites.length)})` : ""}
+          </GlassPill>
+          {HADITH_SECTIONS.map((section) => (
+            <GlassPill
+              key={section.id}
+              active={filter === section.id && !query}
+              onClick={() => {
+                setFilter(section.id);
+                setQuery("");
+              }}
+            >
+              {section.title}
             </GlassPill>
           ))}
         </div>
+
+        {filter !== "all" && filter !== "saved" ? (
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            {HADITH_SECTIONS.find((section) => section.id === filter)?.hint}
+          </p>
+        ) : null}
+        {query ? (
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            نتائج البحث: {arabicNumber(items.length)}
+          </p>
+        ) : null}
       </GlassCard>
 
       {items.length === 0 ? (
         <GlassCard soft className="p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            لم تحفظ أي حديث بعد — اضغط أيقونة الحفظ على الكارت ليظهر هنا.
+            {filter === "saved"
+              ? "لم تحفظ حديثًا بعد — اضغط أيقونة الحفظ على أي كارت."
+              : "لا يوجد حديث بهذا البحث، جرّب كلمة أخرى."}
           </p>
         </GlassCard>
       ) : (
@@ -61,16 +159,29 @@ export function HadithView({
           {items.map((hadith) => {
             const saved = favorites.includes(hadith.id);
             return (
-              <GlassCard key={hadith.id} hover className="flex flex-col p-6">
+              <GlassCard
+                key={hadith.id}
+                id={`hadith-${hadith.id}`}
+                hover
+                className={cn(
+                  "flex flex-col p-6",
+                  highlight?.id === hadith.id && "ring-2 ring-primary/45",
+                )}
+              >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="glass-tile inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-foreground/70">
-                    <Sparkles className="size-3.5 text-primary" />
-                    {hadith.topic}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFilter(hadith.section)}
+                    className="glass-tile inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-foreground/70 transition-colors hover:text-foreground"
+                  >
+                    {sectionTitle(hadith.section)}
+                  </button>
                   <button
                     type="button"
                     aria-label="حفظ الحديث"
-                    onClick={() => onToggleFavorite(hadith.id, "hadith", hadith.text.slice(0, 40))}
+                    onClick={() =>
+                      onToggleFavorite(hadith.id, "hadith", hadith.text.slice(0, 40))
+                    }
                     className={cn(
                       "flex size-8 items-center justify-center rounded-full transition-all",
                       saved
@@ -78,11 +189,7 @@ export function HadithView({
                         : "glass-tile text-foreground/60 hover:text-foreground",
                     )}
                   >
-                    {saved ? (
-                      <BookmarkCheck className="size-4" />
-                    ) : (
-                      <Bookmark className="size-4" />
-                    )}
+                    {saved ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
                   </button>
                 </div>
 
@@ -100,9 +207,19 @@ export function HadithView({
                       {hadith.source}
                     </p>
                   </div>
-                  <p className="mt-3 text-[12px] leading-6 text-primary/85">
-                    {hadith.lesson}
-                  </p>
+                  <p className="mt-3 text-[12px] leading-6 text-primary/85">{hadith.action}</p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <GlassPill onClick={() => void copyHadith(hadith)}>
+                      <span className="flex items-center gap-1.5">
+                        <Copy className="size-3.5" /> نسخ
+                      </span>
+                    </GlassPill>
+                    <GlassPill onClick={() => void shareHadith(hadith)}>
+                      <span className="flex items-center gap-1.5">
+                        <Share2 className="size-3.5" /> مشاركة
+                      </span>
+                    </GlassPill>
+                  </div>
                 </div>
               </GlassCard>
             );

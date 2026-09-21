@@ -11,13 +11,18 @@ import { cn } from "@/lib/utils";
 import {
   BookOpen,
   CalendarClock,
+  CalendarHeart,
   Clock,
   Feather,
   LogOut,
   ScrollText,
+  Settings,
+  Smartphone,
   Sparkles,
   UserRound,
+  WifiOff,
 } from "lucide-react";
+import type { ReactNode } from "react";
 
 export type DashView =
   | "today"
@@ -25,15 +30,19 @@ export type DashView =
   | "plan"
   | "hadith"
   | "quran"
-  | "poetry";
+  | "poetry"
+  | "occasions"
+  | "settings";
 
 export const NAV_ITEMS: { key: DashView; label: string; icon: typeof Sparkles }[] = [
   { key: "today", label: "ذكر اليوم", icon: Sparkles },
   { key: "prayers", label: "صلاتي", icon: Clock },
   { key: "plan", label: "خطّة يومي", icon: CalendarClock },
-  { key: "hadith", label: "أحاديث الخشوع", icon: ScrollText },
-  { key: "quran", label: "القرآن الكريم", icon: BookOpen },
-  { key: "poetry", label: "أبيات تحفّزك", icon: Feather },
+  { key: "hadith", label: "الأحاديث", icon: ScrollText },
+  { key: "quran", label: "المصحف", icon: BookOpen },
+  { key: "poetry", label: "الأبيات", icon: Feather },
+  { key: "occasions", label: "المناسبات", icon: CalendarHeart },
+  { key: "settings", label: "الإعدادات", icon: Settings },
 ];
 
 export function AppHeader({
@@ -41,20 +50,29 @@ export function AppHeader({
   onViewChange,
   userName,
   onSignOut,
+  offline = false,
+  canInstall = false,
+  onInstall,
+  banner,
 }: {
   view: DashView;
   onViewChange: (view: DashView) => void;
   userName?: string;
   onSignOut: () => void;
+  offline?: boolean;
+  canInstall?: boolean;
+  onInstall?: () => void;
+  banner?: ReactNode;
 }) {
   return (
-    <header className="glass-strong sticky top-0 z-40 border-x-0 border-t-0 rounded-none border-b border-white/70">
+    <header className="glass-strong sticky top-0 z-40 rounded-none border-x-0 border-t-0 border-b border-white/70">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => onViewChange("today")}
             className="flex items-center gap-3 text-right"
+            aria-label="سكينة — ذكر اليوم"
           >
             <span className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/90 to-indigo-400/90 text-white shadow-lg shadow-sky-500/25">
               <Sparkles className="size-5" />
@@ -62,38 +80,59 @@ export function AppHeader({
             <span className="leading-tight">
               <span className="block text-base font-bold tracking-tight">سكينة</span>
               <span className="block text-[11px] text-muted-foreground">
-                رفيقك إلى الالتزام
+                {offline ? "يعمل دون إنترنت" : "رفيق الالتزام"}
               </span>
             </span>
           </button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-1.5 lg:hidden">
+            {offline ? (
+              <span className="glass-tile flex size-9 items-center justify-center rounded-full text-muted-foreground">
+                <WifiOff className="size-4" />
+              </span>
+            ) : null}
+            {canInstall && onInstall ? (
               <Button
                 variant="ghost"
-                className="glass-tile h-9 gap-2 rounded-full px-3 text-xs lg:hidden"
+                size="icon"
+                className="glass-tile rounded-full"
+                onClick={onInstall}
+                aria-label="تثبيت التطبيق"
               >
-                <UserRound className="size-4" />
-                {userName ?? "حسابي"}
+                <Smartphone className="size-4" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="glass-strong w-48 rounded-2xl border-white/70 bg-white/85"
-            >
-              <DropdownMenuLabel className="text-xs">
-                {userName ?? "مستخدم سكينة"}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={onSignOut}
-                className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+            ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="glass-tile h-9 gap-2 rounded-full px-3 text-xs">
+                  <UserRound className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="glass-strong w-48 rounded-2xl border-white/70 bg-white/85"
               >
-                <LogOut className="size-4" />
-                تسجيل الخروج
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuLabel className="text-xs">
+                  {userName ?? "مستخدم سكينة"}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onViewChange("settings")}
+                  className="cursor-pointer gap-2"
+                >
+                  <Settings className="size-4" />
+                  الإعدادات
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={onSignOut}
+                  className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                >
+                  <LogOut className="size-4" />
+                  تسجيل الخروج
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         <nav className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
@@ -102,6 +141,7 @@ export function AppHeader({
               key={item.key}
               type="button"
               onClick={() => onViewChange(item.key)}
+              aria-current={view === item.key ? "page" : undefined}
               className={cn(
                 "flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium transition-all",
                 view === item.key
@@ -116,6 +156,12 @@ export function AppHeader({
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
+          {canInstall && onInstall ? (
+            <Button variant="outline" className="rounded-full text-xs" onClick={onInstall}>
+              <Smartphone className="size-4" />
+              ثبّت التطبيق
+            </Button>
+          ) : null}
           <span className="glass-tile flex items-center gap-2 rounded-full px-3.5 py-2 text-xs text-foreground/70">
             <UserRound className="size-4" />
             {userName ?? "مستخدم سكينة"}
@@ -132,6 +178,8 @@ export function AppHeader({
           </Button>
         </div>
       </div>
+
+      {banner ? <div className="mx-auto w-full max-w-6xl px-4 pb-3 sm:px-6">{banner}</div> : null}
     </header>
   );
 }

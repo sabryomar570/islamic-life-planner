@@ -1,18 +1,16 @@
 /**
  * فهرس القرآن الكريم — بيانات السور (مكية/مدنية وعدد الآيات) محليًا،
- * ونص الآيات يُجلب من واجهة AlQuran Cloud ثم يُخزَّن مؤقتًا لتسريع الفتح.
+ * ونصوص الآيات تُدار عبر مخزن المصحف (ذاكرة + جهاز + شبكة).
  */
+import { loadSurah, type Ayah } from "@/lib/quran-store";
+
+export type { Ayah } from "@/lib/quran-store";
 
 export type Surah = {
   number: number;
   name: string;
   ayahs: number;
   type: "مكية" | "مدنية";
-};
-
-export type Ayah = {
-  number: number;
-  text: string;
 };
 
 export const SURAHS: Surah[] = [
@@ -135,59 +133,21 @@ export const SURAHS: Surah[] = [
 export const getSurah = (number: number) =>
   SURAHS.find((surah) => surah.number === number);
 
-const memoryCache = new Map<number, Ayah[]>();
-
-function readLocalCache(number: number): Ayah[] | null {
-  try {
-    const raw = window.localStorage.getItem(`sakinah:quran:${number}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Ayah[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeLocalCache(number: number, ayahs: Ayah[]) {
-  try {
-    window.localStorage.setItem(`sakinah:quran:${number}`, JSON.stringify(ayahs));
-  } catch {
-    /* التخزين ممتلئ أو غير متاح — نتجاهل بهدوء */
-  }
-}
-
-/** يجلب آيات سورة كاملة (المصحف العثماني) مع تخزين مؤقت في الذاكرة والحافظة. */
+/** يجلب آيات سورة كاملة (المصحف العثماني) من الذاكرة أو الجهاز أو الشبكة. */
 export async function fetchSurahAyahs(number: number): Promise<Ayah[]> {
-  const cached = memoryCache.get(number);
-  if (cached) return cached;
-
-  const local = readLocalCache(number);
-  if (local) {
-    memoryCache.set(number, local);
-    return local;
-  }
-
-  const response = await fetch(
-    `https://api.alquran.cloud/v1/surah/${number}/quran-uthmani`,
-  );
-  if (!response.ok) throw new Error("تعذّر تحميل السورة، حاول مرة أخرى");
-
-  const payload = (await response.json()) as {
-    data?: { ayahs?: { numberInSurah?: number; text?: string }[] };
-  };
-  const ayahs: Ayah[] = (payload.data?.ayahs ?? []).map((ayah, index) => ({
-    number: ayah.numberInSurah ?? index + 1,
-    text: ayah.text ?? "",
-  }));
-
-  if (ayahs.length === 0) throw new Error("لم تصل آيات هذه السورة، حاول مرة أخرى");
-
-  memoryCache.set(number, ayahs);
-  writeLocalCache(number, ayahs);
+  const { ayahs } = await loadSurah(number);
   return ayahs;
 }
 
-/** آية مختارة تظهر كـ«آية اليوم» في الشاشة الرئيسية. */
+export const SURAH_COUNT = SURAHS.length;
+
+/** السورة التي تلي رقمًا معيّنًا (للتنقّل بالأسهم). */
+export function clampSurahNumber(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(Math.max(Math.round(value), 1), SURAH_COUNT);
+}
+
+/** آيات مختارة تظهر كـ«آية اليوم» وتتبدّل بتبدّل التاريخ. */
 export const DAILY_AYAHS: { text: string; ref: string }[] = [
   {
     text: "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
@@ -217,4 +177,58 @@ export const DAILY_AYAHS: { text: string; ref: string }[] = [
     text: "وَقُل رَّبِّ زِدْنِي عِلْمًا",
     ref: "طه: ١١٤",
   },
+  {
+    text: "وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ",
+    ref: "الطلاق: ٣",
+  },
+  {
+    text: "فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ",
+    ref: "البقرة: ١٥٢",
+  },
+  {
+    text: "وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا",
+    ref: "الطلاق: ٢",
+  },
+  {
+    text: "إِنَّ اللَّهَ مَعَ الصَّابِرِينَ",
+    ref: "البقرة: ١٥٣",
+  },
+  {
+    text: "وَاصْبِرْ وَمَا صَبْرُكَ إِلَّا بِاللَّهِ",
+    ref: "النحل: ١٢٧",
+  },
+  {
+    text: "وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ عَلَيْهِ تَوَكَّلْتُ وَإِلَيْهِ أُنِيبُ",
+    ref: "هود: ٨٨",
+  },
+  {
+    text: "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
+    ref: "البقرة: ٢٠١",
+  },
+  {
+    text: "وَأَنِ اسْتَغْفِرُوا رَبَّكُمْ ثُمَّ تُوبُوا إِلَيْهِ",
+    ref: "هود: ٣",
+  },
+  {
+    text: "إِنَّ الْحَسَنَاتِ يُذْهِبْنَ السَّيِّئَاتِ",
+    ref: "هود: ١١٤",
+  },
+  {
+    text: "وَاللَّهُ يُحِبُّ الْمُحْسِنِينَ",
+    ref: "آل عمران: ١٣٤",
+  },
+  {
+    text: "فَإِنَّ مَعَ الْعُسْرِ يُسْرًا",
+    ref: "الشرح: ٥",
+  },
+  {
+    text: "وَاعْتَصِمُوا بِحَبْلِ اللَّهِ جَمِيعًا وَلَا تَفَرَّقُوا",
+    ref: "آل عمران: ١٠٣",
+  },
 ];
+
+/** آية اليوم بحسب رقم اليوم — يتغيّر تلقائيًا كل يوم. */
+export function ayahOfTheDay(date: Date = new Date()) {
+  const seed = date.getFullYear() * 372 + (date.getMonth() + 1) * 31 + date.getDate();
+  return DAILY_AYAHS[seed % DAILY_AYAHS.length];
+}

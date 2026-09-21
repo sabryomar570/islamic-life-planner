@@ -1,17 +1,56 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
-  "start_url": "/",
+  "id": "/",
+  "name": "سكينة — رفيق الالتزام",
+  "short_name": "سكينة",
+  "description": "يومك مرتّب حول الصلاة: مواقيت دقيقة، أذكار الصباح والمساء والنوم، أحاديث بأسانيدها، قرآن كامل يعمل دون إنترنت، ومواعيد رمضان والمناسبات.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#f4f7fd",
+  "theme_color": "#f4f7fd",
+  "categories": ["lifestyle", "education", "books"],
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/icon.svg",
       "sizes": "any",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ذكر اليوم",
+      "short_name": "ذكر اليوم",
+      "url": "/dashboard",
+      "description": "آية وذكر وحديث اليوم وصلواتك"
+    },
+    {
+      "name": "المصحف",
+      "short_name": "المصحف",
+      "url": "/dashboard?view=quran",
+      "description": "القرآن الكريم بصفحات المصحف"
+    },
+    {
+      "name": "المناسبات ورمضان",
+      "short_name": "المناسبات",
+      "url": "/dashboard?view=occasions",
+      "description": "رمضان والأعياد والمناسبات القادمة"
+    },
+    {
+      "name": "الإعدادات",
+      "short_name": "الإعدادات",
+      "url": "/dashboard?view=settings",
+      "description": "الإشعارات والموقع والعمل دون إنترنت"
     }
   ]
 }
