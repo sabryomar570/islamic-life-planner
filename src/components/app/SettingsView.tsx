@@ -152,23 +152,73 @@ export function SettingsView({
           }
         />
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          {permission !== "granted" ? (
-            <Button
-              type="button"
-              className="rounded-full"
-              disabled={!supported}
-              onClick={onRequestPermission}
-            >
-              <Bell className="size-4" />
-              اسمح بالإشعارات
-            </Button>
-          ) : null}
-          <Button type="button" variant="outline" className="rounded-full" onClick={onTestNotification}>
-            <Sparkles className="size-4" />
-            إرسال تذكير تجريبي
-          </Button>
+        {/* الأذونان معًا: إشعارات + موقع — زر بارز يعمل عند النقر */}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="tile-edge flex flex-col items-start gap-2 rounded-2xl p-4">
+            <span className="flex items-center gap-2 text-[13px] font-semibold">
+              <BellRing className="size-4 text-primary" />
+              إذن الإشعارات
+            </span>
+            <span className="text-[11px] leading-5 text-muted-foreground">{permissionLabel}</span>
+            {permission !== "granted" ? (
+              <Button
+                type="button"
+                size="sm"
+                className="btn-primary-edge mt-1 rounded-full px-4 font-semibold"
+                disabled={!supported}
+                onClick={onRequestPermission}
+              >
+                <Bell className="size-3.5" />
+                اسمح بالإشعارات
+              </Button>
+            ) : (
+              <span className="mt-1 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-medium text-white">
+                مفعّلة ✓
+              </span>
+            )}
+          </div>
+
+          <div className="tile-edge flex flex-col items-start gap-2 rounded-2xl p-4">
+            <span className="flex items-center gap-2 text-[13px] font-semibold">
+              <MapPin className="size-4 text-primary" />
+              إذن الموقع
+            </span>
+            <span className="text-[11px] leading-5 text-muted-foreground">
+              {geo.coords ? "موقعك محفوظ — المواقيت على إحداثياتك" : "لم يُحدَّد بعد — يجعل المواقيت أدق"}
+            </span>
+            {geo.coords ? (
+              <GlassPill onClick={geo.clear}>
+                <span className="flex items-center gap-1.5">
+                  <Trash2 className="size-3.5" /> إلغاء الإذن
+                </span>
+              </GlassPill>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                className="btn-primary-edge mt-1 rounded-full px-4 font-semibold"
+                disabled={geo.status === "loading" || geo.status === "unsupported"}
+                onClick={() => void geo.request()}
+              >
+                <MapPin className="size-3.5" />
+                {geo.status === "loading" ? "جارٍ التحديد..." : "سماح بالموقع"}
+              </Button>
+            )}
+            {geo.error ? (
+              <span className="text-[10.5px] leading-4 text-amber-700">{geo.error}</span>
+            ) : null}
+          </div>
         </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="btn-edge mt-3 rounded-full"
+          onClick={onTestNotification}
+        >
+          <Sparkles className="size-4" />
+          إرسال تذكير تجريبي
+        </Button>
 
         {!supported ? (
           <p className="mt-3 text-[11px] leading-5 text-amber-700">
@@ -358,7 +408,7 @@ export function SettingsView({
         <div className="mt-5 space-y-3">
           <Row
             title="مدينتك الحالية"
-            hint="استنتجناها من منطقتك الزمنية. عدّلها إن كانت غير دقيقة."
+            hint="استنتجناها من منطقتك الزمنية، أو حدّدناها من إذن الموقع. عدّلها إن أردت."
           >
             <div className="flex items-center gap-2">
               <Input
@@ -379,40 +429,6 @@ export function SettingsView({
               </Button>
             </div>
           </Row>
-
-          <Row
-            title="استخدم موقعي الحالي"
-            hint={
-              geo.label
-                ? `حدّدناك في: ${geo.label}`
-                : "نطلب من المتصفح إذن الموقع مرة واحدة، ويمكنك إلغاؤه في أي وقت."
-            }
-          >
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-full"
-                onClick={() => void geo.request()}
-                disabled={geo.status === "loading" || geo.status === "unsupported"}
-              >
-                <MapPin className="size-3.5" />
-                {geo.status === "loading" ? "جارٍ التحديد..." : "سماح بالموقع"}
-              </Button>
-              {geo.coords ? (
-                <GlassPill onClick={geo.clear}>
-                  <span className="flex items-center gap-1.5">
-                    <Trash2 className="size-3.5" /> إلغاء
-                  </span>
-                </GlassPill>
-              ) : null}
-            </div>
-          </Row>
-
-          {geo.error ? (
-            <p className="text-[11px] leading-5 text-amber-700">{geo.error}</p>
-          ) : null}
 
           <Row title="طريقة حساب المواقيت" hint="اختر ما تعتمده الجهة الشرعية في بلدك.">
             <Select
