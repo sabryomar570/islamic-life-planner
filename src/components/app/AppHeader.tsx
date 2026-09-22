@@ -10,11 +10,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
+  Bookmark,
   CalendarHeart,
   CircleDot,
   Clock,
   Feather,
   HeartHandshake,
+  Landmark,
   LayoutGrid,
   LogOut,
   ScrollText,
@@ -34,7 +36,9 @@ export type DashView =
   | "duas"
   | "tasbih"
   | "poetry"
+  | "prophets"
   | "occasions"
+  | "saved"
   | "settings";
 
 export type NavItem = {
@@ -53,7 +57,9 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "hadith", label: "الأحاديث", description: "أبواب بأسانيدها ورواتها", icon: ScrollText },
   { key: "tasbih", label: "المسبحة", description: "عدّاد تسبيح محفوظ على جهازك", icon: CircleDot },
   { key: "poetry", label: "الأبيات", description: "شعر عربي مختار", icon: Feather },
+  { key: "prophets", label: "قصص الأنبياء", description: "قصص موثقة بمصادرها من القرآن والسيرة", icon: Landmark },
   { key: "occasions", label: "المناسبات", description: "رمضان والأعياد والصيام", icon: CalendarHeart },
+  { key: "saved", label: "محفوظاتي", description: "كل ما حفظته من آيات وأحاديث وأبيات وأدعية", icon: Bookmark },
   { key: "settings", label: "الإعدادات", description: "الإشعارات، المكان، والعمل دون إنترنت", icon: Settings },
 ];
 

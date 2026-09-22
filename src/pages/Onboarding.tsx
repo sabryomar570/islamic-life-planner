@@ -14,9 +14,88 @@ import { detectLocation } from "@/lib/location";
 import { askNotificationPermission, notificationPermission } from "@/lib/notify";
 import { arabicNumber, formatArabicTime } from "@/lib/time";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, BellRing, BookOpen, Bookmark, CheckCircle2, Clock, HeartHandshake, Loader2, ScrollText, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
+
+const TOUR_KEY = "oud:tour:done";
+
+function readTourDone(): boolean {
+  try {
+    return window.localStorage.getItem(TOUR_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeTourDone() {
+  try {
+    window.localStorage.setItem(TOUR_KEY, "1");
+  } catch {
+    /* لا شيء */
+  }
+}
+
+/** شاشة تعريفية مختصرة تظهر مرة واحدة فقط قبل أسئلة البداية. */
+function TourIntro({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  const TOUR_ITEMS = [
+    { icon: Clock, title: "صلاتي", text: "مواقيت على مكانك، وتسجيل كل صلاة بنقرة" },
+    { icon: BookOpen, title: "المصحف", text: "كامل ويعمل دون إنترنت بعد تنزيله" },
+    { icon: HeartHandshake, title: "الأدعية والأذكار", text: "مقسّمة على أبواب: همّ، رزق، مغفرة…" },
+    { icon: ScrollText, title: "الأحاديث والأبيات", text: "لكل عنصر مصدره وراويه" },
+    { icon: Bookmark, title: "الحفظ", text: "اضغط علامة الحفظ على أي عنصر — يبقى محفوظًا" },
+    { icon: BellRing, title: "الإشعارات", text: "تذكير هادئ عند الصلاة والأذكار — بإذنك" },
+  ];
+  return (
+    <main className="flex min-h-screen items-center justify-center px-4 py-8">
+      <GlassCard strong className="w-full max-w-2xl p-6 sm:p-8">
+        <div className="text-center">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/90 to-indigo-400/90 text-lg font-bold text-white shadow-lg shadow-sky-500/25">
+            عود
+          </span>
+          <h1 className="mt-4 text-xl font-bold tracking-tight">مرحبًا بك في عود</h1>
+          <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-6 text-muted-foreground">
+            تطبيق واحد يجمع صلاتك ووردك وذكر اليوم — وهذه أهم أقسامه قبل أن نبدأ.
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-2.5 sm:grid-cols-2">
+          {TOUR_ITEMS.map((item) => (
+            <div key={item.title} className="tile-edge flex items-start gap-3 rounded-2xl p-3.5">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
+                <item.icon className="size-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-semibold">{item.title}</span>
+                <span className="mt-0.5 block text-[11px] leading-5 text-muted-foreground">
+                  {item.text}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <Button
+            type="button"
+            size="lg"
+            className="btn-primary-edge w-full max-w-xs rounded-full font-semibold"
+            onClick={onStart}
+          >
+            نبدأ — {arabicNumber(7)} أسئلة قصيرة
+          </Button>
+          <button
+            type="button"
+            onClick={onSkip}
+            className="text-[11px] text-muted-foreground underline-offset-4 hover:underline"
+          >
+            تخطّي التعريف والذهاب للأسئلة مباشرة
+          </button>
+        </div>
+      </GlassCard>
+    </main>
+  );
+}
 
 export default function Onboarding() {
   const [searchParams] = useSearchParams();
@@ -25,6 +104,7 @@ export default function Onboarding() {
   const profileDoc = useQuery(api.planner.getProfile);
   const saveProfile = useMutation(api.planner.saveProfile);
   const prefilled = useRef(false);
+  const [showTour, setShowTour] = useState(() => !isEdit && !readTourDone());
 
   const location = useMemo(() => detectLocation(), []);
 
@@ -46,6 +126,21 @@ export default function Onboarding() {
       setAnswers(pickAnswers(profileDoc as Partial<ProfileAnswers>));
     }
   }, [profileDoc]);
+
+  if (showTour) {
+    return (
+      <TourIntro
+        onStart={() => {
+          writeTourDone();
+          setShowTour(false);
+        }}
+        onSkip={() => {
+          writeTourDone();
+          setShowTour(false);
+        }}
+      />
+    );
+  }
 
   if (profileDoc === undefined) {
     return (

@@ -4,7 +4,7 @@
  * - يدعم رسائل: CACHE_URLS (تنزيل مسبق)، NOTIFY (إشعار)، SKIP_WAITING، CLEAR_CACHES.
  */
 
-const VERSION = "oud-2026-09-c";
+const VERSION = "oud-2026-09-d";
 const SHELL_CACHE = `${VERSION}:shell`;
 const RUNTIME_CACHE = `${VERSION}:runtime`;
 const API_CACHE = `${VERSION}:api`;

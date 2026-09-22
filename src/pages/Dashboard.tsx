@@ -144,18 +144,21 @@ export default function Dashboard() {
 
   /** اقتباسات الشريط المتنقل: من أقسام التطبيق، كل واحد ينقل لقسمه. */
   const quoteSlides = useMemo<QuoteSlide[]>(() => {
-    const ayah = ayahOfTheDay();
-    const hadith = hadithOfTheDay(now.getDate() + now.getMonth() * 31);
-    const dua = duaOfTheDay(now);
-    const poem = poemOfTheDay(now);
-    const story = PROPHET_STORIES[now.getDate() % PROPHET_STORIES.length];
+    const day = new Date();
+    const ayah = ayahOfTheDay(day);
+    const hadith = hadithOfTheDay(day.getDate() + day.getMonth() * 31);
+    const dua = duaOfTheDay(day);
+    const poem = poemOfTheDay(day);
+    const story = PROPHET_STORIES[day.getDate() % PROPHET_STORIES.length];
     return [
       { quote: `«${hadith.text}»`, origin: hadith.source, target: "hadith" },
       { quote: ayah.text, origin: ayah.ref, target: "quran" },
       { quote: dua.text, origin: dua.reference, target: "duas" },
-      { quote: `${poem.lines[0]}`, origin: poem.poet, target: "poetry" },
+      { quote: poem.lines[0], origin: poem.poet, target: "poetry" },
       { quote: story.title, origin: story.prophet, target: "prophets" },
     ];
+    // يُحسب مرة كل يوم — لا كل ثانية.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today]);
 
   /* عند انعدام الشبكة يعتمد التطبيق على آخر نسخة محفوظة من بياناتك. */
@@ -468,9 +471,11 @@ export default function Dashboard() {
       />
 
       {/* الشريط المتنقل: اقتباسات من أقسام التطبيق، تنقل تلقائيًا وسحب يدوي، والضغط يفتح القسم */}
-      <div className="mx-auto w-full max-w-5xl px-3.5 pt-3 sm:px-6">
-        <QuoteMarquee slides={quoteSlides} onSelect={changeView} />
-      </div>
+      {view === "today" ? (
+        <div className="mx-auto w-full max-w-5xl px-3.5 pt-3 sm:px-6">
+          <QuoteMarquee slides={quoteSlides} onSelect={changeView} />
+        </div>
+      ) : null}
 
       <main className="mx-auto w-full max-w-5xl px-3.5 pt-3.5 sm:px-6">
         {view === "today" && answers ? (

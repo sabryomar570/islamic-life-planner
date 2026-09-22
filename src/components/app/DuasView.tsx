@@ -50,14 +50,19 @@ async function shareText(title: string, message: string): Promise<"shared" | "co
 
 export function DuasView({
   favorites,
+  isSaved,
   onToggleFavorite,
 }: {
   favorites: string[];
+  /** فحص فوري من نظام الحفظ الموحّد (يتفوّق على favorites القديمة عند توفره). */
+  isSaved?: (id: string) => boolean;
   onToggleFavorite: (id: string, kind: string, title: string) => void;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [spotlight, setSpotlight] = useState<Dua>(() => duaOfTheDay());
+
+  const check = (id: string) => (isSaved ? isSaved(id) : favorites.includes(id));
 
   const items = useMemo(() => {
     const term = query.trim();
@@ -66,10 +71,11 @@ export function DuasView({
         (dua) => dua.text.includes(term) || dua.reference.includes(term),
       );
     }
-    if (filter === "saved") return DUAS.filter((dua) => favorites.includes(dua.id));
+    if (filter === "saved") return DUAS.filter((dua) => check(dua.id));
     if (filter === "all") return DUAS;
     return DUAS.filter((dua) => dua.section === filter);
-  }, [filter, query, favorites]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, query, favorites, isSaved]);
 
   const copyDua = async (dua: Dua) => {
     try {
@@ -169,12 +175,12 @@ export function DuasView({
           </GlassPill>
           <GlassPill onClick={() => onToggleFavorite(spotlight.id, "dhikr", spotlight.text.slice(0, 40))}>
             <span className="flex items-center gap-1.5">
-              {favorites.includes(spotlight.id) ? (
+              {check(spotlight.id) ? (
                 <BookmarkCheck className="size-3.5" />
               ) : (
                 <Bookmark className="size-3.5" />
               )}
-              {favorites.includes(spotlight.id) ? "محفوظ" : "احفظ الدعاء"}
+              {check(spotlight.id) ? "محفوظ" : "احفظ الدعاء"}
             </span>
           </GlassPill>
         </div>
@@ -191,7 +197,7 @@ export function DuasView({
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {items.map((dua) => {
-            const saved = favorites.includes(dua.id);
+            const saved = check(dua.id);
             const sectionTitle = DUA_SECTIONS.find((section) => section.id === dua.section)?.title;
             return (
               <GlassCard key={dua.id} hover className="flex flex-col p-6">

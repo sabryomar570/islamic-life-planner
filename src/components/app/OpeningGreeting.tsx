@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Heart, Minus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const COUNT_KEY = "oud:salawat:count";

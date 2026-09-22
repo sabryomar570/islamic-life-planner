@@ -28,11 +28,15 @@ type Filter = HadithSectionId | "all" | "saved";
 
 export function HadithView({
   favorites,
+  isSaved,
   onToggleFavorite,
 }: {
   favorites: string[];
+  /** فحص فوري من نظام الحفظ الموحّد (يتفوّق على favorites القديمة عند توفره). */
+  isSaved?: (id: string) => boolean;
   onToggleFavorite: (id: string, kind: string, title: string) => void;
 }) {
+  const check = (id: string) => (isSaved ? isSaved(id) : favorites.includes(id));
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState<Hadith | null>(null);
@@ -41,12 +45,13 @@ export function HadithView({
     const base = query.trim()
       ? searchHadiths(query)
       : filter === "saved"
-        ? HADITHS.filter((hadith) => favorites.includes(hadith.id))
+        ? HADITHS.filter((hadith) => check(hadith.id))
         : filter === "all"
           ? HADITHS
           : HADITHS.filter((hadith) => hadith.section === filter);
     return base;
-  }, [filter, query, favorites]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, query, favorites, isSaved]);
 
   const copyHadith = async (hadith: Hadith) => {
     const text = `«${hadith.text}»\n${hadith.narrator} — ${hadith.source}\n(${sectionTitle(hadith.section)})`;
@@ -157,7 +162,7 @@ export function HadithView({
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {items.map((hadith) => {
-            const saved = favorites.includes(hadith.id);
+            const saved = check(hadith.id);
             return (
               <GlassCard
                 key={hadith.id}
