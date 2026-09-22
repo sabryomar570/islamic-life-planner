@@ -578,15 +578,7 @@ export function SettingsView({
             </Button>
           </Row>
 
-          <Row title="عرض المصحف بصفحات" hint="أو عرضٌ آيةً آية مع خيارات النسخ والمشاركة.">
-            <Switch
-              checked={prefs.mushafMode}
-              onCheckedChange={(value) => setPref("mushafMode", value)}
-              aria-label="عرض المصحف بصفحات"
-            />
-          </Row>
-
-          <Row title="حجم خط المصحف" hint="يُحفظ ويُطبَّق على كل السور.">
+          <Row title="حجم خط المصحف" hint="يُحفظ ويُطبَّق على كل السور، والعرض آيةٌ آية.">
             <div className="flex items-center gap-2">
               <GlassPill onClick={() => setPref("fontScale", Math.max(0.8, Number((prefs.fontScale - 0.1).toFixed(2))))}>
                 أصغر

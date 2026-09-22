@@ -534,9 +534,7 @@ export default function Dashboard() {
         {view === "quran" && answers ? (
           <QuranView
             profile={answers}
-            mushafMode={prefs.mushafMode}
             fontScale={prefs.fontScale}
-            onMushafModeChange={(value) => setPref("mushafMode", value)}
             onFontScaleChange={(value) => setPref("fontScale", value)}
             offline={{
               cachedCount: quranCache.cachedCount,

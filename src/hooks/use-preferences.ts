@@ -22,7 +22,6 @@ export type Preferences = {
   postPrayerPrompt: boolean;
   salawatPopup: boolean;
   method: number;
-  mushafMode: boolean;
   fontScale: number;
   reducedMotion: boolean;
 };
@@ -45,8 +44,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   postPrayerPrompt: true,
   salawatPopup: true,
   method: 3,
-  mushafMode: true,
-  fontScale: 1,
+  fontScale: 1.2,
   reducedMotion: false,
 };
 

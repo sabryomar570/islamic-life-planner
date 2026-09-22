@@ -1,5 +1,4 @@
 import { GlassCard } from "@/components/app/GlassCard";
-import { MushafPage } from "@/components/app/MushafPage";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +13,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import type { ProfileAnswers } from "@/data/questions";
 import { SURAHS, clampSurahNumber, getSurah } from "@/data/quran";
 import { toArabicDigits } from "@/lib/hijri";
-import { QURAN_FONT_SIZES, paginateAyahs } from "@/lib/mushaf";
 import { useOnlineStatus } from "@/lib/pwa";
 import {
   BASMALA,
@@ -30,6 +28,8 @@ import {
   Bookmark,
   BookmarkCheck,
   Check,
+  ChevronDown,
+  ChevronUp,
   CloudDownload,
   Copy,
   Gauge,
@@ -42,8 +42,6 @@ import {
   RotateCcw,
   Search,
   Share2,
-  StepBack,
-  StepForward,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -60,8 +58,8 @@ const WIRD_LABEL: Record<string, string> = {
   juz: "جزء",
 };
 
-/** سرعات التمرير التلقائي بالبكسل في الثانية (١ = الأهدأ). */
-export const SCROLL_SPEEDS = [12, 20, 32, 50, 76];
+/** سرعات النزول التلقائي بالبكسل في الثانية (١ = الأهدأ). */
+export const SCROLL_SPEEDS = [14, 24, 38, 58, 86];
 
 type BookmarkRecord = { surah: number; ayah: number; at: number };
 
@@ -143,18 +141,18 @@ export type QuranOfflineController = {
   onClear: () => void;
 };
 
+/**
+ * المصحف: عرض متصل آية-آية (لا صفحات)، والنزول التلقائي يقرأ السورة كلها
+ * من أولها إلى آخرها ثم ينتقل للسورة التالية دون تقليب يدوي.
+ */
 export function QuranView({
   profile,
-  mushafMode,
   fontScale,
-  onMushafModeChange,
   onFontScaleChange,
   offline,
 }: {
   profile: ProfileAnswers;
-  mushafMode: boolean;
   fontScale: number;
-  onMushafModeChange: (value: boolean) => void;
   onFontScaleChange: (value: number) => void;
   offline: QuranOfflineController;
 }) {
@@ -167,8 +165,6 @@ export function QuranView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pendingLastPage, setPendingLastPage] = useState(false);
   const [selectedAyah, setSelectedAyah] = useState<Ayah | null>(null);
   const [bookmark, setBookmark] = useState<BookmarkRecord | null>(() => readBookmark());
   const [autoScroll, setAutoScroll] = useState(false);
@@ -198,7 +194,6 @@ export function QuranView({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    setPageIndex(0);
     setReachedEnd(false);
 
     loadSurah(surahNumber, { forceNetwork: attempt > 0 })
@@ -233,66 +228,15 @@ export function QuranView({
     [ayahs, surahNumber],
   );
 
-  const pages = useMemo(() => paginateAyahs(split.ayahs), [split.ayahs]);
-  const safePage = Math.min(pageIndex, Math.max(pages.length - 1, 0));
-
-  /* إرجاع موضع التمرير لأعلى الصفحة عند تبديل الصفحة. */
+  /* إرجاع موضع التمرير لأعلى عند فتح سورة جديدة (بلا صفحات الآن). */
   useEffect(() => {
     const element = scrollRef.current;
-    if (element) element.scrollTop = 0;
-  }, [safePage, surahNumber]);
+    if (element && !pendingBookmark) element.scrollTop = 0;
+  }, [surahNumber, pendingBookmark]);
 
-  const goNext = useCallback(() => {
-    setPageIndex((value) => {
-      if (value + 1 < pages.length) return value + 1;
-      if (surahNumber < SURAHS.length) {
-        setSurahNumber(surahNumber + 1);
-        return 0;
-      }
-      setReachedEnd(true);
-      return value;
-    });
-  }, [pages.length, surahNumber]);
-
-  const goPrev = useCallback(() => {
-    setPageIndex((value) => {
-      if (value > 0) return value - 1;
-      if (surahNumber > 1) {
-        setPendingLastPage(true);
-        setSurahNumber(surahNumber - 1);
-      }
-      return 0;
-    });
-  }, [surahNumber]);
-
+  /* النزول التلقائي: يقرأ السورة كلها ثم ينتقل للسورة التالية. */
   useEffect(() => {
-    if (pendingLastPage && !loading && pages.length > 0) {
-      setPageIndex(pages.length - 1);
-      setPendingLastPage(false);
-    }
-  }, [pendingLastPage, loading, pages.length]);
-
-  /* التنقّل بأسهم لوحة المفاتيح. */
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.target instanceof HTMLInputElement) return;
-      if (event.key === "ArrowLeft") goNext();
-      if (event.key === "ArrowRight") goPrev();
-      if (event.key === " ") {
-        event.preventDefault();
-        setAutoScroll((value) => {
-          if (!value) onMushafModeChange(true);
-          return !value;
-        });
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [goNext, goPrev, onMushafModeChange]);
-
-  /* التمرير التلقائي: حركة ناعمة بمعدّل السرعة المختارة، وتقليب الصفحة تلقائيًا. */
-  useEffect(() => {
-    if (!autoScroll || loading || !mushafMode) return;
+    if (!autoScroll || loading) return;
     const element = scrollRef.current;
     if (!element) return;
 
@@ -312,9 +256,13 @@ export function QuranView({
         element.scrollTop += step;
       }
       if (element.scrollTop + element.clientHeight >= element.scrollHeight - 2) {
-        // ننتقل للصفحة التالية ونُكمل القراءة، ونوقف عند آخر المصحف.
-        if (surahNumber < SURAHS.length || safePage < pages.length - 1) goNext();
-        else setAutoScroll(false);
+        // ننتقل للسورة التالية ونُكمل النزول، ونوقف عند آخر المصحف.
+        if (surahNumber < SURAHS.length) {
+          setSurahNumber(surahNumber + 1);
+          return;
+        }
+        setAutoScroll(false);
+        setReachedEnd(true);
         return;
       }
       frame = requestAnimationFrame(loop);
@@ -325,7 +273,7 @@ export function QuranView({
       stopped = true;
       cancelAnimationFrame(frame);
     };
-  }, [autoScroll, speed, loading, mushafMode, safePage, goNext, surahNumber, pages.length]);
+  }, [autoScroll, speed, loading, surahNumber]);
 
   /* حفظ تفضيل السرعة. */
   useEffect(() => {
@@ -349,8 +297,10 @@ export function QuranView({
   }, [online, downloading, cachedCount, offline]);
 
   const saveBookmark = () => {
-    const current = pages[safePage]?.[0];
-    const record: BookmarkRecord = { surah: surah.number, ayah: current?.number ?? 1, at: Date.now() };
+    // العلامة على أوّل آية ظاهرة أعلى مساحة القراءة.
+    const element = scrollRef.current;
+    const current = visibleAyahNumber(element);
+    const record: BookmarkRecord = { surah: surah.number, ayah: current ?? 1, at: Date.now() };
     try {
       window.localStorage.setItem(BOOKMARK_KEY, JSON.stringify(record));
     } catch {
@@ -370,12 +320,18 @@ export function QuranView({
     toast.info("لا موضع محفوظ بعد — احفظ مكانك بزر العلامة.");
   };
 
+  /* عند اكتمال تحميل السورة ووجود علامة معلّقة: ننزل حتى الآية المحفوظة. */
   useEffect(() => {
-    if (pendingBookmark === null || loading || pages.length === 0) return;
-    const found = pages.findIndex((page) => page.some((ayah) => ayah.number >= pendingBookmark));
-    setPageIndex(found === -1 ? 0 : found);
+    if (pendingBookmark === null || loading || !ayahs || ayahs.length === 0) return;
+    const element = scrollRef.current;
+    if (!element) return;
+    const node = element.querySelector<HTMLElement>(`[data-ayah="${pendingBookmark}"]`);
+    if (node) {
+      element.scrollTop = Math.max(node.offsetTop - 12, 0);
+      toast.info(`استكمال من الآية ${arabicNumber(pendingBookmark)}`);
+    }
     setPendingBookmark(null);
-  }, [pendingBookmark, loading, pages]);
+  }, [pendingBookmark, loading, ayahs]);
 
   const formatAyahMessage = (ayah: Ayah) =>
     `﴿${ayah.text}﴾\n\n[سورة ${surah.name} — الآية ${toArabicDigits(ayah.number)}]\n\n«وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ» — من تطبيق عود`;
@@ -420,8 +376,7 @@ export function QuranView({
         <div className="min-w-0 flex-1 text-center">
           <p className="truncate text-sm font-bold">سورة {surah.name}</p>
           <p className="text-[10px] text-muted-foreground">
-            {surah.type} • {arabicNumber(surah.ayahs)} آية •{" "}
-            {arabicNumber(safePage + 1)}/{arabicNumber(pages.length)}
+            {surah.type} • {arabicNumber(surah.ayahs)} آية
           </p>
         </div>
 
@@ -430,8 +385,9 @@ export function QuranView({
             type="button"
             aria-label="تصغير الخط"
             onClick={() => {
-              const index = QURAN_FONT_SIZES.findIndex((size) => size >= fontScale);
-              onFontScaleChange(QURAN_FONT_SIZES[Math.max(index - 1, 0)]);
+              const sizes = [1.05, 1.2, 1.35, 1.55, 1.8, 2.05];
+              const index = sizes.findIndex((size) => size >= fontScale);
+              onFontScaleChange(sizes[Math.max(index - 1, 0)]);
             }}
             className="btn-edge flex size-8 items-center justify-center rounded-xl"
           >
@@ -441,10 +397,9 @@ export function QuranView({
             type="button"
             aria-label="تكبير الخط"
             onClick={() => {
-              const index = QURAN_FONT_SIZES.findIndex((size) => size > fontScale);
-              onFontScaleChange(
-                QURAN_FONT_SIZES[index === -1 ? QURAN_FONT_SIZES.length - 1 : index],
-              );
+              const sizes = [1.05, 1.2, 1.35, 1.55, 1.8, 2.05];
+              const index = sizes.findIndex((size) => size > fontScale);
+              onFontScaleChange(sizes[index === -1 ? sizes.length - 1 : index]);
             }}
             className="btn-edge flex size-8 items-center justify-center rounded-xl"
           >
@@ -453,7 +408,7 @@ export function QuranView({
         </div>
       </div>
 
-      {/* المصحف: مساحة تمرير مستقلة ليتمكّن التمرير التلقائي من تحريك النص */}
+      {/* النص: مساحة تمرير مستقلة آية-آية، والنزول التلقائي يحرّكها */}
       <div
         ref={scrollRef}
         className="mushaf-scroll h-[58dvh] min-h-[20rem] overflow-y-auto overscroll-contain rounded-3xl pb-2"
@@ -476,33 +431,26 @@ export function QuranView({
               حاول مرة أخرى
             </Button>
           </GlassCard>
-        ) : mushafMode ? (
-          <MushafPage
-            surah={surah}
-            ayahs={pages[safePage] ?? []}
-            pageIndex={safePage}
-            totalPages={pages.length}
-            fontScale={fontScale}
-            showBasmala={split.basmalaShown}
-            onSelectAyah={setSelectedAyah}
-          />
         ) : (
-          <GlassCard className="space-y-2.5 p-3.5">
+          <GlassCard className="space-y-2 p-3.5">
             {surah.number !== 1 && surah.number !== 9 && split.basmalaShown ? (
-              <p className="quran-text text-center text-base text-primary">{BASMALA}</p>
+              <p className="quran-text pb-1 text-center text-base text-primary">{BASMALA}</p>
             ) : null}
             {split.ayahs.map((ayah) => (
-              <div key={ayah.number} className="rounded-2xl bg-white/60 p-3">
-                <p
-                  className="quran-text leading-[2.2]"
-                  style={{ fontSize: `${fontScale}rem` }}
-                >
+              <button
+                key={ayah.number}
+                type="button"
+                data-ayah={ayah.number}
+                onClick={() => setSelectedAyah(ayah)}
+                className="block w-full rounded-2xl bg-white/60 p-3 text-right transition-colors hover:bg-white/85"
+              >
+                <p className="quran-text leading-[2.2]" style={{ fontSize: `${fontScale}rem` }}>
                   {ayah.text}
                   <span className="mr-2 align-middle text-[0.7em] text-primary/70">
                     ﴿{toArabicDigits(ayah.number)}﴾
                   </span>
                 </p>
-              </div>
+              </button>
             ))}
           </GlassCard>
         )}
@@ -521,13 +469,6 @@ export function QuranView({
         </span>
         <span>• الورد: {WIRD_LABEL[profile.quranAmount] ?? "—"}</span>
         {reachedEnd ? <span className="text-primary">بلغت آخر المصحف</span> : null}
-        <button
-          type="button"
-          onClick={() => onMushafModeChange(!mushafMode)}
-          className="mr-auto font-medium text-primary underline-offset-4 hover:underline"
-        >
-          {mushafMode ? "عرض آية بآية" : "عرض صفحات المصحف"}
-        </button>
       </div>
 
       {downloading ? (
@@ -583,22 +524,28 @@ export function QuranView({
           </div>
         ) : null}
         <div className="glass-strong mx-auto flex w-full max-w-md items-center gap-0.5 rounded-3xl border border-white/80 p-1.5 shadow-xl shadow-sky-900/10">
-          <ToolButton onClick={goPrev} label="السابق">
-            <StepBack className="size-[18px]" />
+          <ToolButton
+            onClick={() => {
+              const element = scrollRef.current;
+              if (element) element.scrollBy({ top: -element.clientHeight * 0.8, behavior: "smooth" });
+            }}
+            label="أعلى"
+          >
+            <ChevronUp className="size-[18px]" />
           </ToolButton>
-          <ToolButton onClick={goNext} label="التالي">
-            <StepForward className="size-[18px]" />
+          <ToolButton
+            onClick={() => {
+              const element = scrollRef.current;
+              if (element) element.scrollBy({ top: element.clientHeight * 0.8, behavior: "smooth" });
+            }}
+            label="أسفل"
+          >
+            <ChevronDown className="size-[18px]" />
           </ToolButton>
 
           <ToolButton
-            onClick={() => {
-              setAutoScroll((value) => {
-                // التمرير التلقائي يعمل على صفحات المصحف، فنعرض الصفحات عند تفعيله.
-                if (!value) onMushafModeChange(true);
-                return !value;
-              });
-            }}
-            label={autoScroll ? "إيقاف" : "تمرير تلقائي"}
+            onClick={() => setAutoScroll((value) => !value)}
+            label={autoScroll ? "إيقاف" : "نزول تلقائي"}
             active={autoScroll}
           >
             {autoScroll ? <Pause className="size-[18px]" /> : <Play className="size-[18px]" />}
@@ -649,7 +596,6 @@ export function QuranView({
                 type="button"
                 onClick={() => {
                   setSurahNumber(item.number);
-                  setPageIndex(0);
                   setIndexOpen(false);
                 }}
                 className={cn(
@@ -748,6 +694,21 @@ export function QuranView({
       </Dialog>
     </div>
   );
+}
+
+/** يحدّد رقم أول آية ظاهرة أعلى مساحة القراءة (للعلامة). */
+function visibleAyahNumber(element: HTMLDivElement | null): number | null {
+  if (!element) return null;
+  const nodes = element.querySelectorAll<HTMLElement>("[data-ayah]");
+  const top = element.getBoundingClientRect().top;
+  for (const node of nodes) {
+    const rect = node.getBoundingClientRect();
+    if (rect.bottom >= top) {
+      const value = Number(node.dataset.ayah);
+      return Number.isFinite(value) ? value : null;
+    }
+  }
+  return null;
 }
 
 /** زر دائري صغير داخل النوافذ لتقليل التكرار. */
