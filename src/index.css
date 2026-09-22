@@ -168,6 +168,64 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
   }
 
+  /* ——— بطاقات صغيرة متجاورة وأزرار بحواف بارزة وواضحة ——— */
+  .tile-edge {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.66) 100%
+    );
+    border: 1px solid oklch(0.87 0.02 250);
+    box-shadow:
+      0 2px 0 0 oklch(0.92 0.014 250),
+      0 14px 26px -20px oklch(0.42 0.06 255 / 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  .btn-edge {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.8));
+    border: 1px solid oklch(0.84 0.025 252);
+    box-shadow:
+      0 2px 0 0 oklch(0.9 0.02 252),
+      0 12px 22px -16px oklch(0.42 0.06 255 / 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.98);
+    transition: transform 140ms ease, box-shadow 160ms ease, background 160ms ease;
+  }
+  .btn-edge:hover:not(:disabled) {
+    background: #fff;
+    transform: translateY(-1px);
+  }
+  .btn-edge:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow:
+      0 1px 0 0 oklch(0.9 0.02 252),
+      0 6px 12px -12px oklch(0.42 0.06 255 / 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  }
+
+  /* شريط أفقي من بطاقات صغيرة — بلا شريط تمرير ظاهر، وبمحاذاة انزلاقية. */
+  .rail {
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.15rem;
+  }
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+  .rail > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+  }
+
+  /* حركة خفيفة للأيقونات — تُلغى لمن يفضّل تقليل الحركة. */
+  .float-soft {
+    animation: float-soft 5s ease-in-out infinite;
+  }
+
   /* Inner translucent tile used inside glass panels. */
   .glass-tile {
     background: linear-gradient(
@@ -227,6 +285,20 @@
   .ruqaa {
     font-family: "Aref Ruqaa", "Amiri", "Scheherazade New", serif;
     line-height: 1.9;
+  }
+
+  /* مساحة تمرير المصحف: شريط تمرير رفيع لا يشوّش النص. */
+  .mushaf-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 140, 180, 0.35) transparent;
+    scroll-behavior: auto;
+  }
+  .mushaf-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+  .mushaf-scroll::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: rgba(120, 140, 180, 0.35);
   }
 
   /* ——— صفحة المصحف: ورق كريمي وإطار مذهّب هادئ يشبه المصحف المطبوع ——— */
@@ -387,6 +459,25 @@
       justify-content: center;
       text-align: center;
     }
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-soft {
+    animation: none;
+  }
+  .glass-hover:hover {
+    transform: none;
   }
 }
 

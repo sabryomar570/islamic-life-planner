@@ -32,24 +32,18 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // إجابات أسئلة «نظام حياتك» (١٥ سؤالًا) — أساس خطّة اليوم.
+    // إجابات أسئلة البداية (٧ أسئلة) — كل إجابة منها تُغيّر سلوكًا فعليًا.
     profiles: defineTable({
       userId: v.id("users"),
       wakeTime: v.string(),
       sleepTime: v.string(),
       prayerCommitment: v.string(),
       mostMissedPrayer: v.string(),
-      wantsFajrReminder: v.string(),
-      quranFrequency: v.string(),
       quranAmount: v.string(),
-      workStart: v.string(),
-      workEnd: v.string(),
-      exerciseFrequency: v.string(),
-      exerciseTime: v.string(),
-      familyTime: v.string(),
-      distraction: v.string(),
       mainGoal: v.string(),
-      city: v.string(),
+      startingRitual: v.string(),
+      // المدينة المستنتجة من المنطقة الزمنية أو المُعدّل عليها من الإعدادات.
+      city: v.optional(v.string()),
       // إحداثيات اختيارية عند السماح بالموقع — لحساب مواقيت أدق من اسم المدينة.
       latitude: v.optional(v.number()),
       longitude: v.optional(v.number()),

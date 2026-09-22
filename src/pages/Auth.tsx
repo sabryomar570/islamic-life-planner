@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/input-otp";
 
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, Loader2, Mail, Sparkles, UserX } from "lucide-react";
+import { ArrowRight, Loader2, Mail, UserX } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -78,9 +78,6 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     try {
       const formData = new FormData(event.currentTarget);
       await signIn("email-otp", formData);
-
-      console.log("signed in");
-
       navigate(redirect);
     } catch (error) {
       console.error("OTP verification error:", error);
@@ -96,14 +93,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      console.log("Attempting anonymous sign in...");
       await signIn("anonymous");
-      console.log("Anonymous sign in successful");
       navigate(redirect);
     } catch (error) {
       console.error("Guest login error:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      setError(`Failed to sign in as guest: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(`تعذّر الدخول كزائر: ${error instanceof Error ? error.message : "خطأ غير معروف"}`);
       setIsLoading(false);
     }
   };
@@ -123,15 +117,15 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     <button
                       type="button"
                       onClick={() => navigate("/")}
-                      className="mb-4 mt-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/90 to-indigo-400/90 text-white shadow-lg shadow-sky-500/25"
-                      aria-label="سكينة"
+                      className="mb-4 mt-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/90 to-indigo-400/90 text-lg font-bold text-white shadow-lg shadow-sky-500/25"
+                      aria-label="عود"
                     >
-                      <Sparkles className="size-6" />
+                      عود
                     </button>
                   </div>
-                <CardTitle className="text-xl">ابدأ رحلتك مع سكينة</CardTitle>
+                <CardTitle className="text-xl">الدخول إلى عود</CardTitle>
                 <CardDescription>
-                  أدخل بريدك الإلكتروني للدخول أو إنشاء حساب جديد
+                  أدخل بريدك ليصلك رمز التحقق، ويُحفظ دخولك على هذا الجهاز.
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleEmailSubmit}>
@@ -276,16 +270,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </>
           )}
 
-          <div className="py-4 px-6 text-xs text-center text-muted-foreground border-t border-white/60 bg-white/40">
-            الدخول آمن عبر{" "}
-            <a
-              href="https://freebuff.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-primary transition-colors"
-            >
-              freebuff.com
-            </a>
+          <div className="border-t border-white/60 bg-white/40 px-6 py-3 text-center text-[11px] text-muted-foreground">
+            الجلسة تبقى محفوظة على جهازك، ولا نطلب بريدك مرة أخرى إلا إذا خرجت بنفسك.
           </div>
         </Card>
         </div>

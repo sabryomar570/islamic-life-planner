@@ -47,8 +47,8 @@ export function GlassPill({
       className={cn(
         "rounded-full px-3.5 py-1.5 text-xs font-medium transition-all",
         active
-          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
-          : "glass-tile text-foreground/75 hover:text-foreground",
+          ? "border border-primary/25 bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+          : "btn-edge text-foreground/80 hover:text-foreground",
         className,
       )}
       {...props}

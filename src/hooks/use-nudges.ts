@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hijriProgressLabel, isFriday, isLastTenNights, isRamadan } from "@/lib/hijri";
 import { PRAYERS, type Timings } from "@/lib/prayers";
+import { needsGentlePrayerReminders } from "@/data/questions";
 import { dateKey, formatArabicTime, toMinutes } from "@/lib/time";
 
 export type NudgeId =
@@ -109,17 +110,18 @@ export function markViewSeen(view: string) {
 }
 
 export const VIEW_LABELS: Record<string, string> = {
-  today: "ذكر اليوم",
+  today: "الرئيسية",
   prayers: "صلاتي",
-  plan: "خطّة يومي",
   hadith: "الأحاديث",
   quran: "المصحف",
+  duas: "الأدعية",
+  tasbih: "المسبحة",
   poetry: "الأبيات",
   occasions: "المناسبات",
   settings: "الإعدادات",
 };
 
-const UNVISITED_VIEWS = ["quran", "hadith", "poetry", "occasions", "plan", "prayers"];
+const UNVISITED_VIEWS = ["quran", "hadith", "duas", "poetry", "occasions", "prayers"];
 const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
 
 export type NudgeInput = {
@@ -127,6 +129,10 @@ export type NudgeInput = {
   prayers: Record<string, string>;
   timings: Timings;
   sleepTime?: string;
+  /** أكثر صلاة تفوت المستخدم — نرفع أولوية تذكيرها. */
+  mostMissedPrayer?: string;
+  /** من يبدأ الالتزام يحتاج تنبيهًا أوضح. */
+  prayerCommitment?: string;
   permissionState: NotificationPermission | "unsupported";
   seenViews: Record<string, number>;
   now: Date;
@@ -134,7 +140,18 @@ export type NudgeInput = {
 
 /** يختار التنبيه الأنسب الآن حسب وقت اليوم وحالة المستخدم. */
 export function pickNudges(input: NudgeInput): Nudge[] {
-  const { adhkarDone, prayers, timings, sleepTime, permissionState, seenViews, now } = input;
+  const {
+    adhkarDone,
+    prayers,
+    timings,
+    sleepTime,
+    mostMissedPrayer,
+    prayerCommitment,
+    permissionState,
+    seenViews,
+    now,
+  } = input;
+  const gentle = prayerCommitment ? needsGentlePrayerReminders(prayerCommitment) : false;
   const hour = now.getHours();
   const minutes = now.getHours() * 60 + now.getMinutes();
   const candidates: Nudge[] = [];
@@ -211,12 +228,17 @@ export function pickNudges(input: NudgeInput): Nudge[] {
   if (lastPassed) {
     const passedMinutes = minutes - toMinutes(timings[lastPassed.key]);
     if (passedMinutes >= 5 && passedMinutes <= 240 && !prayers[lastPassed.key]) {
+      const isMissedOne = mostMissedPrayer === lastPassed.key;
       candidates.push({
         id: "prayer_log",
-        priority: 88,
+        priority: isMissedOne ? 96 : gentle ? 91 : 88,
         eyebrow: `${formatArabicTime(timings[lastPassed.key])} • اليوم`,
-        title: `هل صلّيت ${lastPassed.name}؟`,
-        body: "سجّل صلاتك بنقرة؛ يبقى سجل أسبوعك صادقًا وتعرف أثرك.",
+        title: isMissedOne
+          ? `${lastPassed.name} — أكثر ما تفوتك؛ سجّلها الآن`
+          : `هل صلّيت ${lastPassed.name}؟`,
+        body: isMissedOne
+          ? "ابدأ بها اليوم ولا تؤجّلها؛ وسجّلها بصدق لترى أثرك."
+          : "سجّل صلاتك بنقرة؛ يبقى سجلّ أسبوعك صادقًا وتعرف أثرك.",
         primary: "نعم، سجّلها",
         secondary: "ليست الآن",
         payload: { prayer: lastPassed.key },

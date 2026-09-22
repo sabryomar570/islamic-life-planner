@@ -1,16 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="سكينة">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="عود">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8ccbff"/>
-      <stop offset="0.55" stop-color="#2f7bf6"/>
-      <stop offset="1" stop-color="#3b49d8"/>
+    <linearGradient id="mbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fbff" />
+      <stop offset="1" stop-color="#dce9fb" />
+    </linearGradient>
+    <linearGradient id="mink" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#2f6fe4" />
+      <stop offset="1" stop-color="#1450b8" />
+    </linearGradient>
+    <linearGradient id="marc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7fc4f2" />
+      <stop offset="1" stop-color="#3b7ce0" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#bg)"/>
-  <g transform="translate(256 254) scale(0.62) translate(-256 -254)">
-    <path d="M296 118a92 92 0 1 0 0 184 116 116 0 1 1 0-184Z" fill="#ffffff"/>
-    <circle cx="352" cy="150" r="18" fill="#ffe6a7"/>
-    <path d="M188 322c34-18 102-18 136 0 12 7 10 20-6 20H194c-16 0-18-13-6-20Z" fill="#ffffff" opacity="0.9"/>
-    <path d="M188 372c34-14 102-14 136 0" stroke="#ffffff" stroke-opacity="0.7" stroke-width="16" stroke-linecap="round" fill="none"/>
+
+  <rect x="0" y="0" width="512" height="512" fill="url(#mbg)" />
+
+  <g transform="translate(256 256) scale(0.72) translate(-256 -256)">
+    <path
+      d="M256 96c-64 42-104 92-104 152 0 66 46 112 104 112s104-46 104-112c0-60-40-110-104-152z"
+      fill="none"
+      stroke="url(#marc)"
+      stroke-width="16"
+      stroke-linejoin="round"
+      opacity="0.42"
+    />
+    <g transform="rotate(-18 256 268)">
+      <path
+        d="M256 132c26 46 40 88 40 128 0 44-18 76-40 76s-40-32-40-76c0-40 14-82 40-128z"
+        fill="url(#mink)"
+      />
+      <path d="M226 236h60M226 272h60" stroke="#f7fbff" stroke-width="10" stroke-linecap="round" opacity="0.85" />
+    </g>
+    <circle cx="256" cy="380" r="14" fill="url(#marc)" opacity="0.7" />
   </g>
 </svg>

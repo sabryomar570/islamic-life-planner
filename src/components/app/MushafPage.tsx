@@ -16,8 +16,6 @@ export function MushafPage({
   totalPages,
   fontScale,
   showBasmala,
-  onPrev,
-  onNext,
   onSelectAyah,
   className,
 }: {
@@ -27,8 +25,6 @@ export function MushafPage({
   totalPages: number;
   fontScale: number;
   showBasmala: boolean;
-  onPrev: () => void;
-  onNext: () => void;
   onSelectAyah?: (ayah: Ayah) => void;
   className?: string;
 }) {
@@ -79,22 +75,12 @@ export function MushafPage({
             </p>
           </div>
 
+          {/* رأس/تذييل الصفحة: رقم الصفحة ومدى الآيات فقط — التنقّل في شريط التحكم */}
           <footer className="mushaf-footer">
-            <button type="button" onClick={onPrev} disabled={pageIndex === 0} className="mushaf-nav">
-              الصفحة السابقة
-            </button>
             <span className="mushaf-page-number">
               {pageLabel(pageIndex, totalPages)}
               {first && last ? ` • ${ayahRangeLabel(first.number, last.number)}` : ""}
             </span>
-            <button
-              type="button"
-              onClick={onNext}
-              disabled={pageIndex >= totalPages - 1}
-              className="mushaf-nav"
-            >
-              الصفحة التالية
-            </button>
           </footer>
         </div>
       </div>

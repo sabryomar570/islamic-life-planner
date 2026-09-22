@@ -18,9 +18,9 @@ export default function NotFound() {
         </span>
         <h1 className="mt-5 text-2xl font-bold tracking-tight">الصفحة غير موجودة</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          الرابط الذي تبحث عنه غير متاح. عُد إلى الصفحة الرئيسية لتكمل يومك مع سكينة.
+          الرابط الذي تبحث عنه غير متاح. عُد إلى الصفحة الرئيسية.
         </p>
-        <Button asChild className="mt-6 rounded-full">
+        <Button asChild className="btn-edge mt-6 rounded-full">
           <Link to="/">
             <Home className="size-4" />
             الصفحة الرئيسية

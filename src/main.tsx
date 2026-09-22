@@ -2,6 +2,7 @@ import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
+import { authStorage } from "@/lib/auth-storage";
 import { registerServiceWorker } from "@/lib/pwa";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -121,7 +122,8 @@ createRoot(document.getElementById("root")!).render(
       <ToolbarErrorBoundary>
         <VlyToolbar />
       </ToolbarErrorBoundary>
-      <ConvexAuthProvider client={convex}>
+      {/* تخزين صريح دائم للجلسة: يمنع نسيان تسجيل الدخول عند إعادة فتح التطبيق. */}
+      <ConvexAuthProvider client={convex} storage={authStorage} storageNamespace="oud-app">
         <BrowserRouter>
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>

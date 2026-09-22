@@ -162,7 +162,7 @@ export const ADHKAR_GROUPS: AdhkarGroup[] = [
   {
     id: "evening",
     title: "أذكار المساء",
-    subtitle: "اختم نهارك بسكينة، واذكر الله قبل أن تنام",
+    subtitle: "تُقال بعد المغرب وقبل النوم",
     when: "بعد العصر حتى بداية الليل",
     accent: "from-indigo-400/70 to-violet-300/60",
     items: [

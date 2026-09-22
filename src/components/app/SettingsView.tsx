@@ -32,6 +32,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 type GeoProps = {
@@ -91,7 +92,7 @@ export function SettingsView({
   onClearQuran,
   onResetNudges,
   onExportData,
-  onEditCity,
+  onSetCity,
   onSignOut,
   city,
 }: {
@@ -114,10 +115,16 @@ export function SettingsView({
   onClearQuran: () => void;
   onResetNudges: () => void;
   onExportData: () => void;
-  onEditCity: () => void;
+  /** حفظ مدينة يدوية (بلا سؤال في البداية). */
+  onSetCity: (value: string) => void;
   onSignOut: () => void;
   city: string;
 }) {
+  const [cityDraft, setCityDraft] = useState(city);
+
+  useEffect(() => {
+    setCityDraft(city);
+  }, [city]);
   const permissionLabel =
     permission === "granted"
       ? "مفعّلة"
@@ -351,12 +358,24 @@ export function SettingsView({
         <div className="mt-5 space-y-3">
           <Row
             title="مدينتك الحالية"
-            hint="نستخدمها إن لم تسمح بالموقع. تغييرها من إجابات الأسئلة الخمسة عشر."
+            hint="استنتجناها من منطقتك الزمنية. عدّلها إن كانت غير دقيقة."
           >
             <div className="flex items-center gap-2">
-              <span className="glass-tile rounded-full px-3 py-1.5 text-xs">{city}</span>
-              <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={onEditCity}>
-                تعديل
+              <Input
+                value={cityDraft}
+                onChange={(event) => setCityDraft(event.target.value)}
+                className="glass-tile h-9 w-40 rounded-full text-xs"
+                aria-label="المدينة"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="btn-edge rounded-full"
+                disabled={cityDraft.trim().length < 2 || cityDraft.trim() === city}
+                onClick={() => onSetCity(cityDraft.trim())}
+              >
+                حفظ
               </Button>
             </div>
           </Row>
@@ -425,7 +444,7 @@ export function SettingsView({
         <SectionTitle
           icon={<Smartphone className="size-5" />}
           title="التطبيق والعمل دون إنترنت"
-          hint="ثبّت سكينة على شاشتك، ونزّل المصحف كاملًا ليُقرأ دون شبكة"
+          hint="ثبّت عود على شاشتك، ونزّل المصحف كاملًا ليُقرأ دون شبكة"
           action={
             <Badge variant="secondary" className="rounded-full gap-1">
               {online ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
@@ -439,7 +458,7 @@ export function SettingsView({
             title="تثبيت التطبيق"
             hint={
               install.installed
-                ? "سكينة مثبّتة على جهازك بالفعل."
+                ? "عود مثبّت على جهازك بالفعل."
                 : install.isIos
                   ? "على آيفون: زر المشاركة ← «إضافة إلى الشاشة الرئيسية»."
                   : "يثبَّت كتطبيق مستقل بأيقونته الخاصة، ويعمل حتى بلا شبكة."

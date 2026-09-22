@@ -17,7 +17,11 @@ import {
 import { isOddNightOfLastTen, isRamadan } from "@/lib/hijri";
 import { PRAYERS, currentPrayer, nextPrayer, type Timings } from "@/lib/prayers";
 import { dateKey, formatDuration, toMinutes } from "@/lib/time";
+import { needsGentlePrayerReminders } from "@/data/questions";
 import type { Preferences } from "@/hooks/use-preferences";
+
+/** أقل صلاة تفوت المستخدم — نُشدّد تنبيهها. */
+const MISSED_LEAD_MINUTES = 25;
 
 export type ReminderEvent = {
   id: string;
@@ -68,10 +72,24 @@ export function buildReminderSchedule(input: {
   timings: Timings;
   prefs: Preferences;
   sleepTime?: string;
+  mostMissedPrayer?: string;
+  prayerCommitment?: string;
   prayers: Record<string, string>;
   adhkarDone: string[];
 }): ReminderEvent[] {
-  const { now, timings, prefs, sleepTime, adhkarDone } = input;
+  const {
+    now,
+    timings,
+    prefs,
+    sleepTime,
+    mostMissedPrayer,
+    prayerCommitment,
+    prayers,
+    adhkarDone,
+  } = input;
+  const gentle = prayerCommitment ? needsGentlePrayerReminders(prayerCommitment) : false;
+  // من يصلّي بانتظام لا يحتاج تنبيهًا قبل الوقت؛ ومن يتأخر أو يبدأ يحتاجه.
+  const wantsLead = prayerCommitment !== "always" && prefs.leadMinutes > 0;
   const day = dateKey(now);
   const events: ReminderEvent[] = [];
 
@@ -86,13 +104,37 @@ export function buildReminderSchedule(input: {
         body: `${prayer.hint} • ﴿وَأَقِمِ الصَّلَاةَ لِذِكْرِي﴾`,
         url: "/dashboard?view=prayers",
       });
-      if (prefs.leadMinutes > 0) {
+      if (wantsLead) {
         events.push({
           id: `${day}:lead:${prayer.key}`,
           at: new Date(at.getTime() - prefs.leadMinutes * 60_000),
           kind: "lead",
           title: `باقٍ ${prefs.leadMinutes} دقيقة على ${prayer.name}`,
           body: "توضّأ وتهيّأ؛ أفضل ما تكون حين تُقبل على الله بقلب فارغ.",
+          url: "/dashboard?view=prayers",
+        });
+      }
+
+      // الصلاة التي تفوت أكثر: تنبيه أبكر وأوضح.
+      if (mostMissedPrayer === prayer.key) {
+        events.push({
+          id: `${day}:missed:${prayer.key}`,
+          at: new Date(at.getTime() - MISSED_LEAD_MINUTES * 60_000),
+          kind: "lead",
+          title: `باقٍ ${MISSED_LEAD_MINUTES} دقيقة على ${prayer.name} — وهي أكثر ما تفوتك`,
+          body: "اجعلها موعدًا ثابتًا: توضّأ الآن، ولا تؤجّلها.",
+          url: "/dashboard?view=prayers",
+        });
+      }
+
+      // من يبدأ الالتزام أو يصلّي أحيانًا: تذكير بعد الوقت للاستدراك.
+      if (gentle && !prayers[prayer.key]) {
+        events.push({
+          id: `${day}:after:${prayer.key}`,
+          at: new Date(at.getTime() + MISSED_LEAD_MINUTES * 60_000),
+          kind: "lead",
+          title: `هل صلّيت ${prayer.name}؟`,
+          body: "إن كنت نسيت فالوقت باقٍ؛ قُم الآن وسجّلها.",
           url: "/dashboard?view=prayers",
         });
       }
@@ -191,10 +233,13 @@ export function useReminderCenter(options: {
   timings: Timings;
   prefs: Preferences;
   sleepTime?: string;
+  mostMissedPrayer?: string;
+  prayerCommitment?: string;
   prayers: Record<string, string>;
   adhkarDone: string[];
 }) {
-  const { timings, prefs, sleepTime, prayers, adhkarDone } = options;
+  const { timings, prefs, sleepTime, mostMissedPrayer, prayerCommitment, prayers, adhkarDone } =
+    options;
   const [now, setNow] = useState(() => new Date());
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(() =>
     notificationPermission(),
@@ -207,7 +252,8 @@ export function useReminderCenter(options: {
   }, []);
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 20_000);
+    // كل دقيقة تكفي للتذكيرات، وتُقلّل إعادة تصيير الصفحة (سبب رئيس للتأخّر).
+    const id = window.setInterval(() => setNow(new Date()), 60_000);
     const onVisible = () => {
       if (document.visibilityState === "visible") setNow(new Date());
     };
@@ -225,10 +271,12 @@ export function useReminderCenter(options: {
         timings,
         prefs,
         sleepTime,
+        mostMissedPrayer,
+        prayerCommitment,
         prayers,
         adhkarDone,
       }),
-    [now, timings, prefs, sleepTime, prayers, adhkarDone],
+    [now, timings, prefs, sleepTime, mostMissedPrayer, prayerCommitment, prayers, adhkarDone],
   );
 
   const requestPermission = useCallback(async () => {
@@ -237,9 +285,9 @@ export function useReminderCenter(options: {
     if (result === "granted") {
       toast.success("تم تفعيل الإشعارات، سيصلك التذكير في وقته.");
       void showNotification({
-        title: "سكينة",
+        title: "عود",
         body: "الإشعارات مفعّلة. هذا أول تذكير لك.",
-        tag: "sakinah-welcome",
+        tag: "oud-welcome",
       });
     } else if (result === "denied") {
       toast.error("المتصفح رفض الإشعارات. يمكنك تفعيلها من إعدادات الموقع.");
@@ -320,9 +368,9 @@ export function useReminderCenter(options: {
     vibrate([40, 60, 40]);
     toast("هذا تذكير تجريبي", { description: "سيصلك مثل هذا في وقت الصلاة ووقت وردك." });
     void showNotification({
-      title: "تذكير تجريبي من سكينة",
+      title: "تذكير تجريبي من عود",
       body: "إن وصلتك هذه الرسالة فالإشعارات تعمل بشكل صحيح.",
-      tag: "sakinah-test",
+      tag: "oud-test",
     });
   }, [requestPermission]);
 

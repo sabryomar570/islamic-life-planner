@@ -28,7 +28,7 @@ type Filter = DuaSectionId | "all" | "saved";
 /** نص رسالة المشاركة: منسّق وجميل بمصدر الدعاء. */
 export function formatDuaMessage(dua: Dua) {
   const ref = dua.source === "قرآن كريم" ? `﴿${dua.text}﴾` : `«${dua.text}»`;
-  return `${ref}\n\n${dua.source} — ${dua.reference}\n\n[from سكينة 🤍]`;
+  return `${ref}\n\n${dua.source} — ${dua.reference}\n\n[من تطبيق عود]`;
 }
 
 async function shareText(title: string, message: string): Promise<"shared" | "copied" | "failed"> {

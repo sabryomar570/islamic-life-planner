@@ -1,10 +1,10 @@
-/* سكينة — Service Worker
+/* عود — Service Worker
  * - قشرة التطبيق (App Shell) تُجلب من الشبكة أولًا ثم من الحافظة عند انقطاعها.
  * - نصوص القرآن ومواقيت الصلاة والخطوط تُحفظ من أول نجاح لتُقرأ دون إنترنت.
  * - يدعم رسائل: CACHE_URLS (تنزيل مسبق)، NOTIFY (إشعار)، SKIP_WAITING، CLEAR_CACHES.
  */
 
-const VERSION = "sakinah-2026-09-b";
+const VERSION = "oud-2026-09-c";
 const SHELL_CACHE = `${VERSION}:shell`;
 const RUNTIME_CACHE = `${VERSION}:runtime`;
 const API_CACHE = `${VERSION}:api`;
@@ -116,7 +116,7 @@ async function handleNavigation(request) {
       (await cache.match("/"));
     if (cached) return cached;
     return new Response(
-      `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>سكينة</title></head><body style="font-family:sans-serif;padding:2rem;text-align:center"><h1>لا يوجد اتصال بالإنترنت</h1><p>افتح التطبيق مرة واحدة مع اتصال لتُحفظ كل صفحاته، ثم يعمل بعدها دون إنترنت.</p></body></html>`,
+      `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>عود</title></head><body style="font-family:sans-serif;padding:2rem;text-align:center"><h1>لا يوجد اتصال بالإنترنت</h1><p>افتح التطبيق مرة واحدة مع اتصال لتُحفظ كل صفحاته، ثم يعمل بعدها دون إنترنت.</p></body></html>`,
       { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } },
     );
   }
@@ -195,9 +195,9 @@ self.addEventListener("message", (event) => {
   if (data.type === "NOTIFY") {
     const { title, body, tag, url } = data;
     event.waitUntil(
-      self.registration.showNotification(title || "سكينة", {
+      self.registration.showNotification(title || "عود", {
         body: body || "",
-        tag: tag || `sakinah-${Date.now()}`,
+        tag: tag || `oud-${Date.now()}`,
         lang: "ar",
         dir: "rtl",
         badge: "/icon.svg",

@@ -2,23 +2,15 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 
-/** الحقول الخمسة عشر المستخرجة من أسئلة «نظام حياتك». */
+/** الحقول السبعة المستخرجة من أسئلة البداية — كلٌّ منها يؤثر فعليًا في التطبيق. */
 export const answersValidator = v.object({
   wakeTime: v.string(),
   sleepTime: v.string(),
   prayerCommitment: v.string(),
   mostMissedPrayer: v.string(),
-  wantsFajrReminder: v.string(),
-  quranFrequency: v.string(),
   quranAmount: v.string(),
-  workStart: v.string(),
-  workEnd: v.string(),
-  exerciseFrequency: v.string(),
-  exerciseTime: v.string(),
-  familyTime: v.string(),
-  distraction: v.string(),
   mainGoal: v.string(),
-  city: v.string(),
+  startingRitual: v.string(),
 });
 
 /* ——— قوائم مغلقة: أي قيمة خارجها تُرفض في طبقة الخادم قبل وصولها لقاعدة البيانات. ——— */
@@ -89,34 +81,40 @@ export const getProfile = query({
 
 /** حفظ أو تحديث إجابات الأسئلة الخمسة عشر بعد التحقق من كل قيمة. */
 export const saveProfile = mutation({
-  args: { answers: answersValidator },
-  handler: async (ctx, { answers }) => {
+  args: {
+    answers: answersValidator,
+    /** المدينة المستنتجة من المنطقة الزمنية — لا يكتبها المستخدم يدويًا. */
+    location: v.optional(
+      v.object({ city: v.string(), label: v.optional(v.string()) }),
+    ),
+  },
+  handler: async (ctx, { answers, location }) => {
     const userId = await requireUserId(ctx);
 
     const safe = {
       wakeTime: assertTime(answers.wakeTime, "وقت الاستيقاظ"),
       sleepTime: assertTime(answers.sleepTime, "وقت النوم"),
-      workStart: assertTime(answers.workStart, "بداية العمل"),
-      workEnd: assertTime(answers.workEnd, "نهاية العمل"),
       prayerCommitment: cleanText(answers.prayerCommitment, 40),
       mostMissedPrayer: cleanText(answers.mostMissedPrayer, 40),
-      wantsFajrReminder: cleanText(answers.wantsFajrReminder, 40),
-      quranFrequency: cleanText(answers.quranFrequency, 40),
       quranAmount: cleanText(answers.quranAmount, 40),
-      exerciseFrequency: cleanText(answers.exerciseFrequency, 40),
-      exerciseTime: cleanText(answers.exerciseTime, 40),
-      familyTime: cleanText(answers.familyTime, 40),
-      distraction: cleanText(answers.distraction, 40),
       mainGoal: cleanText(answers.mainGoal, 40),
-      city: cleanText(answers.city, 80),
+      startingRitual: cleanText(answers.startingRitual, 40),
     };
+
+    const locationPatch: { city?: string; locationLabel?: string } = {};
+    if (location && location.city.trim().length > 0) {
+      locationPatch.city = cleanText(location.city, 80);
+      if (location.label && location.label.trim().length > 0) {
+        locationPatch.locationLabel = cleanText(location.label, 80);
+      }
+    }
 
     const existing = await ctx.db
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
 
-    const payload = { ...safe, userId, updatedAt: Date.now() };
+    const payload = { ...safe, ...locationPatch, userId, updatedAt: Date.now() };
     if (existing) {
       await ctx.db.patch(existing._id, payload);
       return existing._id;
@@ -131,6 +129,8 @@ export const setLocation = mutation({
     latitude: v.optional(v.number()),
     longitude: v.optional(v.number()),
     locationLabel: v.optional(v.string()),
+    /** مدينة نصية بديلة تُستخدم حين لا تتوفر إحداثيات. */
+    city: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -144,6 +144,7 @@ export const setLocation = mutation({
       latitude?: number;
       longitude?: number;
       locationLabel?: string;
+      city?: string;
     } = {};
 
     if (args.latitude !== undefined || args.longitude !== undefined) {
@@ -164,6 +165,10 @@ export const setLocation = mutation({
 
     if (args.locationLabel !== undefined) {
       patch.locationLabel = cleanText(args.locationLabel, 80);
+    }
+
+    if (args.city !== undefined) {
+      patch.city = cleanText(args.city, 80);
     }
 
     await ctx.db.patch(profile._id, patch);

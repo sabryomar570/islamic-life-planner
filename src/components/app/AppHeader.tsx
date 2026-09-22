@@ -10,7 +10,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
-  CalendarClock,
   CalendarHeart,
   CircleDot,
   Clock,
@@ -25,12 +24,11 @@ import {
   UserRound,
   WifiOff,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 export type DashView =
   | "today"
   | "prayers"
-  | "plan"
   | "quran"
   | "hadith"
   | "duas"
@@ -46,21 +44,20 @@ export type NavItem = {
   icon: typeof Sparkles;
 };
 
-/** كل الأقسام مرتّبة: العبادة اليومية أولًا، ثم المصحف، ثم المعرفة، ثم الأدوات. */
+/** كل الأقسام — بلا تكرار وبوصف قصير يوضّح ما فيه. */
 export const NAV_ITEMS: NavItem[] = [
-  { key: "today", label: "ذكر اليوم", description: "آية وذكر وحديث يخصّان اليوم", icon: Sparkles },
-  { key: "prayers", label: "صلاتي", description: "المواقيت والسجلّ والإحصاءات", icon: Clock },
-  { key: "plan", label: "خطّة يومي", description: "جدولك المبني على إجاباتك", icon: CalendarClock },
-  { key: "quran", label: "المصحف", description: "القرآن كاملًا بصفحات المصحف", icon: BookOpen },
-  { key: "hadith", label: "الأحاديث", description: "أبواب تحثّ القلب على الخشوع", icon: ScrollText },
-  { key: "duas", label: "الأدعية", description: "أدعية مأثورة لكل حاجة", icon: HeartHandshake },
-  { key: "tasbih", label: "المسبحة", description: "مسبحة بعدّاد واهتزاز", icon: CircleDot },
-  { key: "poetry", label: "الأبيات", description: "شعر حماسي يحفّز على الفعل", icon: Feather },
-  { key: "occasions", label: "المناسبات", description: "رمضان والعيد والأيام المباركة", icon: CalendarHeart },
-  { key: "settings", label: "الإعدادات", description: "التنبيهات والموقع والعمل دون إنترنت", icon: Settings },
+  { key: "today", label: "الرئيسية", description: "الصلاة القادمة وذكر اليوم", icon: Sparkles },
+  { key: "prayers", label: "صلاتي", description: "المواقيت، التسجيل، والإحصاءات", icon: Clock },
+  { key: "quran", label: "المصحف", description: "القرآن كاملًا ويعمل دون إنترنت", icon: BookOpen },
+  { key: "duas", label: "الأدعية", description: "أدعية قرآنية ونبوية بأبوابها", icon: HeartHandshake },
+  { key: "hadith", label: "الأحاديث", description: "أبواب بأسانيدها ورواتها", icon: ScrollText },
+  { key: "tasbih", label: "المسبحة", description: "عدّاد تسبيح محفوظ على جهازك", icon: CircleDot },
+  { key: "poetry", label: "الأبيات", description: "شعر عربي مختار", icon: Feather },
+  { key: "occasions", label: "المناسبات", description: "رمضان والأعياد والصيام", icon: CalendarHeart },
+  { key: "settings", label: "الإعدادات", description: "الإشعارات، المكان، والعمل دون إنترنت", icon: Settings },
 ];
 
-/** خمسة أزرار فقط في الشريط السفلي؛ بقية الأقسام داخل «المزيد». */
+/** خمسة أزرار في الشريط السفلي؛ بقية الأقسام داخل «المزيد». */
 const BOTTOM_NAV: { key: DashView; label: string; icon: typeof Sparkles }[] = [
   { key: "today", label: "الرئيسية", icon: Sparkles },
   { key: "quran", label: "المصحف", icon: BookOpen },
@@ -77,6 +74,8 @@ export function AppHeader({
   canInstall = false,
   onInstall,
   banner,
+  moreOpen,
+  onMoreOpenChange,
 }: {
   view: DashView;
   onViewChange: (view: DashView) => void;
@@ -86,34 +85,36 @@ export function AppHeader({
   canInstall?: boolean;
   onInstall?: () => void;
   banner?: ReactNode;
+  /** حالة نافذة «كل الأقسام» — مرفوعة للأعلى ليتمكّن زرّها في الرئيسية من فتحها. */
+  moreOpen: boolean;
+  onMoreOpenChange: (open: boolean) => void;
 }) {
-  const [moreOpen, setMoreOpen] = useState(false);
+  const setMoreOpen = onMoreOpenChange;
 
   const openView = (key: DashView) => {
     setMoreOpen(false);
     onViewChange(key);
   };
 
+  const iconButton =
+    "btn-edge flex size-9 items-center justify-center rounded-2xl";
+
   return (
     <>
-      {/* الشريط العلوي المختصر: قائمة — الشعار بالمنتصف — الحساب والإعدادات */}
       <header className="glass-strong sticky top-0 z-40 rounded-none border-x-0 border-t-0 border-b border-white/70">
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2.5 sm:px-6">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2 sm:px-6">
           <div className="flex items-center gap-1.5 justify-self-start">
             <button
               type="button"
               onClick={() => setMoreOpen(true)}
-              className="glass-tile flex size-10 items-center justify-center rounded-2xl transition-transform hover:scale-[1.03]"
+              className={iconButton}
               aria-label="كل الأقسام"
             >
-              <LayoutGrid className="size-5" />
+              <LayoutGrid className="size-4" />
             </button>
             {offline ? (
-              <span
-                className="glass-tile flex size-10 items-center justify-center rounded-2xl text-muted-foreground"
-                title="أنت دون إنترنت"
-              >
-                <WifiOff className="size-4" />
+              <span className={cn(iconButton, "text-amber-600")} title="أنت دون إنترنت">
+                <WifiOff className="size-3.5" />
               </span>
             ) : null}
           </div>
@@ -121,13 +122,10 @@ export function AppHeader({
           <button
             type="button"
             onClick={() => onViewChange("today")}
-            className="flex flex-col items-center leading-tight"
-            aria-label="سكينة — الرئيسية"
+            className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/90 to-indigo-400/90 text-lg font-bold text-white shadow-lg shadow-sky-500/25"
+            aria-label="عود — الرئيسية"
           >
-            <span className="text-lg font-bold tracking-tight">سكينة</span>
-            <span className="text-[10px] text-muted-foreground">
-              {offline ? "يعمل دون إنترنت" : "رفيق الالتزام"}
-            </span>
+            عود
           </button>
 
           <div className="flex items-center gap-1.5 justify-self-end">
@@ -135,7 +133,7 @@ export function AppHeader({
               <button
                 type="button"
                 onClick={onInstall}
-                className="glass-tile flex size-10 items-center justify-center rounded-2xl transition-transform hover:scale-[1.03]"
+                className={iconButton}
                 aria-label="تثبيت التطبيق"
               >
                 <Smartphone className="size-4" />
@@ -144,33 +142,26 @@ export function AppHeader({
             <button
               type="button"
               onClick={() => onViewChange("settings")}
-              className="glass-tile flex size-10 items-center justify-center rounded-2xl transition-transform hover:scale-[1.03]"
+              className={iconButton}
               aria-label="الإعدادات"
             >
               <Settings className="size-4" />
             </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="glass-tile flex size-10 items-center justify-center rounded-2xl transition-transform hover:scale-[1.03]"
-                  aria-label="الحساب"
-                >
+                <button type="button" className={iconButton} aria-label="الحساب">
                   <UserRound className="size-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="glass-strong w-48 rounded-2xl border-white/70 bg-white/85"
+                className="glass-strong w-48 rounded-2xl border-white/70 bg-white/90"
               >
                 <DropdownMenuLabel className="truncate text-xs">
-                  {userName ?? "مستخدم سكينة"}
+                  {userName ?? "حسابي"}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => openView("settings")}
-                  className="cursor-pointer gap-2"
-                >
+                <DropdownMenuItem onClick={() => openView("settings")} className="cursor-pointer gap-2">
                   <Settings className="size-4" />
                   الإعدادات
                 </DropdownMenuItem>
@@ -186,14 +177,11 @@ export function AppHeader({
           </div>
         </div>
 
-        {banner ? (
-          <div className="mx-auto w-full max-w-6xl px-4 pb-3 sm:px-6">{banner}</div>
-        ) : null}
+        {banner ? <div className="mx-auto w-full max-w-6xl px-4 pb-2.5 sm:px-6">{banner}</div> : null}
       </header>
 
-      {/* الشريط السفلي العائم — مثل التطبيقات الأصلية */}
       <nav
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))]"
         aria-label="التنقّل الرئيسي"
       >
         <div className="glass-strong pointer-events-auto flex items-center gap-0.5 rounded-[1.75rem] border border-white/70 p-1.5 shadow-xl shadow-sky-900/10">
@@ -206,16 +194,14 @@ export function AppHeader({
                 onClick={() => onViewChange(item.key)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex w-[4.25rem] flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-medium transition-all",
+                  "flex w-[4.1rem] flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-medium transition-colors",
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span
                   className={cn(
                     "flex size-8 items-center justify-center rounded-xl transition-all",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
-                      : "bg-transparent",
+                    active ? "bg-primary text-primary-foreground shadow-md shadow-primary/30" : "",
                   )}
                 >
                   <item.icon className="size-[18px]" />
@@ -227,7 +213,7 @@ export function AppHeader({
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex w-[4.25rem] flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-medium text-muted-foreground transition-all hover:text-foreground"
+            className="flex w-[4.1rem] flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <span className="flex size-8 items-center justify-center rounded-xl">
               <LayoutGrid className="size-[18px]" />
@@ -237,11 +223,10 @@ export function AppHeader({
         </div>
       </nav>
 
-      {/* نافذة «المزيد»: كل الأقسام منظمة بوصف قصير لكل واحد */}
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent
           side="bottom"
-          className="glass-strong rounded-t-[2rem] border-white/70 bg-white/90 px-5 pb-10 pt-2"
+          className="glass-strong rounded-t-[2rem] border-white/70 bg-white/95 px-5 pb-10 pt-2"
         >
           <SheetHeader className="items-center text-center">
             <SheetTitle className="text-base">كل الأقسام</SheetTitle>
@@ -253,26 +238,26 @@ export function AppHeader({
                 type="button"
                 onClick={() => openView(item.key)}
                 className={cn(
-                  "glass-tile flex items-start gap-3 rounded-2xl p-3.5 text-right transition-all hover:bg-white/85",
+                  "tile-edge flex items-start gap-2.5 rounded-2xl p-3 text-right transition-colors hover:bg-white",
                   view === item.key && "ring-2 ring-primary/40",
                 )}
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
-                  <item.icon className="size-5" />
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
+                  <item.icon className="size-4" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold">{item.label}</span>
-                  <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                  <span className="block text-[13px] font-semibold">{item.label}</span>
+                  <span className="mt-0.5 block text-[10px] leading-4 text-muted-foreground">
                     {item.description}
                   </span>
                 </span>
               </button>
             ))}
           </div>
-          <div className="glass-tile mt-4 flex items-center justify-between rounded-2xl p-3.5">
-            <span className="flex min-w-0 items-center gap-2 text-sm">
+          <div className="tile-edge mt-4 flex items-center justify-between rounded-2xl p-3">
+            <span className="flex min-w-0 items-center gap-2 text-[13px]">
               <UserRound className="size-4 shrink-0 text-primary" />
-              <span className="truncate">{userName ?? "مستخدم سكينة"}</span>
+              <span className="truncate">{userName ?? "حسابي"}</span>
             </span>
             <button
               type="button"
