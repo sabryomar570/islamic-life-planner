@@ -29,9 +29,12 @@ type Filter = PoemTheme | "all" | "saved";
 
 export function PoetryView({
   favorites,
+  isSaved,
   onToggleFavorite,
 }: {
   favorites: string[];
+  /** فحص فوري من نظام الحفظ الموحّد. */
+  isSaved?: (id: string) => boolean;
   onToggleFavorite: (id: string, kind: string, title: string) => void;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -39,16 +42,18 @@ export function PoetryView({
   const [spotlight, setSpotlight] = useState<Poem>(() => poemOfTheDay());
   const [spotlightKey, setSpotlightKey] = useState(0);
 
+  const check = (id: string) => (isSaved ? isSaved(id) : favorites.includes(id));
+
   const items = useMemo(() => {
     const base =
       filter === "saved"
-        ? POEMS.filter((poem) => favorites.includes(poem.id))
+        ? POEMS.filter((poem) => check(poem.id))
         : filter === "all"
           ? POEMS
           : POEMS.filter((poem) => poem.theme === filter);
     return shuffled ? shufflePoems(base) : base;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, shuffled, favorites]);
+  }, [filter, shuffled, favorites, isSaved]);
 
   const rotate = (pool: Poem[]) => {
     setSpotlight((current) => nextPoem(current.id, pool) ?? current);
@@ -91,8 +96,8 @@ export function PoetryView({
       <GlassCard strong className="p-6">
         <SectionTitle
           icon={<Feather className="size-5" />}
-          title="أبيات من الشعر الجاهلي"
-          hint={`${arabicNumber(POEMS.length)} بيتًا (مطوّلة) من المعلّقات والدواوين — في الشجاعة والعزيمة والكرم والصبر`}
+          title="أبيات من الشعر العربي"
+          hint={`${arabicNumber(POEMS.length)} بيتًا من المعلّقات والدواوين — بنسبة كل بيت إلى قائله`}
           action={
             <div className="flex items-center gap-2">
               <GlassPill
@@ -139,7 +144,7 @@ export function PoetryView({
         <div className="absolute -left-8 bottom-0 size-40 rounded-full bg-sky-200/40 blur-3xl" />
         <span className="relative glass-tile inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-foreground/70">
           <Sparkles className="size-3.5 text-primary" />
-          {spotlight.theme} • الشعر الجاهلي
+          {spotlight.theme}
         </span>
         <div className="poetry-text relative mt-5 text-[1.25rem] leading-[2.5]">
           {spotlight.lines.map((line) => (
@@ -163,20 +168,23 @@ export function PoetryView({
               <Share2 className="size-3.5" /> مشاركة
             </span>
           </GlassPill>
-          <GlassPill
-            onClick={() =>
-              onToggleFavorite(spotlight.id, "poem", spotlight.lines[0])
-            }
+          <button
+            type="button"
+            onClick={() => onToggleFavorite(spotlight.id, "poem", spotlight.lines[0])}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all active:scale-95",
+              check(spotlight.id)
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                : "btn-edge text-foreground/80",
+            )}
           >
-            <span className="flex items-center gap-1.5">
-              {favorites.includes(spotlight.id) ? (
-                <BookmarkCheck className="size-3.5" />
-              ) : (
-                <Bookmark className="size-3.5" />
-              )}
-              {favorites.includes(spotlight.id) ? "محفوظ" : "احفظ البيت"}
-            </span>
-          </GlassPill>
+            {check(spotlight.id) ? (
+              <BookmarkCheck className="size-3.5" />
+            ) : (
+              <Bookmark className="size-3.5" />
+            )}
+            {check(spotlight.id) ? "محفوظ" : "احفظ البيت"}
+          </button>
         </div>
       </GlassCard>
 
@@ -189,7 +197,7 @@ export function PoetryView({
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {items.map((poem) => {
-            const saved = favorites.includes(poem.id);
+            const saved = check(poem.id);
             return (
               <GlassCard key={poem.id} hover className="flex flex-col p-6">
                 <div className="flex items-center justify-between gap-3">
@@ -199,12 +207,12 @@ export function PoetryView({
                   </span>
                   <button
                     type="button"
-                    aria-label="حفظ البيت"
+                    aria-label={saved ? "إزالة الحفظ" : "حفظ البيت"}
                     onClick={() => onToggleFavorite(poem.id, "poem", poem.lines[0])}
                     className={cn(
-                      "flex size-8 items-center justify-center rounded-full transition-all",
+                      "flex size-8 items-center justify-center rounded-full transition-all active:scale-90",
                       saved
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
                         : "glass-tile text-foreground/60 hover:text-foreground",
                     )}
                   >

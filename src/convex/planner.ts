@@ -17,7 +17,7 @@ export const answersValidator = v.object({
 const PRAYER_KEYS = ["fajr", "dhuhr", "asr", "maghrib", "isha"] as const;
 const PRAYER_STATUSES = ["jamaah", "ontime", "late", "missed"] as const;
 const ADHKAR_KINDS = ["morning", "evening", "sleep", "after_prayer", "distress"] as const;
-const FAVORITE_KINDS = ["hadith", "poem", "dhikr", "ayah"] as const;
+const FAVORITE_KINDS = ["hadith", "poem", "dhikr", "ayah", "story"] as const;
 
 export const prayerValidator = v.union(...PRAYER_KEYS.map((key) => v.literal(key)));
 export const prayerStatusValidator = v.union(...PRAYER_STATUSES.map((value) => v.literal(value)));
@@ -455,6 +455,20 @@ export const getStats = query({
       bestWeekStart,
       longestRun,
     };
+  },
+});
+
+/** كل المحفوظات مرتبة من الأحدث — لقسم «محفوظاتي» وحالة الحفظ الفورية. */
+export const getFavorites = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+    const items = await ctx.db
+      .query("favorites")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(MAX_FAVORITES);
+    return items.sort((a, b) => b.savedAt - a.savedAt);
   },
 });
 

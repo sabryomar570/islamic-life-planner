@@ -1,16 +1,18 @@
 import { AdhkarDialog } from "@/components/app/AdhkarDialog";
 import { AppHeader, type DashView } from "@/components/app/AppHeader";
 import { DuasView } from "@/components/app/DuasView";
-import { GazaDuaDialog } from "@/components/app/GazaDuaDialog";
 import { GlassCard } from "@/components/app/GlassCard";
 import { HadithView } from "@/components/app/HadithView";
 import { HomeView } from "@/components/app/HomeView";
 import { NudgeCenter } from "@/components/app/NudgeCenter";
 import { OccasionsView } from "@/components/app/OccasionsView";
+import { OpeningGreeting } from "@/components/app/OpeningGreeting";
 import { PoetryView } from "@/components/app/PoetryView";
 import { PrayerView } from "@/components/app/PrayerView";
+import { ProphetsView } from "@/components/app/ProphetsView";
+import { QuoteMarquee, type QuoteSlide } from "@/components/app/QuoteMarquee";
 import { QuranView } from "@/components/app/QuranView";
-import { SalawatGreeting } from "@/components/app/SalawatGreeting";
+import { SavedView } from "@/components/app/SavedView";
 import { SettingsView } from "@/components/app/SettingsView";
 import { StatsTable } from "@/components/app/StatsTable";
 import { TasbihView } from "@/components/app/TasbihView";
@@ -24,8 +26,14 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
 import { getAdhkarGroup, type AdhkarGroupId } from "@/data/adhkar";
+import { duaOfTheDay } from "@/data/duas";
+import { hadithOfTheDay } from "@/data/hadith";
+import { poemOfTheDay } from "@/data/poetry";
+import { PROPHET_STORIES } from "@/data/prophets";
+import { ayahOfTheDay } from "@/data/quran";
 import { pickAnswers, type ProfileAnswers } from "@/data/questions";
 import { SURAH_COUNT } from "@/data/quran";
+import { useFavorites } from "@/hooks/use-favorites";
 import { useAuth } from "@/hooks/use-auth";
 import { useGeolocation } from "@/hooks/use-location";
 import { usePrayerTimes, type Coords } from "@/hooks/use-prayer-times";
@@ -65,13 +73,15 @@ const VALID_VIEWS: DashView[] = [
   "duas",
   "tasbih",
   "poetry",
+  "prophets",
   "occasions",
+  "saved",
   "settings",
 ];
 
 const PRAYER_KEYS: PrayerKey[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 const ADHKAR_KINDS = ["morning", "evening", "sleep", "after_prayer", "distress"] as const;
-const FAVORITE_KINDS = ["hadith", "poem", "dhikr", "ayah"] as const;
+const FAVORITE_KINDS = ["hadith", "poem", "dhikr", "ayah", "story"] as const;
 
 function isDashView(value: string | null): value is DashView {
   return value !== null && (VALID_VIEWS as string[]).includes(value);
@@ -115,11 +125,38 @@ export default function Dashboard() {
 
   const setPrayerStatusMutation = useMutation(api.planner.setPrayerStatus);
   const setAdhkarDoneMutation = useMutation(api.planner.setAdhkarDone);
-  const toggleFavoriteMutation = useMutation(api.planner.toggleFavorite);
   const setLocationMutation = useMutation(api.planner.setLocation);
+
+  /** نظام الحفظ الموحّد: حالة فورية محليًا + مزامنة الخادم. */
+  const favoritesApi = useFavorites();
+  const savedIds = useMemo(() => favoritesApi.ids, [favoritesApi.ids]);
+  const favoriteIds = useMemo(() => favoritesApi.favorites.map((item) => item.itemId), [favoritesApi.favorites]);
+  const handleToggleFavorite = useCallback(
+    (itemId: string, kind: string, title: string) => {
+      if (!FAVORITE_KINDS.includes(kind as (typeof FAVORITE_KINDS)[number])) return;
+      favoritesApi.toggle(itemId, kind as (typeof FAVORITE_KINDS)[number], title);
+    },
+    [favoritesApi],
+  );
 
   /* المكان: من إحداثياتك إن سمحت، وإلا من المنطقة الزمنية للجهاز — بلا سؤال. */
   const detected = useMemo(() => detectLocation(), []);
+
+  /** اقتباسات الشريط المتنقل: من أقسام التطبيق، كل واحد ينقل لقسمه. */
+  const quoteSlides = useMemo<QuoteSlide[]>(() => {
+    const ayah = ayahOfTheDay();
+    const hadith = hadithOfTheDay(now.getDate() + now.getMonth() * 31);
+    const dua = duaOfTheDay(now);
+    const poem = poemOfTheDay(now);
+    const story = PROPHET_STORIES[now.getDate() % PROPHET_STORIES.length];
+    return [
+      { quote: `«${hadith.text}»`, origin: hadith.source, target: "hadith" },
+      { quote: ayah.text, origin: ayah.ref, target: "quran" },
+      { quote: dua.text, origin: dua.reference, target: "duas" },
+      { quote: `${poem.lines[0]}`, origin: poem.poet, target: "poetry" },
+      { quote: story.title, origin: story.prophet, target: "prophets" },
+    ];
+  }, [today]);
 
   /* عند انعدام الشبكة يعتمد التطبيق على آخر نسخة محفوظة من بياناتك. */
   const cachedProfile = useMemo(() => readOfflineProfile<Partial<ProfileAnswers>>(), []);
@@ -322,18 +359,6 @@ export default function Dashboard() {
     [setAdhkarDoneMutation, today],
   );
 
-  const handleToggleFavorite = useCallback(
-    (itemId: string, kind: string, title: string) => {
-      if (!FAVORITE_KINDS.includes(kind as (typeof FAVORITE_KINDS)[number])) return;
-      void toggleFavoriteMutation({
-        itemId,
-        kind: kind as (typeof FAVORITE_KINDS)[number],
-        title,
-      });
-    },
-    [toggleFavoriteMutation],
-  );
-
   const handleGeoRequest = useCallback(async () => {
     const result = await geo.request();
     if (!result) return;
@@ -442,7 +467,12 @@ export default function Dashboard() {
         onMoreOpenChange={setMoreOpen}
       />
 
-      <main className="mx-auto w-full max-w-5xl px-3.5 pt-4 sm:px-6">
+      {/* الشريط المتنقل: اقتباسات من أقسام التطبيق، تنقل تلقائيًا وسحب يدوي، والضغط يفتح القسم */}
+      <div className="mx-auto w-full max-w-5xl px-3.5 pt-3 sm:px-6">
+        <QuoteMarquee slides={quoteSlides} onSelect={changeView} />
+      </div>
+
+      <main className="mx-auto w-full max-w-5xl px-3.5 pt-3.5 sm:px-6">
         {view === "today" && answers ? (
           <HomeView
             userName={user?.name ?? undefined}
@@ -480,14 +510,16 @@ export default function Dashboard() {
 
         {view === "hadith" ? (
           <HadithView
-            favorites={state.favorites.filter((id) => id.startsWith("h"))}
+            favorites={favoriteIds.filter((id) => id.startsWith("h"))}
+            isSaved={favoritesApi.isSaved}
             onToggleFavorite={handleToggleFavorite}
           />
         ) : null}
 
         {view === "duas" ? (
           <DuasView
-            favorites={state.favorites.filter((id) => id.startsWith("d"))}
+            favorites={favoriteIds.filter((id) => id.startsWith("d"))}
+            isSaved={favoritesApi.isSaved}
             onToggleFavorite={handleToggleFavorite}
           />
         ) : null}
@@ -515,8 +547,24 @@ export default function Dashboard() {
 
         {view === "poetry" ? (
           <PoetryView
-            favorites={state.favorites.filter((id) => id.startsWith("p"))}
+            favorites={favoriteIds.filter((id) => id.startsWith("p"))}
+            isSaved={favoritesApi.isSaved}
             onToggleFavorite={handleToggleFavorite}
+          />
+        ) : null}
+
+        {view === "prophets" ? (
+          <ProphetsView
+            savedIds={savedIds}
+            onToggleSave={(id, title) => handleToggleFavorite(id, "story", title)}
+          />
+        ) : null}
+
+        {view === "saved" ? (
+          <SavedView
+            favorites={favoritesApi.favorites}
+            onRemove={(itemId) => favoritesApi.remove(itemId)}
+            onOpenSection={changeView}
           />
         ) : null}
 
@@ -595,8 +643,11 @@ export default function Dashboard() {
         onRequestNotifications={() => void reminders.requestPermission()}
       />
 
-      <SalawatGreeting enabled={prefs.salawatPopup} />
-      <GazaDuaDialog enabled={Boolean(profileDoc)} />
+      {/* نافذة الافتتاح الموحّدة: صلاة على النبي ﷺ + دعاء لأهل غزة — عند كل تشغيل. */}
+      <OpeningGreeting
+        enabled={Boolean(profileDoc)}
+        onToggleFavorite={handleToggleFavorite}
+      />
 
       {/* رسالة «هل صلّيت؟» بعد دقائق من دخول وقت الصلاة — مع سطر الصدق */}
       {postPrayer && !state.prayers[postPrayer.key] ? (

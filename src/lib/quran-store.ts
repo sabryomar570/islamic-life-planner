@@ -319,29 +319,46 @@ export const BASMALA = "بِسْمِ اللَّهِ الرَّحْمَٰنِ ا�
 /**
  * يفصل «بسم الله الرحمن الرحيم» عن أول آية لأن بعض المصادر تُدمجها مع الآية.
  * سورة الفاتحة البسملة فيها آية مستقلة (تحسب آية ١)، وسورة التوبة بلا بسملة إطلاقًا.
+ *
+ * المطابقة حرفًا-بحرف على النص المُطبَّع (بلا تشكيل ولا تطويل ولا علامات قرآنية)
+ * فتعمل مع أي صياغة تشكيل من أي مصدر، ولا تلمس الآية إن لم تكن تبدأ بها فعلاً.
  */
+const BASMALA_TARGET = [...normalizeArabic(BASMALA).replace(/\s/g, "")];
+
+function stripLeadingBasmala(text: string): string | null {
+  const chars = [...text];
+  let target = 0;
+  for (let index = 0; index < chars.length; index += 1) {
+    const normalized = normalizeArabic(chars[index]);
+    if (normalized === "") continue; // تشكيل أو تطويل: نتجاهله
+    if (target >= BASMALA_TARGET.length || normalized !== BASMALA_TARGET[target]) return null;
+    target += 1;
+    if (target === BASMALA_TARGET.length) {
+      let rest = index + 1;
+      while (rest < chars.length && /\s/.test(normalizeArabic(chars[rest]))) rest += 1;
+      return chars.slice(rest).join("").trim();
+    }
+  }
+  return null;
+}
+
 export function splitBasmala(number: number, ayahs: Ayah[]) {
   const needsSeparateBasmala = number !== 1 && number !== 9;
   if (!needsSeparateBasmala || ayahs.length === 0) {
     return { ayahs, basmalaShown: false };
   }
-  const first = ayahs[0];
-  const normalizedBasmala = normalizeArabic(BASMALA);
-  const normalizedFirst = normalizeArabic(first.text);
-
-  // أول آية تبدأ بالبسملة؟ نقصّها منها فورًا — وإلا ستتكرر مرتين (مرة عند العرض ومرة في النص).
-  if (normalizedFirst.startsWith(normalizedBasmala)) {
-    const stripped = first.text
-      .replace(/^[\s\u0640]*بِ?سْ?مِ?\s*اللَّهِ\s*الرَّحْمَ[ٰا]?نِ\s*الرَّحِيمِ\s*/u, "")
-      .trim();
-    if (stripped.length > 0) {
-      return {
-        ayahs: [{ ...first, text: stripped }, ...ayahs.slice(1)],
-        basmalaShown: true,
-      };
-    }
+  const stripped = stripLeadingBasmala(ayahs[0].text);
+  if (stripped === null) {
+    // أول آية لا تحتوي البسملة — نعرضها منفصلة كالمعتاد.
+    return { ayahs, basmalaShown: true };
   }
-  // أول آية لا تحتوي البسملة (بعض المصادر تعرضها في النص مسبقًا في الآية رقم 1)
-  // لكن نعرضها بخط خاص فنعتبرها ظاهرة.
-  return { ayahs, basmalaShown: true };
+  if (stripped.length > 0) {
+    // البسملة مدمجة في أول آية: نقصّها ونعرضها منفصلة مرّة واحدة فقط.
+    return {
+      ayahs: [{ ...ayahs[0], text: stripped }, ...ayahs.slice(1)],
+      basmalaShown: true,
+    };
+  }
+  // أول آية هي البسملة نفسها (بيانات شاذة): نحذفها من الآيات ونعرضها منفصلة.
+  return { ayahs: ayahs.slice(1), basmalaShown: true };
 }
