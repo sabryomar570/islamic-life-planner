@@ -1,14 +1,17 @@
 {
-  "name": "vite-template",
+  "name": "oud-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "bun test",
+    "typecheck": "tsc -b --noEmit",
+    "package:zip": "bash scripts/package-zip.sh"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",

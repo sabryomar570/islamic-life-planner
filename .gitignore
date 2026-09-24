@@ -1,4 +1,39 @@
-.env.local
+# بيئة ومكتبات
 node_modules
 dist
+.vite
+.turbo
+
+# مفاتيح وأسرار (لا يُرفع أي منها أبدًا)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.keystore
+*.jks
+credentials.json
+secrets.json
+
+# مخرجات Convex المولدة
 src/convex/_generated
+
+# ملفات مؤقتة وسجلات
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+.cache
+
+# أرشيفات التسليم (تُرفع فقط عبر GitHub Releases)
+/releases/*.zip
+/releases/*.apk
+
+# zip سابق في الجذر (استُبدل بـ /releases)
+/*.zip
+
+# أدوات المنصة
+.vly
+sst-env.d.ts
