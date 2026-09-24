@@ -177,6 +177,16 @@ function MiniCard({
   );
 }
 
+/** شكل مختصر من getStats لبطاقة الثبات — أسماء مطابقة لما يعيده الخادم. */
+export type WeekStats = {
+  days: number;
+  prayerRate: number;
+  adhkarRate: number;
+  streak: number;
+  weakest: string | null;
+  daily: { date: string; done: number; logged: number; adhkar: number }[];
+};
+
 export function HomeView({
   userName,
   profile,
@@ -184,6 +194,7 @@ export function HomeView({
   timings,
   hijri,
   dayState,
+  stats,
   onOpenSection,
   onOpenAdhkar,
   onOpenAllSections,
@@ -196,6 +207,8 @@ export function HomeView({
   timings: Timings;
   hijri: string | null;
   dayState: { prayers: Record<string, string>; adhkar: string[]; favorites: string[] };
+  /** إحصاءات آخر ٣٠ يومًا — تخفى البطاقة إن لم يوجد سجل بعد. */
+  stats?: WeekStats | null;
   onOpenSection: (section: HomeSection) => void;
   onOpenAdhkar: (group: AdhkarGroupId) => void;
   /** يفتح نافذة «كل الأقسام» في الشريط العلوي. */
@@ -348,6 +361,47 @@ export function HomeView({
           })}
         </div>
       </GlassCard>
+
+      {/* خاتمة الحلقة: ثبات المستخدم في آخر ٣٠ يومًا — تُخفى حتى يوجد سجل */}
+      {stats && stats.daily.some((day) => day.logged > 0) ? (
+        <GlassCard className="p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold text-muted-foreground">ثباتك في آخر ٣٠ يومًا</p>
+            <button
+              type="button"
+              onClick={() => onOpenSection("prayers")}
+              className="text-[11px] font-semibold text-primary hover:underline"
+            >
+              التفاصيل
+            </button>
+          </div>
+          <div className="mt-2.5 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-2xl font-bold text-primary">{arabicNumber(stats.prayerRate)}٪</p>
+              <p className="text-[10px] text-muted-foreground">صلوات في وقتها</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{arabicNumber(stats.streak)}</p>
+              <p className="text-[10px] text-muted-foreground">أيام متصلة كاملة</p>
+            </div>
+            <div className="text-left">
+              <p className="text-2xl font-bold">{arabicNumber(stats.adhkarRate)}٪</p>
+              <p className="text-[10px] text-muted-foreground">أيام بأذكار</p>
+            </div>
+          </div>
+          {(() => {
+            const weakestName = stats.weakest
+              ? PRAYERS.find((prayer) => prayer.key === stats.weakest)?.name ?? null
+              : null;
+            if (!weakestName) return null;
+            return (
+              <p className="mt-2.5 rounded-xl bg-primary/8 px-3 py-2 text-[11px] text-foreground/80">
+                أكثر ما يفوتك: <span className="font-semibold">{weakestName}</span> — ابدأ بها اليوم.
+              </p>
+            );
+          })()}
+        </GlassCard>
+      ) : null}
 
       {/* أذكار مختصرة: صباح / مساء / نوم */}
       <div className="grid grid-cols-3 gap-2.5">

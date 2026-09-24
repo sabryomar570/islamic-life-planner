@@ -55,6 +55,7 @@ function toRecords(serverItems: readonly { itemId: string; kind: string; title: 
 export function useFavorites() {
   const serverFavorites = useQuery(api.planner.getFavorites);
   const toggleFavorite = useMutation(api.planner.toggleFavorite);
+  const removeFavorite = useMutation(api.planner.removeFavorite);
 
   // النسخة المحلية تُعرض فورًا حتى قبل أول ردّ من الخادم.
   const [local, setLocal] = useState<FavoriteRecord[]>(() => readLocalFavorites());
@@ -112,9 +113,10 @@ export function useFavorites() {
       const nextLocal = local.filter((item) => item.itemId !== itemId);
       setLocal(nextLocal);
       writeLocalFavorites(nextLocal);
-      void toggleFavorite({ itemId, kind: "dhikr", title: "x" }).catch(() => undefined);
+      // حذف صريح على الخادم: لا يُدرج شيئًا حتى لو لم يكن العنصر محفوظًا هناك بعد.
+      void removeFavorite({ itemId }).catch(() => undefined);
     },
-    [local, toggleFavorite],
+    [local, removeFavorite],
   );
 
   const byKind = useCallback(

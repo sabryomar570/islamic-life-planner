@@ -486,6 +486,7 @@ export default function Dashboard() {
             timings={times.timings}
             hijri={times.hijri}
             dayState={state}
+            stats={stats}
             onOpenSection={changeView}
             onOpenAdhkar={setAdhkarGroup}
             onOpenAllSections={() => setMoreOpen(true)}

@@ -1,4 +1,5 @@
 /** أدوات الوقت والتاريخ — بصياغة عربية وأرقام عربية-هندية (٠١٢٣). */
+import { toArabicDigits } from "./hijri";
 
 export function toMinutes(hhmm: string): number {
   const [hours, minutes] = hhmm.split(":").map((part) => Number(part));
@@ -34,7 +35,8 @@ export function formatArabicTime(hhmm: string, withPeriod = true): string {
   const mins = minutes % 60;
   const isPm = hours24 >= 12;
   const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
-  const time = `${arabicNumber(hours12)}:${String(mins).padStart(2, "0")}`;
+  // الدقائق أيضًا بأرقام هندية — كشفها اختبارات bun: كانت تظهر ٥:16 بأرقام مختلطة.
+  const time = `${arabicNumber(hours12)}:${toArabicDigits(String(mins).padStart(2, "0"))}`;
   if (!withPeriod) return time;
   return `${time} ${isPm ? "مساءً" : "صباحًا"}`;
 }

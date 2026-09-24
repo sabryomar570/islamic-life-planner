@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { dateKey } from "../lib/time";
 
 /** الحقول السبعة المستخرجة من أسئلة البداية — كلٌّ منها يؤثر فعليًا في التطبيق. */
 export const answersValidator = v.object({
@@ -297,21 +298,35 @@ export const getHistory = query({
     // نحدّ عدد الأيام المطلوبة لمنع أي استعلام ثقيل.
     const safeDates = dates.slice(0, MAX_HISTORY_DAYS).map((date) => assertDate(date));
 
+    // استعلام نطاق واحد لكل جدول بدل 2×N استعلام يومي (نفس نمط getStats).
+    const sorted = [...safeDates].sort();
+    const from = sorted[0];
+    const to = sorted[sorted.length - 1];
+
+    const rangeLogs = await ctx.db
+      .query("prayerLogs")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", userId).gte("date", from).lte("date", to))
+      .take(MAX_HISTORY_DAYS * 10);
+    const rangeAdhkar = await ctx.db
+      .query("adhkarLogs")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", userId).gte("date", from).lte("date", to))
+      .take(MAX_HISTORY_DAYS * 10);
+
+    const wanted = new Set(safeDates);
     const prayers: Record<string, Record<string, string>> = {};
     const adhkar: Record<string, string[]> = {};
-
     for (const date of safeDates) {
-      const dayLogs = await ctx.db
-        .query("prayerLogs")
-        .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", date))
-        .collect();
-      const dayAdhkar = await ctx.db
-        .query("adhkarLogs")
-        .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", date))
-        .collect();
+      prayers[date] = {};
+      adhkar[date] = [];
+    }
 
-      prayers[date] = Object.fromEntries(dayLogs.map((log) => [log.prayer, log.status]));
-      adhkar[date] = dayAdhkar.map((log) => log.kind);
+    for (const log of rangeLogs) {
+      if (!wanted.has(log.date)) continue;
+      (prayers[log.date] ??= {})[log.prayer] = log.status;
+    }
+    for (const log of rangeAdhkar) {
+      if (!wanted.has(log.date)) continue;
+      adhkar[log.date]?.push(log.kind);
     }
 
     return { prayers, adhkar };
@@ -341,11 +356,12 @@ export const getStats = query({
     };
     if (userId === null) return empty;
 
+    // نبني التواريخ بالتوقيت المحلي للمستخدم (dateKey) ليتسق التعريف مع بقية التطبيق.
     const dates: string[] = [];
     for (let offset = 29; offset >= 0; offset -= 1) {
       const date = new Date();
       date.setDate(date.getDate() - offset);
-      dates.push(date.toISOString().slice(0, 10));
+      dates.push(dateKey(date));
     }
     const from = dates[0];
 
@@ -469,6 +485,28 @@ export const getFavorites = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .take(MAX_FAVORITES);
     return items.sort((a, b) => b.savedAt - a.savedAt);
+  },
+});
+
+/** حذف صريح من المحفوظات: لا يُدرج شيئًا أبدًا — أمان عند الحذف من «محفوظاتي». */
+export const removeFavorite = mutation({
+  args: {
+    itemId: v.string(),
+  },
+  handler: async (ctx, { itemId }) => {
+    const userId = await requireUserId(ctx);
+    if (!ITEM_ID_PATTERN.test(itemId)) throw new Error("معرّف العنصر غير صحيح");
+
+    const existing = await ctx.db
+      .query("favorites")
+      .withIndex("by_user_and_item", (q) => q.eq("userId", userId).eq("itemId", itemId))
+      .unique();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return true;
+    }
+    return false;
   },
 });
 
