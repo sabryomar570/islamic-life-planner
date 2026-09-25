@@ -118,8 +118,14 @@
     @apply border-border outline-ring/50;
   }
   /* Bright, layered light background — soft light through frosted glass. */
+  html {
+    min-height: 100%;
+    background: var(--background);
+  }
   body {
     @apply text-foreground;
+    min-width: 320px;
+    overflow-x: clip;
     font-family: "IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont,
       "SF Pro Text", "Segoe UI", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -136,9 +142,21 @@
   [role="button"]:not([disabled]) {
     cursor: pointer;
   }
+  #root {
+    min-height: 100dvh;
+    isolation: isolate;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 24%, transparent);
+  }
 }
 
 @layer components {
+  /* انتقال هادئ بين مشاهد فهم اليوم؛ لا يعطل المحتوى ولا يضيف تأخيرًا. */
+  .stage-enter {
+    animation: stage-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   /* Core frosted surface: translucent white panel, controlled blur, edge highlight. */
   .glass {
     background: rgba(255, 255, 255, 0.62);
@@ -495,6 +513,17 @@
   }
 }
 
+@keyframes stage-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes float-soft {
   0%,
   100% {
@@ -506,6 +535,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .stage-enter {
+    animation: none;
+  }
   .float-soft {
     animation: none;
   }

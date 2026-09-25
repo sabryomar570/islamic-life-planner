@@ -133,6 +133,10 @@ export type NudgeInput = {
   mostMissedPrayer?: string;
   /** من يبدأ الالتزام يحتاج تنبيهًا أوضح. */
   prayerCommitment?: string;
+  /** يغيّر صياغة تذكير الورد دون لوم. */
+  distraction?: string;
+  /** gentle | balanced | firm. */
+  disciplineLevel?: string;
   permissionState: NotificationPermission | "unsupported";
   seenViews: Record<string, number>;
   now: Date;
@@ -147,6 +151,7 @@ export function pickNudges(input: NudgeInput): Nudge[] {
     sleepTime,
     mostMissedPrayer,
     prayerCommitment,
+    distraction,
     permissionState,
     seenViews,
     now,
@@ -267,7 +272,14 @@ export function pickNudges(input: NudgeInput): Nudge[] {
       priority: 72,
       eyebrow: "وردك اليومي",
       title: "لم تفتح وردك اليوم",
-      body: "صفحة واحدة بحضور قلب تكفي. خمس دقائق الآن أفضل من وعد الغد.",
+      body:
+        distraction === "phone"
+          ? "صفحة واحدة بحضور قلب تكفي. اترك الهاتف بعيدًا خمس دقائق، وابدأ من أول آية."
+          : distraction === "social"
+            ? "صفحة واحدة الليلة. أغلق التنقل الرقمي حتى نهاية الورد، ثم عد إليه."
+            : distraction === "fatigue"
+              ? "لو تعبت، خذ وردًا أخف اليوم: بضع آيات بتركيز خير من صفحة تنقطع."
+              : "صفحة واحدة بحضور قلب تكفي. خمس دقائق الآن أفضل من وعد الغد.",
       primary: "افتح المصحف",
       secondary: "بعد قليل",
       view: "quran",
@@ -361,7 +373,13 @@ export function useNudgeEngine(enabled: boolean, input: NudgeInput) {
     if (!next) return;
 
     const alreadyShownThisSession = sessionShownRef.current;
-    const delay = alreadyShownThisSession ? 25_000 : 8_000;
+    const baseDelay =
+      input.disciplineLevel === "gentle"
+        ? 25_000
+        : input.disciplineLevel === "firm"
+          ? 3_000
+          : 8_000;
+    const delay = alreadyShownThisSession ? Math.max(25_000, baseDelay) : baseDelay;
     clearTimer();
     timerRef.current = window.setTimeout(() => {
       shownRef.current.add(`${day}:${next.id}`);
@@ -373,7 +391,7 @@ export function useNudgeEngine(enabled: boolean, input: NudgeInput) {
     return clearTimer;
     // نعتمد على المفتاح (المعرّفات) لا على المصفوفة، حتى لا يُعاد المؤقّت كل دقيقة.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candidatesKey, current, dismissState, enabled, clearTimer]);
+  }, [candidatesKey, current, dismissState, enabled, clearTimer, input.disciplineLevel]);
 
   const dismiss = useCallback(
     (options?: { forever?: boolean; foreverAll?: boolean }) => {

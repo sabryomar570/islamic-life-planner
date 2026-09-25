@@ -43,7 +43,7 @@ import {
   Search,
   Share2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const LAST_READ_KEY = "sakinah:quran:last";

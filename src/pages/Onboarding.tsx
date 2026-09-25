@@ -70,7 +70,7 @@ const CORE_STAGES: Stage[] = [
     id: "prayer",
     eyebrow: "صلاتك أولًا",
     title: "أين أنت من الصلاة الآن؟",
-    description: "نختار أسلوب تذكير يناسبك الآن —현재 без لوم أو مبالغة.",
+    description: "نختار أسلوب تذكير يناسبك الآن، без لوم أو مبالغة.",
     keys: ["prayerCommitment", "mostMissedPrayer"],
   },
   {
@@ -753,7 +753,7 @@ export default function Onboarding() {
 
   // Prefetch the next route while this screen is active.
   useEffect(() => {
-    void import("./pages/Dashboard.tsx");
+    void import("./Dashboard.tsx");
   }, []);
 
   const stage = ALL_STAGES[stageIndex];

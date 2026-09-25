@@ -1,22 +1,10 @@
 import { AdhkarDialog } from "@/components/app/AdhkarDialog";
 import { AppHeader, type DashView } from "@/components/app/AppHeader";
 import type { DayReviewRecord } from "@/components/app/DailyReview";
-import { DuasView } from "@/components/app/DuasView";
 import { GlassCard } from "@/components/app/GlassCard";
-import { HadithView } from "@/components/app/HadithView";
 import { HomeView } from "@/components/app/HomeView";
 import { NudgeCenter } from "@/components/app/NudgeCenter";
-import { OccasionsView } from "@/components/app/OccasionsView";
 import { OpeningGreeting } from "@/components/app/OpeningGreeting";
-import { PoetryView } from "@/components/app/PoetryView";
-import { PrayerView } from "@/components/app/PrayerView";
-import { ProphetsView } from "@/components/app/ProphetsView";
-import { QuoteMarquee, type QuoteSlide } from "@/components/app/QuoteMarquee";
-import { QuranView } from "@/components/app/QuranView";
-import { SavedView } from "@/components/app/SavedView";
-import { SettingsView } from "@/components/app/SettingsView";
-import { StatsTable } from "@/components/app/StatsTable";
-import { TasbihView } from "@/components/app/TasbihView";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,11 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/convex/_generated/api";
 import { getAdhkarGroup, type AdhkarGroupId } from "@/data/adhkar";
-import { duaOfTheDay } from "@/data/duas";
-import { hadithOfTheDay } from "@/data/hadith";
-import { poemOfTheDay } from "@/data/poetry";
-import { PROPHET_STORIES } from "@/data/prophets";
-import { ayahOfTheDay } from "@/data/quran";
 import { pickAnswers, type ProfileAnswers } from "@/data/questions";
 import { SURAH_COUNT } from "@/data/quran";
 import { useFavorites } from "@/hooks/use-favorites";
@@ -61,10 +44,74 @@ import { useInstallPrompt, useOnlineStatus } from "@/lib/pwa";
 import { cachedSurahNumbers, clearQuranCache, downloadFullQuran } from "@/lib/quran-store";
 import { addMinutes, dateKey } from "@/lib/time";
 import { useMutation, useQuery } from "convex/react";
-import { Loader2, Smartphone, WifiOff } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Smartphone, WifiOff } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
+
+const DuasView = lazy(() =>
+  import("@/components/app/DuasView").then((module) => ({ default: module.DuasView })),
+);
+const HadithView = lazy(() =>
+  import("@/components/app/HadithView").then((module) => ({ default: module.HadithView })),
+);
+const OccasionsView = lazy(() =>
+  import("@/components/app/OccasionsView").then((module) => ({ default: module.OccasionsView })),
+);
+const PoetryView = lazy(() =>
+  import("@/components/app/PoetryView").then((module) => ({ default: module.PoetryView })),
+);
+const PrayerView = lazy(() =>
+  import("@/components/app/PrayerView").then((module) => ({ default: module.PrayerView })),
+);
+const ProphetsView = lazy(() =>
+  import("@/components/app/ProphetsView").then((module) => ({ default: module.ProphetsView })),
+);
+const QuranView = lazy(() =>
+  import("@/components/app/QuranView").then((module) => ({ default: module.QuranView })),
+);
+const SavedView = lazy(() =>
+  import("@/components/app/SavedView").then((module) => ({ default: module.SavedView })),
+);
+const SettingsView = lazy(() =>
+  import("@/components/app/SettingsView").then((module) => ({ default: module.SettingsView })),
+);
+const StatsTable = lazy(() =>
+  import("@/components/app/StatsTable").then((module) => ({ default: module.StatsTable })),
+);
+const TasbihView = lazy(() =>
+  import("@/components/app/TasbihView").then((module) => ({ default: module.TasbihView })),
+);
+
+const VIEW_LABELS: Record<DashView, string> = {
+  today: "الرئيسية",
+  prayers: "صلاتي",
+  quran: "المصحف",
+  hadith: "الأحاديث",
+  duas: "الأدعية",
+  tasbih: "المسبحة",
+  poetry: "الأبيات",
+  prophets: "قصص الأنبياء",
+  occasions: "المناسبات",
+  saved: "المحفوظات",
+  settings: "الإعدادات",
+};
+
+function SectionLoading({ label }: { label: string }) {
+  return (
+    <div className="space-y-4" role="status" aria-live="polite" aria-busy="true">
+      <div className="flex items-center justify-between gap-3 px-1">
+        <span className="h-5 w-32 animate-pulse rounded-full bg-foreground/10 motion-reduce:animate-none" />
+        <span className="text-xs text-muted-foreground">نجهّز {label}</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="glass h-44 animate-pulse rounded-3xl motion-reduce:animate-none" />
+        <div className="glass h-44 animate-pulse rounded-3xl motion-reduce:animate-none" />
+      </div>
+      <span className="sr-only">جارٍ فتح {label}</span>
+    </div>
+  );
+}
 
 const VALID_VIEWS: DashView[] = [
   "today",
@@ -145,25 +192,6 @@ export default function Dashboard() {
   /* المكان: من إحداثياتك إن سمحت، وإلا من المنطقة الزمنية للجهاز — بلا سؤال. */
   const detected = useMemo(() => detectLocation(), []);
 
-  /** اقتباسات الشريط المتنقل: من أقسام التطبيق، كل واحد ينقل لقسمه. */
-  const quoteSlides = useMemo<QuoteSlide[]>(() => {
-    const day = new Date();
-    const ayah = ayahOfTheDay(day);
-    const hadith = hadithOfTheDay(day.getDate() + day.getMonth() * 31);
-    const dua = duaOfTheDay(day);
-    const poem = poemOfTheDay(day);
-    const story = PROPHET_STORIES[day.getDate() % PROPHET_STORIES.length];
-    return [
-      { quote: `«${hadith.text}»`, origin: hadith.source, target: "hadith" },
-      { quote: ayah.text, origin: ayah.ref, target: "quran" },
-      { quote: dua.text, origin: dua.reference, target: "duas" },
-      { quote: poem.lines[0], origin: poem.poet, target: "poetry" },
-      { quote: story.title, origin: story.prophet, target: "prophets" },
-    ];
-    // يُحسب مرة كل يوم — لا كل ثانية.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today]);
-
   /* عند انعدام الشبكة يعتمد التطبيق على آخر نسخة محفوظة من بياناتك. */
   const cachedProfile = useMemo(() => readOfflineProfile<Partial<ProfileAnswers>>(), []);
   const useCachedData = profileDoc === undefined && !online;
@@ -235,6 +263,8 @@ export default function Dashboard() {
       sleepTime: answers?.sleepTime,
       mostMissedPrayer: answers?.mostMissedPrayer,
       prayerCommitment: answers?.prayerCommitment,
+      distraction: answers?.distraction,
+      disciplineLevel: answers?.disciplineLevel,
       permissionState: reminders.permission,
       seenViews,
       now: reminders.now,
@@ -246,6 +276,8 @@ export default function Dashboard() {
       answers?.sleepTime,
       answers?.mostMissedPrayer,
       answers?.prayerCommitment,
+      answers?.distraction,
+      answers?.disciplineLevel,
       reminders.permission,
       reminders.now,
       seenViews,
@@ -433,12 +465,34 @@ export default function Dashboard() {
 
   if (profileDoc === undefined && !useCachedData) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <div className="glass flex items-center gap-3 rounded-full px-5 py-3 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          جارٍ التحميل...
-        </div>
-      </main>
+      <div className="min-h-dvh pb-28" role="status" aria-live="polite" aria-busy="true">
+        <AppHeader
+          view={view}
+          onViewChange={changeView}
+          userName={user?.name ?? user?.email ?? undefined}
+          onSignOut={() => void signOut()}
+          offline={!online}
+          canInstall={install.canInstall}
+          onInstall={() => void install.promptInstall()}
+          moreOpen={moreOpen}
+          onMoreOpenChange={setMoreOpen}
+        />
+        <main className="mx-auto w-full max-w-5xl animate-pulse space-y-4 px-3.5 pt-5 motion-reduce:animate-none sm:px-6">
+          <div className="space-y-2 px-1">
+            <span className="block h-5 w-44 rounded-full bg-foreground/10" />
+            <span className="block h-3 w-64 max-w-full rounded-full bg-foreground/8" />
+          </div>
+          <div className="glass-strong h-40 rounded-3xl p-5">
+            <span className="block h-3 w-24 rounded-full bg-primary/15" />
+            <span className="mt-4 block h-7 w-48 rounded-xl bg-foreground/10" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <span className="glass h-36 rounded-3xl" />
+            <span className="glass h-36 rounded-3xl" />
+          </div>
+          <span className="sr-only">نجهّز يومك</span>
+        </main>
+      </div>
     );
   }
 
@@ -493,14 +547,8 @@ export default function Dashboard() {
         onMoreOpenChange={setMoreOpen}
       />
 
-      {/* الشريط المتنقل: اقتباسات من أقسام التطبيق، تنقل تلقائيًا وسحب يدوي، والضغط يفتح القسم */}
-      {view === "today" ? (
-        <div className="mx-auto w-full max-w-5xl px-3.5 pt-3 sm:px-6">
-          <QuoteMarquee slides={quoteSlides} onSelect={changeView} />
-        </div>
-      ) : null}
-
       <main className="mx-auto w-full max-w-5xl px-3.5 pt-3.5 sm:px-6">
+        <Suspense fallback={<SectionLoading label={VIEW_LABELS[view]} />}>
         {view === "today" && answers ? (
           <HomeView
             userName={user?.name ?? undefined}
@@ -514,9 +562,6 @@ export default function Dashboard() {
             reviewSaving={reviewSaving}
             onOpenSection={changeView}
             onOpenAdhkar={setAdhkarGroup}
-            onOpenAllSections={() => setMoreOpen(true)}
-            mainGoal={answers.mainGoal}
-            startingRitual={answers.startingRitual}
           />
         ) : null}
 
@@ -638,6 +683,7 @@ export default function Dashboard() {
             }}
             onExportData={handleExportData}
             onSetCity={(value) => void handleSetCity(value)}
+            onEditProfile={() => navigate("/onboarding?edit=1")}
             onSignOut={() => void handleSignOut()}
             city={locationLabel}
           />
@@ -645,14 +691,15 @@ export default function Dashboard() {
 
         {view === "today" && !answers ? (
           <GlassCard soft className="p-6 text-center text-sm text-muted-foreground">
-            لا توجد إجابات محفوظة بعد — أكمل الأسئلة ليُبنى التطبيق عليها.
+            لا توجد إجابات محفوظة بعد — أكمل فهم يومك ليُبنى التطبيق عليها.
             <div className="mt-4 flex justify-center">
-              <Button type="button" className="btn-edge rounded-full" onClick={() => navigate("/onboarding")}>
-                ابدأ الأسئلة
+              <Button type="button" className="btn-edge min-h-11 rounded-full" onClick={() => navigate("/onboarding")}>
+                ابدأ الفهم
               </Button>
             </div>
           </GlassCard>
         ) : null}
+        </Suspense>
       </main>
 
       <AdhkarDialog

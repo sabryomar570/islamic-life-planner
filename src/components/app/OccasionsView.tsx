@@ -169,6 +169,7 @@ function OccasionCard({
 export function OccasionsView({ timings }: { timings: Timings }) {
   const now = useNow(30_000);
   const parts = hijriParts(now);
+  const currentDay = now.getDay();
 
   const today = useMemo(() => {
     try {
@@ -176,7 +177,7 @@ export function OccasionsView({ timings }: { timings: Timings }) {
     } catch {
       return [];
     }
-  }, [parts.year, parts.month, parts.day, now.getDay()]);
+  }, [parts.year, parts.month, parts.day, currentDay]);
 
   const upcoming = useMemo(() => {
     try {

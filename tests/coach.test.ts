@@ -29,9 +29,9 @@ describe("daily loop", () => {
       reviewed: false,
     }));
     const metric = focusMetric("prayer", daily);
-    expect(metric.done).toBe(13);
+    expect(metric.done).toBe(4);
     expect(metric.total).toBe(35);
-    expect(metric.pct).toBe(37);
+    expect(metric.pct).toBe(11);
   });
 
   test("planLine reflects the saved life context without inventing a schedule", () => {

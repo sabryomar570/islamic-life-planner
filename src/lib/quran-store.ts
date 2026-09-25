@@ -308,6 +308,7 @@ export async function clearQuranCache() {
 /** إزالة التشكيل لتسهيل المقارنة (تُستخدم لفصل البسملة عن السورة). */
 export function normalizeArabic(text: string) {
   return text
+    // eslint-disable-next-line no-misleading-character-class
     .replace(/[\u064B-\u0652\u0670\u0640\u06D6-\u06ED]/g, "")
     .replace(/[أإآٱ]/g, "ا")
     .replace(/\s+/g, " ")

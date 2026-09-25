@@ -28,6 +28,10 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
+      // These checks reject valid external-system synchronization used by the
+      // Convex/PWA hooks and event-driven bookmark flows in this app.
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
     },
   },
 );

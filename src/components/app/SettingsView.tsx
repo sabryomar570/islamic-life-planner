@@ -93,6 +93,7 @@ export function SettingsView({
   onResetNudges,
   onExportData,
   onSetCity,
+  onEditProfile,
   onSignOut,
   city,
 }: {
@@ -117,6 +118,7 @@ export function SettingsView({
   onExportData: () => void;
   /** حفظ مدينة يدوية (بلا سؤال في البداية). */
   onSetCity: (value: string) => void;
+  onEditProfile: () => void;
   onSignOut: () => void;
   city: string;
 }) {
@@ -136,6 +138,23 @@ export function SettingsView({
 
   return (
     <div className="space-y-5">
+      <GlassCard strong className="p-5 sm:p-6">
+        <SectionTitle
+          icon={<Sparkles className="size-5" />}
+          title="فهم يومك"
+          hint="عدّل أوقاتك وهدفك، أو أضف التفاصيل الاختيارية التي تجعل فهم عود ليومك أدق"
+          action={
+            <Button
+              type="button"
+              className="btn-edge min-h-11 rounded-full"
+              onClick={onEditProfile}
+            >
+              تعديل الفهم
+            </Button>
+          }
+        />
+      </GlassCard>
+
       <GlassCard strong className="p-6">
         <SectionTitle
           icon={<Bell className="size-5" />}

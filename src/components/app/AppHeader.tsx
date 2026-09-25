@@ -103,11 +103,11 @@ export function AppHeader({
   };
 
   const iconButton =
-    "btn-edge flex size-9 items-center justify-center rounded-2xl";
+    "btn-edge flex size-11 items-center justify-center rounded-2xl";
 
   return (
     <>
-      <header className="glass-strong sticky top-0 z-40 rounded-none border-x-0 border-t-0 border-b border-white/70">
+      <header className="glass-strong sticky top-0 z-40 rounded-none border-x-0 border-t-0 border-b border-white/70 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2 sm:px-6">
           <div className="flex items-center gap-1.5 justify-self-start">
             <button
@@ -128,7 +128,7 @@ export function AppHeader({
           <button
             type="button"
             onClick={() => onViewChange("today")}
-            className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/90 to-indigo-400/90 text-lg font-bold text-white shadow-lg shadow-sky-500/25"
+            className="flex size-11 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-lg shadow-primary/20"
             aria-label="عود — الرئيسية"
           >
             عود
@@ -187,10 +187,10 @@ export function AppHeader({
       </header>
 
       <nav
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))]"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:pb-[max(0.7rem,env(safe-area-inset-bottom))]"
         aria-label="التنقّل الرئيسي"
       >
-        <div className="glass-strong pointer-events-auto flex items-center gap-0.5 rounded-[1.75rem] border border-white/70 p-1.5 shadow-xl shadow-sky-900/10">
+        <div className="glass-strong pointer-events-auto flex w-full max-w-md items-center justify-between gap-0.5 rounded-[1.75rem] border border-white/70 p-1.5 shadow-xl shadow-sky-900/10">
           {BOTTOM_NAV.map((item) => {
             const active = view === item.key;
             return (
@@ -200,7 +200,7 @@ export function AppHeader({
                 onClick={() => onViewChange(item.key)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex w-[4.1rem] flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-medium transition-colors",
+                  "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-2xl px-1 py-2 text-[10px] font-medium transition-colors",
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -219,7 +219,7 @@ export function AppHeader({
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex w-[4.1rem] flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-2xl px-1 py-2 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <span className="flex size-8 items-center justify-center rounded-xl">
               <LayoutGrid className="size-[18px]" />
@@ -232,7 +232,7 @@ export function AppHeader({
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent
           side="bottom"
-          className="glass-strong rounded-t-[2rem] border-white/70 bg-white/95 px-5 pb-10 pt-2"
+          className="glass-strong max-h-[88dvh] overflow-y-auto rounded-t-[2rem] border-white/70 bg-white/95 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-2 sm:px-5"
         >
           <SheetHeader className="items-center text-center">
             <SheetTitle className="text-base">كل الأقسام</SheetTitle>

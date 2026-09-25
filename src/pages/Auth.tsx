@@ -55,8 +55,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   // نبدأ تنزيل وجهتي ما بعد المصادقة أثناء 입력/انتظار الرمز، لا بعد
   // الضغط فقط. هذا يمنع cold route chunk من إظهار شاشة الانتقال.
   useEffect(() => {
-    void import("./pages/Dashboard.tsx");
-    void import("./pages/Onboarding.tsx");
+    void import("./Dashboard.tsx");
+    void import("./Onboarding.tsx");
   }, []);
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
