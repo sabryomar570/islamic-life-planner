@@ -81,7 +81,10 @@ describe("بنية الوحدات — لا تسمية قبل آخر استيرا
 
   test("وكل موضع كسول في المشروع يعلن `lazy` من `react` في نفس الملف", () => {
     for (const file of files) {
-      const source = readFileSync(file, "utf8");
+      // **نقرأ بلا تعليقات.** ملف `ui/index.ts` يذكر `lazy` في أمثلة توثيق
+      // داخل تعليقات، وهو لا يستعملها أصلا — فالفحص على النص الخام كان
+      // يظنّه موضعًا كسولا ويضرب حارسا صحيحا.
+      const source = withoutComments(readFileSync(file, "utf8"));
       if (!/= lazy\(/.test(source)) continue;
       expect({ file, importsLazy: /from\s+"react"/.test(source) && /\blazy\b/.test(source) }).toEqual(
         { file, importsLazy: true },
@@ -89,3 +92,10 @@ describe("بنية الوحدات — لا تسمية قبل آخر استيرا
     }
   });
 });
+
+/** يحذف تعليقات السطر والتعليق المتعدد الأسطر، فيبقى الشيفرة وحدها. */
+function withoutComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/^\s*\/\/.*$/gm, " ");
+}
