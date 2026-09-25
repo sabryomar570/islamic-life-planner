@@ -192,6 +192,33 @@ const CUE_SHAPE: Record<
 /** أعلى ذروة مسموحة. تحفظ للصوت الهادئ. */
 const MAX_PEAK = 0.09;
 
+/** فئة الإشعار إلى نغمتها. صلاة لها نغمة مستقلة عمدا. */
+export type NotificationCategoryKey =
+  | "prayer"
+  | "task"
+  | "commitment"
+  | "review"
+  | "dhikr"
+  | "recovery"
+  | "occasion"
+  | "hadith";
+
+const CUE_BY_CATEGORY: Record<NotificationCategoryKey, AudioCue> = {
+  prayer: "prayer",
+  task: "complete",
+  commitment: "reminder",
+  review: "reminder",
+  dhikr: "reminder",
+  recovery: "tap",
+  occasion: "reminder",
+  hadith: "tap",
+};
+
+/** النغمة التي تخص فئة إشعار معينة. */
+export function cueForCategory(category: NotificationCategoryKey): AudioCue {
+  return CUE_BY_CATEGORY[category];
+}
+
 /**
  * يشغّل نغمة إن سمحت القواعد. يرجع true إن اشتغل فعلا وfalse إن منع.
  * الفشل الصامت مقصود: الصوت رفاهية، ولا يجوز أن يفسد تجربة من أوقفه.

@@ -1,4 +1,9 @@
 import { Panel, PrimaryButton, QuietButton, SectionHead, StatusDot, Sunken } from "@/components/app/Surfaces";
+
+// PHASE 3: كسول عمدا حتى لا تدخل قاعدة الأحاديث المسار الحرج.
+const InsightSlot = lazy(() =>
+  import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
+);
 import {
   BLOCKER_LABELS,
   MOOD_LABELS,
@@ -9,7 +14,7 @@ import {
 } from "@/lib/coach";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Check, CheckCircle2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 
 /**
  * PHASE 2K — مراجعة اليوم.
@@ -168,6 +173,14 @@ export function DailyReview({
 
   return (
     <Panel className={cn("overflow-hidden", expanded ? "p-0" : "")}>
+      {expanded ? (
+        /* اقتباس المحاسبة: يظهر عند فتح المراجعة، لا يزعج مطويّة. */
+        <div className="px-5 pt-5 sm:px-6 sm:pt-6">
+          <Suspense fallback={null}>
+            <InsightSlot area="review" />
+          </Suspense>
+        </div>
+      ) : null}
       <div className={cn(expanded ? "p-5 sm:p-6" : "p-4 sm:p-5")}>
         <div className="flex items-center justify-between gap-3">
           <SectionHead

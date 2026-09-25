@@ -36,6 +36,7 @@ export function AppHeader({
   canInstall = false,
   onInstall,
   banner,
+  notifications,
   moreOpen,
   onMoreOpenChange,
 }: {
@@ -47,6 +48,8 @@ export function AppHeader({
   canInstall?: boolean;
   onInstall?: () => void;
   banner?: ReactNode;
+  /** PHASE 3: زر مركز الإشعارات. يفتله في سطر الأدوات بلا ازدحام. */
+  notifications?: ReactNode;
   moreOpen: boolean;
   onMoreOpenChange: (open: boolean) => void;
 }) {
@@ -95,6 +98,7 @@ export function AppHeader({
                   <Smartphone className="size-3.5" />
                 </button>
               ) : null}
+              {notifications}
               <button
                 type="button"
                 onClick={() => onViewChange("settings")}

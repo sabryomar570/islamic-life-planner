@@ -6,6 +6,14 @@ import { DailyReview } from "@/components/app/DailyReview";
 import { HomeView } from "@/components/app/HomeView";
 import { isDashView, VIEW_LABELS, type DashView } from "@/components/app/Navigation";
 import { NudgeCenter } from "@/components/app/NudgeCenter";
+import {
+  NotificationBell,
+  NotificationCenter,
+} from "@/components/app/NotificationCenter";
+import { unlockAudio } from "@/lib/audio";
+import { useNotificationCenter } from "@/hooks/use-notification-center";
+import { audioPreferencesOf } from "@/hooks/use-preferences";
+import { toMinutes as toMinutesOfDay } from "@/lib/time";
 import { OpeningGreeting } from "@/components/app/OpeningGreeting";
 import { ViewBoundary } from "@/components/app/ViewBoundary";
 import { EmptyState, OfflineNote, Panel, PrimaryButton, Skeleton } from "@/components/app/Surfaces";
@@ -174,6 +182,16 @@ export default function Dashboard() {
   const [quranCache, setQuranCache] = useState({ cachedCount: 0, downloading: false, progress: 0 });
   const [reviewSaving, setReviewSaving] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  // الصوت لا يبدأ بلا تفاعل: نفكّ القفل عند أول نقرة كما تفعل المتصفحات.
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, []);
+
+  const audioPrefs = useMemo(() => audioPreferencesOf(prefs), [prefs]);
 
   const profileDoc = useQuery(api.planner.getProfile);
   const today = dateKey();
@@ -351,6 +369,39 @@ export default function Dashboard() {
   }, [dailyPlan, dayState?.prayers, planItemLogs]);
 
   const prayers = useMemo(() => dayState?.prayers ?? {}, [dayState]);
+
+  // نُخرج وقت النوم إلى متغيّر مستقرّ: ربط `useCallback` بـ`answers?.sleepTime`
+  // مباشرة يُفقد المُجمِّع قدرته على حفظ الذاكرة، فيتحوّل تحذيرٌ إلى خطأ.
+  const sleepTimeValue = answers?.sleepTime;
+  const sleepMinutes = useMemo(
+    () => (sleepTimeValue ? toMinutesOfDay(sleepTimeValue) : undefined),
+    [sleepTimeValue],
+  );
+
+  // لقطة الحالة التي يقرأها محرّك الإشعارات. دالة لا قيمة: تُقرأ عند كل نبضة.
+  const notificationSnapshot = useCallback(
+    () => ({
+      now: new Date(),
+      adhkarDone: dayState?.adhkar ?? [],
+      prayersLogged: Object.keys(prayers),
+      prayerMinutes: Object.fromEntries(
+        PRAYERS.map((prayer) => [prayer.key, toMinutesOfDay(times.timings[prayer.key])]),
+      ),
+      remainingSteps: dailyPlan
+        ? dailyPlan.sections.reduce((total, section) => total + section.items.length, 0)
+        : 0,
+      reviewedToday: Boolean(dayState?.review),
+      missedDays: 0,
+      sleepMinutes,
+    }),
+    [dayState, prayers, times.timings, dailyPlan, sleepMinutes],
+  );
+
+  const notifications = useNotificationCenter({
+    enabled: prefs.nudgesEnabled,
+    getSnapshot: notificationSnapshot,
+    audio: audioPrefs,
+  });
   const adhkarDone = useMemo(() => dayState?.adhkar ?? [], [dayState]);
 
   const reminders = useReminderCenter({
@@ -844,6 +895,12 @@ export default function Dashboard() {
         canInstall={install.canInstall}
         onInstall={() => void install.promptInstall()}
         banner={banner}
+        notifications={
+          <NotificationBell
+            count={notifications.unread}
+            onClick={() => setNotificationsOpen(true)}
+          />
+        }
         moreOpen={moreOpen}
         onMoreOpenChange={setMoreOpen}
       />
@@ -1108,6 +1165,21 @@ export default function Dashboard() {
         onOpenChange={(open) => setAdhkarGroup(open ? adhkarGroup : null)}
         isDone={adhkarGroup ? state.adhkar.includes(adhkarGroup) : false}
         onToggleDone={(done) => adhkarGroup && handleAdhkarDone(adhkarGroup, done)}
+      />
+
+      <NotificationCenter
+        open={notificationsOpen}
+        onOpenChange={setNotificationsOpen}
+        items={notifications.items}
+        today={notifications.today}
+        earlier={notifications.earlier}
+        onRead={notifications.markRead}
+        onReadAll={notifications.markAllRead}
+        onClear={notifications.clear}
+        onNavigate={(item) => {
+          setNotificationsOpen(false);
+          if (item.view) changeView(item.view as DashView);
+        }}
       />
 
       <NudgeCenter

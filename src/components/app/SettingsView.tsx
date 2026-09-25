@@ -9,7 +9,6 @@ import {
   AUDIO_CHANNELS,
   playCue,
   unlockAudio,
-  type AudioCue,
 } from "@/lib/audio";
 import { audioPreferencesOf, PRAYER_METHODS, type Preferences } from "@/hooks/use-preferences";
 import { Volume2 } from "lucide-react";
@@ -413,6 +412,98 @@ export function SettingsView({
               onCheckedChange={(value) => setPref("soundOn", value)}
               aria-label="نغمة التنبيه"
             />
+          </Row>
+
+          {/* PHASE 3 — نظام الصوت: مفتاح عام ثم قناة لكل صوت. */}
+          <Row
+            title="صوت التطبيق"
+            hint="المفتاح العام. إيقافه يسكت كل النغمات، ويبقى كل مفتاح آخر على حاله."
+          >
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={prefs.soundOn}
+                onCheckedChange={(value) => {
+                  if (value) unlockAudio();
+                  setPref("soundOn", value);
+                  if (value) playCue("toggle-on", audioPreferencesOf({ ...prefs, soundOn: true }));
+                }}
+                aria-label="تشغيل أصوات التطبيق"
+              />
+              <QuietButton
+                disabled={!prefs.soundOn}
+                onClick={() => {
+                  unlockAudio();
+                  playCue("reminder", audioPreferencesOf(prefs));
+                }}
+                aria-label="تجربة نغمة التنبيه"
+              >
+                <Volume2 className="size-3.5" />
+                جرّب
+              </QuietButton>
+            </div>
+          </Row>
+
+          {AUDIO_CHANNELS.map((channel) => {
+            const key = {
+              notification: "notificationSound",
+              prayer: "prayerRing",
+              completion: "completionSound",
+              feedback: "gentleFeedback",
+            }[channel.key] as
+              | "notificationSound"
+              | "prayerRing"
+              | "completionSound"
+              | "gentleFeedback";
+            return (
+              <Row
+                key={channel.key}
+                title={channel.label}
+                hint={
+                  channel.key === "prayer"
+                    ? `${channel.hint}. إن أطفأت الصوت العام فلا نغمة هنا.`
+                    : channel.hint
+                }
+              >
+                <Switch
+                  checked={prefs[key]}
+                  disabled={!prefs.soundOn}
+                  onCheckedChange={(value) => {
+                    if (value) unlockAudio();
+                    setPref(key, value);
+                    const next = audioPreferencesOf({ ...prefs, [key]: value });
+                    playCue(value ? "toggle-on" : "toggle-off", {
+                      ...next,
+                      appSounds: true,
+                    });
+                  }}
+                  aria-label={channel.label}
+                />
+              </Row>
+            );
+          })}
+
+          <Row
+            title="مستوى الصوت"
+            hint="هادئ في الغالب. الصمت الكامل ممكن: اضبطه على الصفر."
+          >
+            <div className="flex min-w-[12rem] flex-1 items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={Math.round(prefs.soundVolume * 100)}
+                disabled={!prefs.soundOn}
+                onChange={(event) =>
+                  setPref("soundVolume", Number(event.target.value) / 100)
+                }
+                aria-label="مستوى الصوت"
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--status-idle)] accent-[var(--primary)] disabled:cursor-not-allowed"
+              />
+              <span className="label-meta w-12 text-end text-muted-foreground">
+                {arabicNumber(Math.round(prefs.soundVolume * 100))}٪
+              </span>
+            </div>
           </Row>
 
           <Row

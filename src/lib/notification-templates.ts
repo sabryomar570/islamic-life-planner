@@ -330,3 +330,94 @@ export const MIN_TEMPLATE_PRIORITY = 1;
 export function priorityInRange(priority: number): boolean {
   return priority >= MIN_TEMPLATE_PRIORITY && priority <= MAX_TEMPLATE_PRIORITY;
 }
+
+/* ————————————————————— ملاءمة القوالب لحالة المستخدم ————————————————————— */
+
+export type AppSnapshot = {
+  now: Date;
+  /** أذكار أنجزها اليوم: morning | evening | sleep. */
+  adhkarDone: readonly string[];
+  /** صلوات سجّلها اليوم. */
+  prayersLogged: readonly string[];
+  /** أوقات الصلاة اليوم بالدقائق. */
+  prayerMinutes: Readonly<Record<string, number>>;
+  /** هل بقيت خطوات في خطة اليوم. */
+  remainingSteps: number;
+  /** هل راجع يومه اليوم. */
+  reviewedToday: boolean;
+  /** عدد أيام الانقطاع المتتالية قبل اليوم. */
+  missedDays: number;
+  /** وقت النوم المختار بالدقائق. */
+  sleepMinutes?: number;
+};
+
+/**
+ * يحوّل حالة التطبيق إلى قائمة قوالب تستحق العرض.
+ *
+ * **نقطة مهمة:** الشرط يقرّر *أن يظهر*، والأولوية تقرّر *متى*، والتهدئة
+ * تقرّر *لا يتكرر*. ثلاث طبقات منفصلة عمدا حتى لا تختلط.
+ */
+export function resolveApplicableTemplates(
+  templates: readonly NotificationTemplate[],
+  snapshot: AppSnapshot,
+): NotificationTemplate[] {
+  const { now, adhkarDone, prayersLogged } = snapshot;
+  const current = now.getHours() * 60 + now.getMinutes();
+  const applicable: NotificationTemplate[] = [];
+
+  for (const template of templates) {
+    switch (template.id) {
+      case "prayer-time": {
+        // نغمة واحدة لكل صلاة: أول صلاة دخل وقتها ولم يسجلها.
+        const due = Object.entries(snapshot.prayerMinutes).find(
+          ([key, minutes]) => minutes <= current && !prayersLogged.includes(key),
+        );
+        if (due) applicable.push(template);
+        break;
+      }
+      case "prayer-lead": {
+        const upcoming = Object.entries(snapshot.prayerMinutes).some(
+          ([key, minutes]) => !prayersLogged.includes(key) && minutes > current && minutes - current <= 10,
+        );
+        if (upcoming) applicable.push(template);
+        break;
+      }
+      case "dhikr-morning":
+        if (!adhkarDone.includes("morning")) applicable.push(template);
+        break;
+      case "dhikr-evening":
+        if (!adhkarDone.includes("evening")) applicable.push(template);
+        break;
+      case "dhikr-sleep":
+        if (
+          !adhkarDone.includes("sleep") &&
+          snapshot.sleepMinutes !== undefined &&
+          current >= snapshot.sleepMinutes - 45
+        ) {
+          applicable.push(template);
+        }
+        break;
+      case "task-step":
+        if (snapshot.remainingSteps > 0) applicable.push(template);
+        break;
+      case "review-day":
+        if (!snapshot.reviewedToday) applicable.push(template);
+        break;
+      case "review-week":
+        // الأسبوع: بعد ظهر الخميس. لا داعي للتذكير كل يوم.
+        if (now.getDay() === 4) applicable.push(template);
+        break;
+      case "recovery-soft":
+        // يومان متتاليان بلا نشاط، ولا أكثر: بعدها يئمل التطبيق.
+        if (snapshot.missedDays >= 2) applicable.push(template);
+        break;
+      case "commitment-near":
+      case "occasion":
+      case "hadith-of-day":
+      default:
+        applicable.push(template);
+        break;
+    }
+  }
+  return applicable;
+}

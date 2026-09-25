@@ -149,7 +149,12 @@ export function InsightCarousel({
 
       {count > 1 ? (
         <div className="mt-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5" role="tablist" aria-label="شرائح الإحصاء">
+          <div
+          className="flex items-center gap-1.5"
+          role="tablist"
+          aria-label="شرائح الإحصاء"
+          onKeyDown={handleKey}
+        >
             {insights.map((insight, position) => (
               <button
                 key={insight.id}

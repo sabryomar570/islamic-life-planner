@@ -1,4 +1,10 @@
 import { DailyReview, type DayReviewRecord } from "@/components/app/DailyReview";
+
+// PHASE 3: كسول عمدا. تحميل الإحصاء يجرّ قاعدة الأحاديث كاملة،
+// فلا يدخل المسار الحرج إلا عند ظهوره.
+const InsightSlot = lazy(() =>
+  import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
+);
 import { DayTimeline } from "@/components/app/DayTimeline";
 import { NextPrayerHero } from "@/components/app/NextPrayerHero";
 import {
@@ -23,7 +29,7 @@ import { PRAYERS, type PrayerKey, type PrayerStatus, type Timings } from "@/lib/
 import { arabicNumber, formatGregorian, greeting } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { BookOpen, Check, ChevronLeft, Moon, Sun, Target } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, lazy, Suspense } from "react";
 
 /**
  * PHASE 2A — الشاشة الأولى.
@@ -212,6 +218,11 @@ export function HomeView({
         onOpenPrayers={() => onOpenSection("prayers")}
         onLogCurrent={onLogPrayer}
       />
+
+      {/* ——— 2.5) إحصاء اليوم: اقتباس واحد ثابت، لا شريط إعلانات ——— */}
+      <Suspense fallback={null}>
+        <InsightSlot area="today" onNavigate={(view) => onOpenSection(view as HomeSection)} />
+      </Suspense>
 
       {/* ——— 3) خطة اليوم، مرتسية بالصلاة ——— */}
       {dailyPlan ? (
