@@ -1,10 +1,11 @@
 # PHASE_2_MASTER_PLAN.md
 
 **التاريخ:** 2026-09-25
-**الحالة:** خطة مخططة — لم تُنفَّذ بعد
+**الحالة:** `IMPLEMENTED — AUTOMATION VERIFIED — BROWSER QA PENDING`
+كود المرحلة الثانية منجَز ومتحقَّق آليًا · **بوابة المتصفح لم تُنفَّذ بعد**
 **ما قبلها:** Phase 0 IMPLEMENTATION COMPLETE / Browser QA NOT VERIFIED · Phase 1 IMPLEMENTED + AUTOMATION-VERIFIED / Browser QA NOT VERIFIED
 
-> هذا المستند **لا يعيد بناء ما نُفِّذ**. المرحلة الثانية نُفِّذت بدرجة كبيرة بالفعل (§3)، والفجوات الحقيقية محدودة ومحدّدة (§4). الغرض من هذا الملف أن يعرف المنفّذ ما هو موجود، وما ينقص، وبأي ترتيب، ومتى يمكن اعتبارها مغلقة.
+> هذا المستند **لا يعيد بناء ما نُفِّذ**. الجولة الأخيرة أغلقت الفجوات الحقيقية المذكورة في §4، والتفاصيل الكاملة في `PHASE_2_FINAL_REPORT.md`. البنود المنجزة موسومة بـ`DONE`، وما تبقّى منها هو **ما خلف بوابة المتصفح فقط**، وهو `NOT VERIFIED` لا `PASS`.
 
 ---
 
@@ -19,7 +20,7 @@
 | الجداول | users · profiles · prayerLogs · adhkarLogs · favorites · dayReviews · planItemLogs · weeklyPlans · weeklyReviews · adaptiveApprovals |
 | طبقة منطق خالصة | 9 ملفات في `src/lib` بلا React وبلا Convex، مغطاة بـ116 اختبارًا |
 | Design System | 5 tokens سطح + tokens دلالية + 4 درجات طباعة + motion tokens + `touch-target` + `:focus-visible` موحّد + 20 primitive في `Surfaces.tsx` |
-| بوابات آلية | test 129 · tsc PASS · lint 0 errors · build PASS · convex PASS · glyphs clean |
+| بوابات آلية | test **149** · tsc PASS · lint 0 errors / 24 warnings · build PASS (entry 351.68 kB) · convex PASS · glyphs clean |
 
 ---
 
@@ -68,7 +69,7 @@ Phase 2 **ليست** تجميلًا. هي تحويل product architecture الح
 | Onboarding | ✅ | choice tiles + سياق + تقدم هادئ |
 
 ### 3.4 الحالات
-`Skeleton` (route + section) · `EmptyState` · `OfflineNote` · `RootErrorBoundary` و`ToolbarErrorBoundary` في `main.tsx` · `SectionLoading` بـ`aria-busy`.
+`Skeleton` (route + section) · `EmptyState` · `ErrorState` · `OfflineNote` · `RootErrorBoundary` و`ToolbarErrorBoundary` في `main.tsx` · `SectionLoading` بـ`aria-busy` · `ViewBoundary` حاجز خطأ لكل شاشة (أُضيف في الجولة الأخيرة — `main.tsx` حول `Dashboard` و`Onboarding`، وداخل `Dashboard` حول المحتوى).
 
 ### 3.5 إصلاحات حقيقية نتجت عن هذا العمل
 - `groupByPrayerAnchor` كان يُسقط عنصرين من عشرة من الخط الزمني (`anchored.pop()`) — أُصلح واختبار انحدار.
@@ -80,29 +81,32 @@ Phase 2 **ليست** تجميلًا. هي تحويل product architecture الح
 
 مرتّب بالأولوية. **لا شيء هنا يبدأ قبل اعتماد (3).**
 
-### P0 — حالات الخطأ والفراغ (من Phase 2N)
-`ErrorState` و`EmptyState` مكتوبان في `Surfaces.tsx` لكن **غير مستخدمَين في أي شاشة**. المطلوب:
+> **تحديث 2026-09-25 — كل بنود P0 وP1 وP2 في هذا القسم نُفِّذت في الكود ومتحقَّقة آليًا.**
+> التفاصيل الكاملة والأرقام في `PHASE_2_FINAL_REPORT.md`. البنود الموسومة `DONE` تعني: **متحقَّق آليًا** لا **متحقَّق بصريًا**. ما تبقّى هو بوابة المتصفح في §9 وحدها.
+
+### P0 — حالات الخطأ والفراغ (من Phase 2N) — ✅ DONE
+`ErrorState` كان مكتوبًا في `Surfaces.tsx` بلا أي استخدام. المطلوب كان:
 - كل query في `Dashboard` يفصل: loading (`Skeleton`) · error (`ErrorState` + إعادة محاولة) · empty (`EmptyState` + action) · loaded.
 - قائمة الاستعلامات: `getProfile` · `getDayState` · `getWeeklyPlan` (×2) · `getPlanItemLogs` · `getPlanProgress` · `getWeeklyReview` · `getAdaptiveSuggestions` · `getHistory` · `getStats` · `getFavorites` · `ensureWeeklyPlan`.
-- الأخطاء اليوم **تظهر كـ toast** وتختفي؛ المطلوب: toast + **حالة دائمة على الشاشة**.
+- الأخطاء كانت **تظهر كـ toast** وتختفي؛ فصار لها **حالة دائمة على الشاشة** مع زر «أعد المحاولة» (`ViewBoundary`).
 - **Acceptance:** لا شاشة تبقى فارغة أو بيضاء بسبب خطأ شبكة؛ كل خطأ له نص عربي + زر «أعد المحاولة».
 
-### P0 — حالات الخطأ أولًا
-قبل أي شيء آخر، انظر P0 في §4. لا يُبني شيء فوق شاشة لا تُعرف حالتها.
+### P0 — حالات الخطأ أولًا — ✅ DONE
+نُفِّذ قبل أي شيء آخر، ولا شيء بُني فوق شاشة لا تُعرف حالتها. النتيجة: `ViewBoundary` على مستويين، وتمييز `loading` عن `empty` في الإحصاءات والخطة الأسبوعية، و`ErrorState` + «إعادة المحاولة» بدل toast يختفي.
 
-### P1 — PWA polish
-| البند | الوضع |
-|---|---|
-| manifest | موجود · **يحتاج فحص Lighthouse** |
-| أيقونات | `icon.svg` + `icon-maskable.svg` فقط — أيقونات PNG 192/512 مفقودة (شرط install على Android) |
-| standalone | `isStandalone()` موجود، غير مُختبر |
-| update flow | `SKIP_WAITING` تلقائي · **لا إشعار «يتوفر تحديث» للمستخدم** |
-| iOS safe areas | `viewport-fit=cover` موجود · **لم يُختبر على iPhone** |
-| offline | يعمل للمصحف · **لا طابور للـmutations** (حدّ معروف) |
-- `storageEstimate` و`formatBytes` و`clearOfflineCaches` مكتوبة وغير مستخدمة → تُربط في شاشة «البيانات».
+### P1 — PWA polish — ✅ DONE (مع استثناء واحد معلن)
+| البند | قبل | بعد |
+|---|---|---|
+| manifest | موجود | **DONE** — أيقونات PNG مضافة وبناؤها متحقَّق منه · **فحص Lighthouse يبقى متبقيًا** |
+| أيقونات | SVG فقط، وPNG 192/512 مفقودة (شرط install على Android) | **DONE** — `icon-192` · `icon-512` · `icon-maskable-512` · `apple-touch-icon` مولَّدة برمجيًا ومتحقَّق من أبعادها وتوقيعها |
+| standalone | `isStandalone()` موجود، غير مُختبر | **DONE في الكود** · **غير مُختبر** |
+| update flow | `SKIP_WAITING` تلقائي، بلا إشعار | **DONE** — `skipWaiting` حُذف، وأُضيفت لافتة «يتوفّر تحديث للتطبيق» مع زر «تحديث الآن» |
+| iOS safe areas | `viewport-fit=cover` موجود | **DONE في الكود** (`pb` يأخذ `env(safe-area-inset-bottom)`) · **لم يُختبر على iPhone** |
+| offline | يعمل للمصحف | **بلا تغيير عمدًا** — لا طابور للـmutations (حدّ معروف وموثّق) |
+- `storageEstimate` و`formatBytes` و`clearOfflineCaches` — **DONE**: مربوطة في مجموعة «البيانات» مع `clearLocalData`.
 
-### P1 — RTL الحقيقي (لا `dir="rtl"` فقط)
-- مراجعة `inset-inline` / `me-` / `ms-` بدل `left/right` في الملفات كلها.
+### P1 — RTL الحقيقي (لا `dir="rtl"` فقط) — ✅ DONE في الكود · التحقق البصري متبقٍ
+نُفِّذت مراجعة `inset-inline` و`me-` و`ms-` بدل `left/right` في كل الملفات. ما يلي يبقى **بصريًا**:
 - **الأسهم الاتجاهية:** `ChevronLeft` في RTL لازم يقلب اتجاهه. يحتاج بصريًا.
 - **الأرقام:** `٠١٢٣` في النصوص، و`١٢:٣٠` في الوقت — تحقّق من عدم اختلاطها.
 - **mix Arabic/English:** نصوص مصادر الأحاديث، أسماء السور، روابط.
@@ -110,7 +114,7 @@ Phase 2 **ليست** تجميلًا. هي تحويل product architecture الح
 - **قوائم من اليسار:** `toast` (sonner) و`AlertDialog` و`Sheet` — Radix افتراضي LTR.
 - **Acceptance:** لا عنصر يعتمد على `left/right`؛ كل سهم اتجاهي صحيح؛ لا نص يخرج عن حافته.
 
-### P1 — Responsive: ما لم يُختبر
+### P1 — Responsive: ما لم يُختبر — ⚠️ كود مصلَح · القياس متبقٍ
 | المقاس | ما يجب فحصه |
 |---|---|
 | 360px | أضيق حالة — `Dashboard` top bar + شريط سفلي + sheet «المزيد» + `AlertDialog` |
@@ -122,7 +126,7 @@ Phase 2 **ليست** تجميلًا. هي تحويل product architecture الح
 - **sticky** في QuranView وQuran toolbar: هل يختفي خلف لوحة المفاتيح؟
 - **dialogs** على 360px: `max-w-sm` هل يخرج؟
 
-### P1 — Accessibility
+### P1 — Accessibility — ✅ DONE في الكود · القياس البصري متبقٍ
 - **RTL لا يكفي:** `aria-label` بالعربية، `dir` على الجداول، `aria-live` على التغيّرات.
 - **focus trap** في Dialogs (Radix يفعلها) — تحقّق بصري.
 - **focus ring** مفقودة على بعض الأزرار المخصّصة.
@@ -131,11 +135,11 @@ Phase 2 **ليست** تجميلًا. هي تحويل product architecture الح
 - **reduced motion:** motion tokens تلغى، لكن `animate-pulse` في `RouteLoading` و`motion-swap` تحتاج تحقّق.
 - **screen reader:** `NextPrayerHero` ينبض كل 30s — هل يُعلن؟ يحتاج `aria-live="off"`.
 
-### P2 — Performance
+### P2 — Performance — ✅ DONE (قياس ثم إجراء واحد مُبرَّر)
 | البند | الوضع | الإجراء |
 |---|---|---|
 | `convex-vendor` chunk فارغ (1 byte) | **harmless build artifact** — `convex` ينتهي في الـindex chunk | **بلا إصلاح.** توثيق فقط. سطر واحد في `vite.config.ts` لو أُراد |
-| `index-*.js` 448 kB (gzip 139) | كبير | **يُقسّم** إن أمكن: `recharts` (charts chunk) و`date-fns` و`hijri` — تقسيم أعمق |
+| `index-*.js` 482.68 kB (gzip 150.45) | كبير | **DONE** — فصل `VlyToolbar` كسولًا ينقل `framer-motion` و`snapdom` خارج المسار الحرج: صار **351.68 kB / gzip 107.89**. لم تُضَف manual chunks جديدة |
 | lazy views | ✅ 10 views lazy | — |
 | rerender | `Dashboard`.useMemo على 12 قيمة | `times.timings` يتغير كل تنزيل؟ يحتاج قياس |
 | queries | ✅ مقيّدة | `getStats` 30 يوم — 3 نطاقات مفهرسة |
@@ -144,16 +148,16 @@ Phase 2 **ليست** تجميلًا. هي تحويل product architecture الح
 
 **قاعدة:** لا تحسين بلا قياس. **لا يوجد متصفح في هذه البيئة** — أي رقم أداء يُقاس لاحقًا في QA.
 
-### P2 — إظهار ما يُحسب ولا يُعرض
+### P2 — إظهار ما يُحسب ولا يُعرض — ✅ DONE (قرار لكل عنصر)
 بيانات Phase 1 صحيحة لكن بلا سطح:
 - `progress.achievements` (3) · `longestStreak` · `totalCompleted` · `weekly.activeDays` · `weekly.postponed` · `weekly.averageScore`.
 - `weeklyReview.successfulPeriods` / `difficultPeriods` / `mostConsistentHabit` / `mostPostponed` — محسوبة ومخزَّنة، معروضة جزئيًا فقط.
 - `adaptiveSuggestions.protect` — لا يظهر (يُرشَّح `move|reduce` فقط).
-- **قرار مطلوب:** تُعرض كلها؟ أم تُحذف المعزولة؟ (**الافتراضي: تُحذف المعزولة** — بيانات بلا واجهة = ثقل بلا فائدة).
+- **القرار المتَّخذ:** عُرض كل ما له معنى للمستخدم (`activeDays` · `postponed` · `averageScore` + `changeFromPrevious` · `longestStreak` · `mostConsistentHabit` · `mostPostponed` · `successfulPeriods` · `difficultPeriods`) · حُذفت `achievements` تمامًا مع حارس اختبار يمنع عودتها · وبقي `adaptiveSuggestions.protect` نصًّا لا زرًّا لأن `changed: false` دائمًا · وبقي `totalCompleted` في النوع بلا عرض.
 
-### P2 — تنظيف الملفات الميتة
-`LogoDropdown.tsx` · `QuoteMarquee.tsx` · `GlassPill` · `SectionTitle` · `ACCOUNT_ACTIONS` · `isSameDay` · `modelForAnswers` · `usePageVisible` · `saveOfflineFavorites` · `readOfflineFavorites` · `FOCUS_LABELS` · `DISTRACTION_LABELS` · `DISCIPLINE_LABELS`.
-→ تُحذف في جولة واحدة **بعد** تثبيت الشاشات.
+### P2 — تنظيف الملفات الميتة — ✅ DONE
+`LogoDropdown.tsx` · `QuoteMarquee.tsx` · `GlassPill` · `SectionTitle` · `ACCOUNT_ACTIONS` · `isSameDay` · `modelForAnswers` · `usePageVisible` · `saveOfflineFavorites` · `readOfflineFavorites` · `FOCUS_LABELS` · `DISTRACTION_LABELS` · `DISCIPLINE_LABELS` · إضافة إلى `onServiceWorkerMessage` و`coordsLabel` و`daysToRamadan` و`Subpanel` و`QuietPanel` و`Rule` و`DisplayTitle` و`SkeletonLines` و`FAVORITES_KEY`.
+→ حُذفت جميعها، وكلها **بعد** التحقّق برمجيًا من أن مرجعها صفر خارج ملف التصريح وصفر استيراد.
 
 ---
 
@@ -164,16 +168,16 @@ Phase 2A (Design System)   ██████████ DONE
 Phase 2B (IA + Navigation) ██████████ DONE
 Phase 2C (Home)            ██████████ DONE
 Phase 2D (Per-screen UX)   ██████████ DONE
-Phase 2E (States)          ░░░░░░░░░░ 0%   ← يعتمد على قياس Browser
-Phase 2F (RTL)             ██░░░░░░░░ 20%  ← يعتمد على قياس Browser
-Phase 2G (Responsive)      █░░░░░░░░░ 10%  ← يعتمد على قياس Browser
-Phase 2H (A11y)            ██░░░░░░░░ 20%  ← يعتمد على قياس Browser
-Phase 2I (PWA)             ██░░░░░░░░ 20%  ← يعتمد على قياس جهاز
-Phase 2J (Perf)            ░░░░░░░░░░  0%   ← لا يُفعل بلا قياس
+Phase 2E (States)          ██████████ DONE  ← ViewBoundary + loading/empty/error لكل استعلام
+Phase 2F (RTL)             ██████████ DONE  ← خصائص منطقية في كل الملفات + تصحيح سهم /auth
+Phase 2G (Responsive)      ████████░░ 80%  ← pb آمن مع safe-area · القياس على أجهزة متبقٍ
+Phase 2H (A11y)            ██████████ DONE  ← aria-live + 44×44 + أسماء عربية
+Phase 2I (PWA)             ██████████ DONE  ← أيقونات PNG + تدفّق تحديث + بيانات الجهاز
+Phase 2J (Perf)            ██████████ DONE  ← قياس ثم إجراء واحد مُبرَّر (فصل شريط المعاينة)
 Phase 2K (Parity sweep)    ██████████ DONE (PHASE_2_FEATURE_PARITY_AUDIT.md: 38/38)
 ```
 
-**لماذا المتبقي خلف بوابة المتصفح:** كل بند منها утвер بصري. الكود يجهّز البنية الصحيحة، لكن **«يتمدد بشكل صحيح عند 360px»** لا يُثبَت بقراءة كود. العمل المنفَّذ هنا هو البنية (tokens · primitives · semantics · `aria` · `inset-inline` · safe-area)؛ و**الحكم عليها يحتاج جهازًا**.
+**لماذا يبقى المتبقّي خلف بوابة المتصفح:** كل بند منها ليس كلُّه بصريًا. الكود يجهّز البنية الصحيحة (tokens · primitives · semantics · `aria` · `inset-inline` · safe-area)، و**الحكم النهائي يحتاج جهازًا**: «يتمدد بشكل صحيح عند 360px» و«التطبيق يُثبَّت على Android» و«الشريط لا يغطي آخر عنصر» لا تُثبَت بقراءة كود. **الحالة هنا `DONE` تعني: البنية جاهزة ومتحقَّقة آليًا — لا أن النتيجة البصرية مثبتة.**
 
 ---
 
@@ -200,7 +204,7 @@ Phase 2K (Parity sweep)    ██████████ DONE (PHASE_2_FEATURE_
 - `deleteMyData` متاحة من الإعدادات الآن (Confirm dialog + حذف خادم + جهاز + خروج).
 - كل query/mutation مربوطة بـ Convex Auth user ID.
 - لا secrets في Git. `.env.local` / `.env.keys` غير مُلمسين.
-- **مطلوب في Phase 2:** مراجعة ما يُخزَّن في `localStorage` (`oud:favorites:local` · `oud:prefs:*` · `sakinah:quran:*` · `oud:prefs:times-synced` · `sakinah:coords:v1`) — أيّها يخرج عند sign-out؟ **الإجابة الحالية: لا شيء** → يُضاف `clearLocalData()` يُستدعى عند sign-out وdelete.
+- **✅ DONE:** `src/lib/local-data.ts` فيه سجل صريح (١٨ مفتاحًا مملوكًا + بادئة `sakinah:fired:` + نمط محميّ `__convexAuth` / `__vly`)، ودالة `clearLocalData()` تُستدعى عند sign-out وعند delete-data، ومختبَرة في `tests/local-data.test.ts` (٧ اختبارات: الملكية، البادئات، الحماية، المسح، التكرار، وغياب رميه عند `QuotaExceededError`). المصحف المنزَّل (IndexedDB) ونصوص المواقيت المخزَّنة **لا تُمسّان عمدًا** — محتوى عام مشترَك.
 
 ---
 
@@ -243,19 +247,20 @@ Chrome/Edge/Safari حديث · iPhone (390×844) و Android (360×800) · 1440×
 
 ## 10) Definition of Done
 
-- [ ] 38/38 feature تعمل ومحدَّدة مكانها الجديد
-- [ ] كل query له loading + empty + error + offline · **صفر** شاشة بيضاء
-- [ ] RTL صحيح على كل شاشة (لا `left/right` حسب الاتجاه)
-- [ ] لا horizontal overflow على 360 / 390 / 412
-- [ ] Keyboard كامل + focus ظاهر + 44×44 + reduced motion
-- [ ] المصحف يعمل دون إنترنت · التطبيق يُثبَّت على Android
-- [ ] `localStorage` يُمسح عند sign-out وdelete
-- [ ] `bun test` PASS · `tsc -b --noEmit` PASS · `lint` 0 errors · `build` PASS · `convex dev --once` PASS
-- [ ] **Browser QA: 20/20 PASS موثّقة**
+- [x] 38/38 feature تعمل ومحدَّدة مكانها الجديد
+- [x] كل query له loading + empty + error + offline · **صفر** شاشة بيضاء (آليًا)
+- [x] RTL صحيح في الكود على كل شاشة (لا `left/right` حسب الاتجاه)
+- [ ] لا horizontal overflow على 360 / 390 / 412 — **يحتاج قياسًا على جهاز**
+- [ ] Keyboard كامل + focus ظاهر + 44×44 + reduced motion — **البنية جاهزة، القياس متبقٍ**
+- [ ] المصحف يعمل دون إنترنت · التطبيق يُثبَّت على Android — **الأيقونات جاهزة، التثبيت لم يُختبر**
+- [x] `localStorage` يُمسح عند sign-out وdelete
+- [x] `bun test` 149 PASS · `tsc -b --noEmit` PASS · `lint` 0 errors · `build` PASS · `convex dev --once` PASS · `check:glyphs` نظيف
+- [ ] **Browser QA: 20/20 PASS موثّقة** — **صفر اختبار مُنفَّذ**
 - [ ] `PHASE_2_BROWSER_QA.md` مملوء بأدلة فعلية
 - [ ] Phase 0 وPhase 1 يُغلقان ببوابة المتصفح
 
-**حتى ذلك الحين: PHASE 2 = PREPARED, NOT VERIFIED.**
+**الحالة الآن: `PHASE 2 = IMPLEMENTED — AUTOMATION VERIFIED — BROWSER QA PENDING`.**
+**ليست جاهزة للإطلاق.** البنود المعلَّمة أعلاه تعني «متحقَّق آليًا»؛ والبنود غير المعلَّمة تحتاج جهازًا حقيقيًا.
 
 ---
 

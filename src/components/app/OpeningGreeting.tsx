@@ -63,7 +63,7 @@ export function OpeningGreeting({
         dir="rtl"
         className="glass-strong max-w-md rounded-3xl border-white/70 bg-white/93"
       >
-        <DialogHeader className="text-right">
+        <DialogHeader className="text-start">
           <span className="mx-auto flex size-11 items-center justify-center rounded-2xl bg-emerald-400/18 text-emerald-600">
             <Heart className="size-5" />
           </span>

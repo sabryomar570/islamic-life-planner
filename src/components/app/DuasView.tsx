@@ -117,12 +117,12 @@ export function DuasView({
         />
 
         <div className="relative mt-4">
-          <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="ابحث في نص الدعاء أو المصدر..."
-            className="h-11 rounded-2xl border-[var(--rule)] bg-white/80 pr-10 text-[13px]"
+            className="h-11 rounded-2xl border-[var(--rule)] bg-white/80 ps-10 text-[13px]"
           />
         </div>
 

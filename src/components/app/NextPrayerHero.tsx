@@ -130,7 +130,11 @@ export function NextPrayerHero({
         <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
           <div className="rounded-2xl surface-sunken px-4 py-3 text-center">
             <p className="label-meta text-muted-foreground">المتبقّي</p>
-            <LiveCountdown target={target} />
+            {/* العدّاد يتحدّث كل نصف دقيقة: إعلانُه لقارئ الشاشة كل ٣٠ ثانية إزعاج.
+               aria-live="off" يجعل ذلك مقصودًا لا مجرّد نتيجة عرضية. */}
+            <div aria-live="off">
+              <LiveCountdown target={target} />
+            </div>
           </div>
           {awaiting ? (
             <PrimaryButton
@@ -160,7 +164,7 @@ export function NextPrayerHero({
           </p>
           <span className="label-meta text-muted-foreground">دخول الوقت</span>
         </div>
-        <ol className="flex items-stretch gap-1.5" aria-label="حالة صلوات اليوم">
+        <ol className="flex items-stretch gap-1.5" aria-label="حالة صلوات اليوم" aria-live="polite">
           {PRAYERS.map((prayer) => {
             const state = prayerState(
               prayer.key,

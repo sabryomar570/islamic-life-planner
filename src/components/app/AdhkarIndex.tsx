@@ -62,7 +62,7 @@ export function AdhkarIndex({
                 type="button"
                 onClick={() => onOpen(group.id)}
                 className={cn(
-                  "motion-press surface-primary flex w-full items-center gap-3.5 rounded-3xl p-4 text-right sm:p-5",
+                  "motion-press surface-primary flex w-full items-center gap-3.5 rounded-3xl p-4 text-start sm:p-5",
                   isDone && "bg-[var(--status-success)]/6",
                 )}
               >

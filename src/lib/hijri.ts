@@ -211,9 +211,6 @@ export function isLastTenNights(date: Date = new Date()) {
   return parts.month === 9 && parts.day >= 20;
 }
 
-export function daysToRamadan(date: Date = new Date()) {
-  return daysUntilHijri(9, 1, date);
-}
 
 export function isFriday(date: Date = new Date()) {
   return date.getDay() === 5;

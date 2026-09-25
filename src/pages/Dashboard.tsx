@@ -7,6 +7,7 @@ import { HomeView } from "@/components/app/HomeView";
 import { isDashView, VIEW_LABELS, type DashView } from "@/components/app/Navigation";
 import { NudgeCenter } from "@/components/app/NudgeCenter";
 import { OpeningGreeting } from "@/components/app/OpeningGreeting";
+import { ViewBoundary } from "@/components/app/ViewBoundary";
 import { EmptyState, OfflineNote, Panel, PrimaryButton, Skeleton } from "@/components/app/Surfaces";
 import { WeeklyView } from "@/components/app/WeeklyView";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ import type { PlanItemOutcome, PlanItemStatus } from "@/lib/accountability";
 import type { AdaptiveSuggestion } from "@/lib/adaptive-planning";
 import { buildDailyPlan, type DailyPlan } from "@/lib/daily-plan";
 import { detectLocation } from "@/lib/location";
+import { clearLocalData } from "@/lib/local-data";
 import { calculateDailyScore, mergePrayerOutcomes } from "@/lib/accountability";
 import { buildProgressSummary, type ProgressSummary } from "@/lib/progress";
 import type { WeeklyPlan, WeeklyPlanItem } from "@/lib/weekly-plan";
@@ -52,11 +54,11 @@ import {
   saveOfflineProfile,
 } from "@/lib/offline-store";
 import { PRAYERS, type PrayerKey, type PrayerStatus } from "@/lib/prayers";
-import { useInstallPrompt, useOnlineStatus } from "@/lib/pwa";
+import { applyUpdate, clearOfflineCaches, onUpdateReady, useInstallPrompt, useOnlineStatus } from "@/lib/pwa";
 import { cachedSurahNumbers, clearQuranCache, downloadFullQuran } from "@/lib/quran-store";
 import { addMinutes, arabicNumber, dateKey, startOfWeekKey, toMinutes } from "@/lib/time";
 import { useMutation, useQuery } from "convex/react";
-import { Smartphone } from "lucide-react";
+import { RefreshCw, Smartphone } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -154,6 +156,9 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const online = useOnlineStatus();
   const install = useInstallPrompt();
+  // تحديث جديد بانتظار موافقة المستخدم — لا تبديل صامت تحت جلسة مفتوحة.
+  const [updateReady, setUpdateReady] = useState(false);
+  useEffect(() => onUpdateReady(setUpdateReady), []);
   const { prefs, setPref, reset: resetPrefs } = usePreferences();
   const geo = useGeolocation();
   const downloadRef = useRef<AbortController | null>(null);
@@ -509,6 +514,16 @@ export default function Dashboard() {
     toast.success("حُذفت نسخ المصحف المحفوظة على الجهاز.");
   }, [refreshQuranCache]);
 
+  /** تفريغ الحفظ المؤقت: القشرة والصفحات المقروءة، بلا مساس بالمصحف ولا بالحساب. */
+  const clearCaches = useCallback(async () => {
+    try {
+      await clearOfflineCaches();
+      toast.success("فُرِّغ الحفظ المؤقت. سيُعاد تنزيل ما تحتاجه عند الحاجة.");
+    } catch {
+      toast.error("تعذّر تفريغ الحفظ. حاول مرة أخرى.");
+    }
+  }, []);
+
   const changeView = useCallback(
     (next: string) => {
       if (!isDashView(next)) return;
@@ -520,6 +535,8 @@ export default function Dashboard() {
 
   const handleSignOut = useCallback(async () => {
     await signOut();
+    // تسجيل الخروج ينهي بيانات المستخدم على الجهاز أيضًا: ملف الإجابات، الموقع، المحفوظات.
+    clearLocalData();
     navigate("/");
   }, [signOut, navigate]);
 
@@ -527,6 +544,7 @@ export default function Dashboard() {
   const handleDeleteAllData = useCallback(() => {
     void deleteMyDataMutation()
       .then(async (removed) => {
+        clearLocalData();
         clearOfflineProfile();
         resetNudges();
         setSeenViews({});
@@ -733,7 +751,7 @@ export default function Dashboard() {
 
   if (profileDoc === undefined && !useCachedData) {
     return (
-      <div className="min-h-dvh pb-28" role="status" aria-live="polite" aria-busy="true">
+      <div className="min-h-dvh pb-[calc(7rem+env(safe-area-inset-bottom))]" role="status" aria-live="polite" aria-busy="true">
         <AppHeader
           view={view}
           onViewChange={changeView}
@@ -772,7 +790,23 @@ export default function Dashboard() {
   const state =
     dayState ?? (useCachedData ? readOfflineDayState(today) : null) ?? EMPTY_DAY_STATE;
 
-  const banner = !online ? (
+  const banner = updateReady ? (
+    <div className="surface-secondary flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2">
+      <span className="flex items-center gap-2 text-[11px] text-foreground/75">
+        <RefreshCw className="size-3.5 text-primary" />
+        يتوفّر تحديث جديد للتطبيق.
+      </span>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="btn-edge h-8 rounded-full px-3 text-[11px]"
+        onClick={() => void applyUpdate()}
+      >
+        تحديث الآن
+      </Button>
+    </div>
+  ) : !online ? (
     <OfflineNote>
       دون إنترنت: المصحف المحفوظ والأذكار والمواقيت تعمل، وتسجيلاتك تُرسل عند عودة الاتصال.
     </OfflineNote>
@@ -798,7 +832,9 @@ export default function Dashboard() {
   const postPrayer = postPrayerKey ? PRAYERS.find((item) => item.key === postPrayerKey) : null;
 
   return (
-    <div className="min-h-screen pb-28">
+    // الفراغ السفلي = ارتفاع شريط التنقّل (٧rem) + شريط نظام الجوّال،
+    // وإلا غطى الشريط آخر عنصر على الأجهزة ذات المؤشّر.
+    <div className="min-h-screen pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <AppHeader
         view={view}
         onViewChange={changeView}
@@ -813,6 +849,7 @@ export default function Dashboard() {
       />
 
       <main className="page max-w-5xl pt-4">
+        <ViewBoundary label={VIEW_LABELS[view]}>
         <Suspense fallback={<SectionLoading label={VIEW_LABELS[view]} />}>
         {view === "today" && answers ? (
           <div className="motion-swap">
@@ -931,44 +968,60 @@ export default function Dashboard() {
         {view === "occasions" ? <OccasionsView timings={times.timings} /> : null}
 
         {view === "stats" ? (
-          stats && stats.days > 0 ? (
-            <div className="motion-swap">
-              <StatsTable stats={stats} history={history} />
-            </div>
-          ) : (
+          stats === undefined ? (
+            <SectionLoading label="الإحصاءات" />
+          ) : stats === null || stats.days === 0 ? (
             <EmptyState
               title="لا يوجد سجلّ بعد"
               body="سجّل حالة صلواتك ومراجعاتك ليظهر أثرها هنا. لن نخمّن أرقامًا لم تسجّلها."
             />
+          ) : (
+            <div className="motion-swap">
+              <StatsTable stats={stats} history={history} />
+            </div>
           )
         ) : null}
 
         {view === "weekly" ? (
-          <div className="motion-swap">
-            <WeeklyView
-              plan={(browseWeekPlan ?? weeklyPlanDoc) as
-                | {
-                    weekStart: string;
-                    timezone: string;
-                    weeklyFocus: string;
-                    items: WeeklyPlanItem[];
-                    version: number;
-                  }
-                | null}
-              weekStart={weekStart}
-              today={today}
-              progress={planProgress ? weekProgressSummary(planProgress, today) : null}
-              weeklyReview={(weeklyReviewDoc?.summary as WeeklyReview | undefined) ?? null}
-              suggestions={adaptiveSuggestions ?? []}
-              applyingSuggestion={applyingSuggestion}
-              reviewing={reviewingWeek}
-              savingItemId={savingItemId}
-              onWeekChange={handleWeekChange}
-              onPatchItem={handlePatchPlanItem}
-              onApplySuggestion={handleApplyBrowsedSuggestion}
-              onSaveWeeklyReview={handleSaveBrowsedWeeklyReview}
+          browseWeekPlan === undefined && weeklyPlanDoc === undefined ? (
+            <SectionLoading label="الخطة الأسبوعية" />
+          ) : browseWeekPlan === null && weeklyPlanDoc === null ? (
+            <EmptyState
+              title="لا توجد خطة لهذا الأسبوع بعد"
+              body="تُبنى الخطة من نموذج حياتك أول مرة تفتح «اليوم». ارجع إليه لأُنشئها، ثم عُد."
+              action={
+                <PrimaryButton onClick={() => changeView("today")} className="px-5">
+                  الذهاب إلى «اليوم»
+                </PrimaryButton>
+              }
             />
-          </div>
+          ) : (
+            <div className="motion-swap">
+              <WeeklyView
+                plan={(browseWeekPlan ?? weeklyPlanDoc) as
+                  | {
+                      weekStart: string;
+                      timezone: string;
+                      weeklyFocus: string;
+                      items: WeeklyPlanItem[];
+                      version: number;
+                    }
+                  | null}
+                weekStart={weekStart}
+                today={today}
+                progress={planProgress ? weekProgressSummary(planProgress, today) : null}
+                weeklyReview={(weeklyReviewDoc?.summary as WeeklyReview | undefined) ?? null}
+                suggestions={adaptiveSuggestions ?? []}
+                applyingSuggestion={applyingSuggestion}
+                reviewing={reviewingWeek}
+                savingItemId={savingItemId}
+                onWeekChange={handleWeekChange}
+                onPatchItem={handlePatchPlanItem}
+                onApplySuggestion={handleApplyBrowsedSuggestion}
+                onSaveWeeklyReview={handleSaveBrowsedWeeklyReview}
+              />
+            </div>
+          )
         ) : null}
 
         {view === "review" ? (
@@ -1019,6 +1072,7 @@ export default function Dashboard() {
             onDownload={() => void startDownload()}
             onCancelDownload={cancelDownload}
             onClearQuran={() => void clearQuran()}
+            onClearCaches={clearCaches}
             onResetNudges={() => {
               resetNudges();
               setSeenViews({});
@@ -1045,6 +1099,7 @@ export default function Dashboard() {
           />
         ) : null}
         </Suspense>
+        </ViewBoundary>
       </main>
 
       <AdhkarDialog
@@ -1079,9 +1134,9 @@ export default function Dashboard() {
           }}
         >
           <DialogContent dir="rtl" className="glass-strong max-w-sm rounded-3xl border-white/70 bg-white/94">
-            <DialogHeader className="text-right">
+            <DialogHeader className="text-start">
               <DialogTitle className="text-lg">هل صلّيت {postPrayer.name}؟</DialogTitle>
-              <DialogDescription className="text-right text-[13px] leading-7">
+              <DialogDescription className="text-start text-[13px] leading-7">
                 هذا السجلّ مرآتك أمام نفسك؛ والكذب عليه يُخفي عنك ما تحتاج إصلاحه. «إنّ الصدق
                 يهدي إلى البرّ» — رواه مسلم.
               </DialogDescription>

@@ -43,7 +43,8 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { formatBytes, storageEstimate } from "@/lib/pwa";
 import { toast } from "sonner";
 
 type GeoProps = {
@@ -131,6 +132,7 @@ export function SettingsView({
   onDownload,
   onCancelDownload,
   onClearQuran,
+  onClearCaches,
   onResetNudges,
   onExportData,
   onSetCity,
@@ -156,6 +158,7 @@ export function SettingsView({
   onDownload: () => void;
   onCancelDownload: () => void;
   onClearQuran: () => void;
+  onClearCaches: () => Promise<void>;
   onResetNudges: () => void;
   onExportData: () => void;
   /** حفظ مدينة يدوية (بلا سؤال في البداية). */
@@ -166,6 +169,33 @@ export function SettingsView({
   city: string;
 }) {
   const [cityDraft, setCityDraft] = useState(city);
+  // قياس حقيقي من المتصفح: لا رقم مُقدَّر. null = غير مدعوم أوCalculation لم تجرِ.
+  const [storageLabel, setStorageLabel] = useState<string | null>(null);
+  const [clearingCaches, setClearingCaches] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void storageEstimate().then((estimate) => {
+      if (!active) return;
+      setStorageLabel(
+        estimate === null
+          ? "المتصفح لا يبلّغ عن المساحة"
+          : `${formatBytes(estimate.usage)} من ${formatBytes(estimate.quota)}`,
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleClearCaches = useCallback(async () => {
+    setClearingCaches(true);
+    try {
+      await onClearCaches();
+    } finally {
+      setClearingCaches(false);
+    }
+  }, [onClearCaches]);
 
   useEffect(() => {
     setCityDraft(city);
@@ -565,6 +595,29 @@ export function SettingsView({
               <Progress value={downloadProgress} className="mt-3 h-2 bg-white/60" />
             ) : null}
           </div>
+
+          <Row
+            title="مساحة التخزين"
+            hint="ما يستخدمه عود على جهازك: المصحف المحفوظ، القشرة، والصفحات المقروءة."
+          >
+            <span className="label-meta text-muted-foreground">
+              {storageLabel ?? "جارٍ الحساب…"}
+            </span>
+          </Row>
+
+          <Row
+            title="تفريغ الحفظ المؤقت"
+            hint="يحذف القشرة والصفحات المقروءة فقط. لا يمسّ المصحف المنزَّل ولا حسابك ولا موضع قراءتك."
+          >
+            <QuietButton
+              onClick={() => void handleClearCaches()}
+              disabled={clearingCaches}
+              className="px-3 text-[12px]"
+            >
+              <HardDriveDownload className="size-3.5" />
+              {clearingCaches ? "جارٍ…" : "تفريغ الحفظ"}
+            </QuietButton>
+          </Row>
 
           <Row
             title="عدم إنترنت أول مرة"

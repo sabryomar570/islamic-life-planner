@@ -96,13 +96,5 @@ export function readOfflineDayState(date: string): OfflineDayState | null {
   };
 }
 
-const FAVORITES_KEY = "sakinah:offline:favorites:v1";
 
-/** نسخة محلية من المحفوظات تُعرض فورًا وتُقرأ دون إنترنت. */
-export function saveOfflineFavorites(items: unknown) {
-  write(FAVORITES_KEY, items);
-}
 
-export function readOfflineFavorites<T>(): T | null {
-  return read<T>(FAVORITES_KEY);
-}

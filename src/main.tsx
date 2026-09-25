@@ -1,7 +1,7 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
-import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
+import { ViewBoundary } from "@/components/app/ViewBoundary";
 import { authStorage } from "@/lib/auth-storage";
 import { registerServiceWorker } from "@/lib/pwa";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
@@ -17,6 +17,12 @@ const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Onboarding = lazy(() => import("./pages/Onboarding.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+
+// شريط أدوات المعاينة يجرّ framer-motion (١٢٧ kB) معاه. تحميله مؤجَّل حتى
+// لا يقف أول رسم للتطبيق على أداة معاينة لا يحتاجها المستخدم.
+const VlyToolbar = lazy(() =>
+  import("../vly-toolbar-readonly.tsx").then((module) => ({ default: module.VlyToolbar })),
+);
 
 // هيكل واضح يبقي الخلفية والواجهة مثبتتين أثناء تحميل route chunk حقيقي؛
 // لا شاشة بيضاء ولا انتظار صامت.
@@ -158,7 +164,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
       <ToolbarErrorBoundary>
-        <VlyToolbar />
+        <Suspense fallback={null}>
+          <VlyToolbar />
+        </Suspense>
       </ToolbarErrorBoundary>
       {/* تخزين صريح دائم للجلسة: يمنع نسيان تسجيل الدخول عند إعادة فتح التطبيق. */}
       <ConvexAuthProvider client={convex} storage={authStorage} storageNamespace="oud-app">
@@ -175,7 +183,9 @@ createRoot(document.getElementById("root")!).render(
                 path="/dashboard"
                 element={
                   <RequireAuth>
-                    <Dashboard />
+                    <ViewBoundary label="يومك">
+                      <Dashboard />
+                    </ViewBoundary>
                   </RequireAuth>
                 }
               />
@@ -183,7 +193,9 @@ createRoot(document.getElementById("root")!).render(
                 path="/onboarding"
                 element={
                   <RequireAuth>
-                    <Onboarding />
+                    <ViewBoundary label="فهم يومك">
+                      <Onboarding />
+                    </ViewBoundary>
                   </RequireAuth>
                 }
               />

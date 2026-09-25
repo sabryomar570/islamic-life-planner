@@ -61,9 +61,9 @@ export function AdhkarDialog({
       >
         {/* ——— الترويسة: ما هذا الورد، وكم بقي ——— */}
         <div className="rule-b px-5 pb-4 pt-5 sm:px-6">
-          <DialogHeader className="text-right">
+          <DialogHeader className="text-start">
             <DialogTitle className="label-display">{group.title}</DialogTitle>
-            <DialogDescription className="label-body text-right text-muted-foreground">
+            <DialogDescription className="label-body text-start text-muted-foreground">
               {group.when} · {group.subtitle}
             </DialogDescription>
           </DialogHeader>
@@ -92,7 +92,7 @@ export function AdhkarDialog({
                   onClick={() => toggleItem(dhikr.id)}
                   aria-pressed={isChecked}
                   className={cn(
-                    "motion-press w-full border-b border-[var(--rule)] py-4 text-right last:border-b-0",
+                    "motion-press w-full border-b border-[var(--rule)] py-4 text-start last:border-b-0",
                     isChecked && "opacity-55",
                   )}
                 >

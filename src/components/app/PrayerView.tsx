@@ -172,7 +172,7 @@ export function PrayerView({
                     <div className="min-w-0">
                       <p className={cn("text-[14px] font-bold", isNow && "text-primary")}>
                         {prayer.name}
-                        {isNow ? <span className="label-meta mr-2 font-normal">الآن</span> : null}
+                        {isNow ? <span className="label-meta me-2 font-normal">الآن</span> : null}
                       </p>
                       <p className="label-meta text-muted-foreground">
                         {formatArabicTime(timings[prayer.key])} · {prayer.hint}

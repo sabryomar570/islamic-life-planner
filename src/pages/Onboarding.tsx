@@ -401,7 +401,7 @@ function ChoiceCards({
               aria-pressed={selected}
               onClick={() => onChange(option.value)}
               className={cn(
-                "motion-press flex min-h-24 items-start gap-3 rounded-2xl p-3.5 text-right",
+                "motion-press flex min-h-24 items-start gap-3 rounded-2xl p-3.5 text-start",
                 selected
                   ? "bg-primary/10 ring-1 ring-primary/40"
                   : "surface-secondary hover:bg-white/80",
@@ -942,7 +942,7 @@ export default function Onboarding() {
           <button
             type="button"
             onClick={() => navigate(isEdit ? "/dashboard" : "/")}
-            className="flex min-h-11 items-center gap-3 rounded-2xl text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+            className="flex min-h-11 items-center gap-3 rounded-2xl text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
             aria-label={isEdit ? "العودة إلى الرئيسية" : "العودة"}
           >
             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-lg shadow-primary/20">

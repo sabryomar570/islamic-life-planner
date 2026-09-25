@@ -142,7 +142,7 @@ export function StatsTable({
           hint="كل نقطة صلاة في آخر سبعة أيام — أخضر أديتها، رمادي لم تُسجّل."
         />
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[32rem] text-right">
+          <table className="w-full min-w-[32rem] text-start">
             <caption className="sr-only">حالة كل صلاة في آخر سبعة أيام مع نسبة الأداء</caption>
             <thead>
               <tr className="border-b border-[var(--rule)] label-meta text-muted-foreground">

@@ -180,7 +180,3 @@ export function detectLocation(): DetectedLocation {
   return { ...FALLBACK, timeZone: zone };
 }
 
-/** وصف مختصر لموقع الإحداثيات عند عرضه في الإعدادات. */
-export function coordsLabel(latitude: number, longitude: number) {
-  return `${latitude.toFixed(2)}° ، ${longitude.toFixed(2)}°`;
-}

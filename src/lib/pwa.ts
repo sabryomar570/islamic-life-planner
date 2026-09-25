@@ -12,22 +12,40 @@ type BeforeInstallPromptEvent = Event & {
 let registration: ServiceWorkerRegistration | null = null;
 const listeners = new Set<(data: Record<string, unknown>) => void>();
 
+let updateReadyRegistration: ServiceWorkerRegistration | null = null;
+const updateListeners = new Set<(ready: boolean) => void>();
+
+/**
+ * PHASE 2I — تدفّق التحديث.
+ *
+ * كان العامل الجديد يزيح القديم فور تثبيته، فتتبدّل ملفات التطبيق تحت
+ * جلسة مفتوحة دون أن يعلم المستخدم. الآن: يبقى الجديد في الانتظار، ونُعلم
+ * المستخدم، ويُطبَّق التحديث فقط بضغطه.
+ */
 export function registerServiceWorker() {
   if (typeof window === "undefined") return;
   if (!("serviceWorker" in navigator)) return;
+
+  const announce = () => {
+    for (const listener of updateListeners) listener(updateReadyRegistration !== null);
+  };
 
   const start = () => {
     navigator.serviceWorker
       .register("/sw.js", { scope: "/", updateViaCache: "none" })
       .then((reg) => {
         registration = reg;
-        if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
-        // نفعّل التحديث المكتشف تلقائيًا عندما يصبح جاهزًا.
+        // تحديث انتظر من فحص سابق: نُعلم به فورًا بدل تجاهله بصمت.
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          updateReadyRegistration = reg;
+          announce();
+        }
         reg.addEventListener("updatefound", () => {
           const installing = reg.installing;
           installing?.addEventListener("statechange", () => {
             if (installing.state === "installed" && navigator.serviceWorker.controller) {
-              installing.postMessage({ type: "SKIP_WAITING" });
+              updateReadyRegistration = reg;
+              announce();
             }
           });
         });
@@ -47,9 +65,35 @@ export function registerServiceWorker() {
   });
 }
 
-export function onServiceWorkerMessage(handler: (data: Record<string, unknown>) => void) {
-  listeners.add(handler);
-  return () => listeners.delete(handler);
+
+/** يشترك في تغيّر حالة «يتوفر تحديث» ويعيد الاشتراك. */
+export function onUpdateReady(handler: (ready: boolean) => void) {
+  updateListeners.add(handler);
+  handler(updateReadyRegistration !== null);
+  return () => {
+    updateListeners.delete(handler);
+  };
+}
+
+/**
+ * يطبّق التحديث المنتظر: يُنشّط العامل الجديد ثم يعيد التحميل.
+ * الجلسة محفوظة في تخزين Convex، فلا يفقد المستخدم تسجيل دخوله.
+ */
+export async function applyUpdate() {
+  const reg = updateReadyRegistration ?? (await getServiceWorker());
+  if (!reg) return false;
+  const waiting = reg.waiting;
+  if (waiting) {
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      navigator.serviceWorker.addEventListener("controllerchange", done, { once: true });
+      waiting.postMessage({ type: "SKIP_WAITING" });
+      // شبكة حماية: بعض البيئات لا تُغيّر الـcontroller، فلا نعلق.
+      window.setTimeout(done, 1500);
+    });
+  }
+  window.location.reload();
+  return true;
 }
 
 export async function getServiceWorker() {

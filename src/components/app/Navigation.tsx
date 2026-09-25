@@ -11,11 +11,9 @@ import {
   Feather,
   HeartHandshake,
   Landmark,
-  LogOut,
   ScrollText,
   Settings,
   Sparkles,
-  UserRound,
 } from "lucide-react";
 
 /**
@@ -150,10 +148,3 @@ export const LIBRARY_GROUPS: NavGroup[] = [
     ],
   },
 ];
-
-/** إجراءات الحساب — تظهر في قائمة الحساب لا في المكتبة نفسها. */
-export const ACCOUNT_ACTIONS = [
-  { key: "settings", label: "الإعدادات", icon: Settings },
-  { key: "edit-profile", label: "تعديل ملفّي", icon: UserRound },
-  { key: "sign-out", label: "تسجيل الخروج", icon: LogOut },
-] as const;

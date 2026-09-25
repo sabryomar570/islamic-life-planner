@@ -2,7 +2,7 @@
  * Weekly Plan Engine — منطق خالص لا يعرف Convex أو React.
  * يولّد خطة قابلة للتعديل، ويحوّل مواقيت الصلاة إلى anchors بدل تثبيت مواعيد صلوات وهمية.
  */
-import { buildLifeModel, type PersonalLifeModel } from "./life-model";
+import { type PersonalLifeModel } from "./life-model";
 import { addMinutes, diffMinutes, toMinutes, weekStartOfDateKey } from "./time";
 
 const DAY_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -355,9 +355,6 @@ export function updateWeeklyPlanItems(
   return { items: next, changed };
 }
 
-export function modelForAnswers(answers: Parameters<typeof buildLifeModel>[0]) {
-  return buildLifeModel(answers);
-}
 
 /**
  * الأسبوع الذي ينتمي إليه عنصر الخطة، مشتقًا من مُعرّف العنصر نفسه.

@@ -1,6 +1,7 @@
 /**
- * Progress foundation — streaks وmilestones without gamification pressure.
- * لا نقاط_compare بين الناس، ولا achievements قبل وجود فعل حقيقي في السجل.
+ * Progress foundation — السلسلة والتقدم الأسبوعي بلا ضغط تنافسي.
+ * لا نقاط_compare بين الناس، ولا «إنجازات» وشارات: بيانات بلا سطح تُحذف
+ * ولا تُخزَّن.
  */
 export type ProgressDay = {
   date: string;
@@ -10,16 +11,6 @@ export type ProgressDay = {
   postponed: number;
   skipped: number;
   reviewed: boolean;
-};
-
-export type Achievement = {
-  id: string;
-  title: string;
-  description: string;
-  unlocked: boolean;
-  progress: number;
-  target: number;
-  kind: "milestone" | "consistency" | "review";
 };
 
 export type WeeklyProgress = {
@@ -37,7 +28,6 @@ export type ProgressSummary = {
   longestStreak: number;
   totalCompleted: number;
   weekly: WeeklyProgress;
-  achievements: Achievement[];
 };
 
 function activeDay(day: ProgressDay) {
@@ -100,43 +90,6 @@ export function calculateWeeklyProgress(
   };
 }
 
-export function calculateAchievements(days: readonly ProgressDay[]): Achievement[] {
-  const ordered = sortDays(days);
-  const streaks = calculateStreaks(ordered);
-  const completed = ordered.reduce((sum, day) => sum + day.completed, 0);
-  const reviewed = ordered.filter((day) => day.reviewed).length;
-  const achievements: Achievement[] = [
-    {
-      id: "first-step",
-      title: "أول خطوة",
-      description: "سجّلت أول عنصر مكتمل في خطتك.",
-      unlocked: completed >= 1,
-      progress: Math.min(completed, 1),
-      target: 1,
-      kind: "milestone",
-    },
-    {
-      id: "steady-seven",
-      title: "إيقاع سبعة",
-      description: "حافظت على يوم نشط لمدة سبعة أيام متتالية.",
-      unlocked: streaks.longest >= 7,
-      progress: Math.min(streaks.longest, 7),
-      target: 7,
-      kind: "consistency",
-    },
-    {
-      id: "first-review",
-      title: "وقفة صادقة",
-      description: "أكملت أول مراجعة يومية لتعرف نمطك.",
-      unlocked: reviewed >= 1,
-      progress: Math.min(reviewed, 1),
-      target: 1,
-      kind: "review",
-    },
-  ];
-  return achievements;
-}
-
 export function buildProgressSummary(
   days: readonly ProgressDay[],
   previousDays: readonly ProgressDay[] = [],
@@ -148,6 +101,5 @@ export function buildProgressSummary(
     longestStreak: streaks.longest,
     totalCompleted: ordered.reduce((sum, day) => sum + day.completed, 0),
     weekly: calculateWeeklyProgress(ordered, previousDays),
-    achievements: calculateAchievements(ordered),
   };
 }

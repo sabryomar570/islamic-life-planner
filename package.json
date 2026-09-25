@@ -12,6 +12,7 @@
     "test": "bun test",
     "typecheck": "tsc -b --noEmit",
     "check:glyphs": "bun scripts/check-stray-glyphs.ts",
+    "icons": "bun scripts/generate-icons.ts",
     "package:zip": "bash scripts/package-zip.sh"
   },
   "dependencies": {

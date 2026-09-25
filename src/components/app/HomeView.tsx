@@ -290,7 +290,7 @@ export function HomeView({
           <button
             type="button"
             onClick={() => onOpenSection("quran")}
-            className="motion-press surface-primary flex items-start gap-3 rounded-3xl p-4 text-right sm:p-5"
+            className="motion-press surface-primary flex items-start gap-3 rounded-3xl p-4 text-start sm:p-5"
           >
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <BookOpen className="size-[18px]" />
@@ -310,7 +310,7 @@ export function HomeView({
           <button
             type="button"
             onClick={() => onOpenAdhkar("morning")}
-            className="motion-press surface-primary flex items-start gap-3 rounded-3xl p-4 text-right sm:p-5"
+            className="motion-press surface-primary flex items-start gap-3 rounded-3xl p-4 text-start sm:p-5"
           >
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Sun className="size-[18px]" />
@@ -432,15 +432,23 @@ export function HomeView({
           ) : null}
 
           {lifeProgress ? (
-            <p className="label-meta mt-1 text-muted-foreground">
-              من خطة الأسبوع: {arabicNumber(lifeProgress.weekly.completed)} خطوة منفَّذة ·{" "}
-              {arabicNumber(lifeProgress.weekly.reviewedDays)} يوم مراجَع
+            <p className="label-meta mt-1 leading-6 text-muted-foreground">
+              من خطة الأسبوع: {arabicNumber(lifeProgress.weekly.completed)} خطوة منفَّذة في{" "}
+              {arabicNumber(lifeProgress.weekly.activeDays)} أيام نشطة
+              {lifeProgress.weekly.postponed > 0
+                ? ` · ${arabicNumber(lifeProgress.weekly.postponed)} مؤجّل`
+                : ""}{" "}
+              · {arabicNumber(lifeProgress.weekly.reviewedDays)} يوم مراجَع
+              {lifeProgress.weekly.averageScore !== null
+                ? ` · متوسّط ${arabicNumber(lifeProgress.weekly.averageScore)}`
+                : ""}
               {lifeProgress.weekly.changeFromPrevious !== null
                 ? ` · ${lifeProgress.weekly.changeFromPrevious >= 0 ? "أعلى" : "أقل"} من الأسبوع الذي قبله بـ${arabicNumber(
                     Math.abs(lifeProgress.weekly.changeFromPrevious),
                   )} نقطة`
                 : ""}
-              .
+              .<br />
+              أطول سلسلة: {arabicNumber(lifeProgress.longestStreak)} يوم
             </p>
           ) : null}
         </Panel>

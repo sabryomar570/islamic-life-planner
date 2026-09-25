@@ -10,11 +10,6 @@ export type WeeklyFocus = "prayer" | "adhkar" | "consistency";
 export type ReviewMood = "bad" | "ok" | "good" | "great";
 export type ReviewBlocker = "none" | "busy" | "tired" | "forgot" | "mood";
 
-export const FOCUS_LABELS: Record<WeeklyFocus, string> = {
-  prayer: "الصلاة في وقتها",
-  adhkar: "أذكار الصباح والمساء",
-  consistency: "ألا يمر يوم بلا عبادة",
-};
 
 export const MOOD_LABELS: Record<ReviewMood, string> = {
   bad: "يوم صعب",
@@ -54,12 +49,6 @@ export const MOVEMENT_LABELS: Record<string, string> = {
   rest: "راحة متدرجة",
 };
 
-export const DISTRACTION_LABELS: Record<string, string> = {
-  phone: "الهاتف",
-  social: "التواصل الاجتماعي",
-  fatigue: "الإرهاق",
-  noise: "الضجيج وتشتت المكان",
-};
 
 export const EVENING_RESET_LABELS: Record<string, string> = {
   quran: "قراءة خفيفة",
@@ -68,11 +57,6 @@ export const EVENING_RESET_LABELS: Record<string, string> = {
   calm: "هدوء ودون شاشة",
 };
 
-export const DISCIPLINE_LABELS: Record<string, string> = {
-  gentle: "برفق: تذكير هادئ فقط",
-  balanced: "متوازن: تذكير ومراجعة",
-  firm: "حازم بصراحة، بلا تجاوز",
-};
 
 /** فترة اليوم من وقت الجهاز + إجابات المستخدم (استيقاظ/نوم). */
 export function dayPeriod(

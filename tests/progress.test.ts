@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildProgressSummary,
-  calculateAchievements,
   calculateStreaks,
   calculateWeeklyProgress,
   type ProgressDay,
@@ -63,38 +62,27 @@ describe("Streaks and weekly progress", () => {
     const result = buildProgressSummary([]);
     expect(result.currentStreak).toBe(0);
     expect(result.longestStreak).toBe(0);
+    expect(result.totalCompleted).toBe(0);
+    expect(result.weekly.activeDays).toBe(0);
     expect(result.weekly.averageScore).toBeNull();
     expect(result.weekly.changeFromPrevious).toBeNull();
-    expect(result.achievements.every((item) => !item.unlocked)).toBe(true);
   });
 });
 
-describe("Milestones", () => {
-  test("unlocks only milestones supported by actual records", () => {
-    const early = calculateAchievements([day("2026-09-01", 1)]);
-    expect(early.find((item) => item.id === "first-step")?.unlocked).toBe(true);
-    expect(early.find((item) => item.id === "steady-seven")?.unlocked).toBe(false);
-    expect(early.find((item) => item.id === "first-review")?.unlocked).toBe(false);
-
-    const sustained = calculateAchievements([
-      ...Array.from({ length: 7 }, (_, index) =>
-        day(`2026-09-${String(index + 1).padStart(2, "0")}`, 1),
-      ),
-      day("2026-09-08", 0, 0, { reviewed: true }),
+describe("No gamification layer", () => {
+  // PHASE 2: «الإنجازات» حُذفت لأنها كانت تُحسب ولا تُعرض، والشارات ضغط تنافسي
+  // يخالف دستور العلامة. الحارس هنا يمنع عودتها صامتة إلى طبقة الملخص.
+  test("the summary exposes no achievements or badges", () => {
+    const keys = Object.keys(
+      buildProgressSummary([day("2026-09-01", 3), day("2026-09-02", 4)]),
+    );
+    expect(keys).not.toContain("achievements");
+    expect(keys).not.toContain("badges");
+    expect(keys.sort()).toEqual([
+      "currentStreak",
+      "longestStreak",
+      "totalCompleted",
+      "weekly",
     ]);
-    expect(sustained.find((item) => item.id === "steady-seven")?.unlocked).toBe(true);
-    expect(sustained.find((item) => item.id === "first-review")?.unlocked).toBe(true);
-  });
-
-  test("uses bounded progress values suitable for calm UI feedback", () => {
-    const achievements = calculateAchievements([
-      day("2026-09-01", 12),
-      day("2026-09-02", 9),
-    ]);
-    const first = achievements.find((item) => item.id === "first-step")!;
-    const steady = achievements.find((item) => item.id === "steady-seven")!;
-    expect(first.progress).toBeLessThanOrEqual(first.target);
-    expect(steady.progress).toBeLessThanOrEqual(steady.target);
-    expect(steady.kind).toBe("consistency");
   });
 });

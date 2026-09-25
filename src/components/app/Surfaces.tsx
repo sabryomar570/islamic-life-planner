@@ -32,14 +32,6 @@ export function Panel({ children, className, as: Tag = "section", role }: Surfac
   );
 }
 
-/** Secondary surface — عنصر داخل اللوح. أخف، بلا ضباب مزدوج. */
-export function Subpanel({ children, className, as: Tag = "div", role }: SurfaceProps) {
-  return (
-    <Tag role={role} className={cn("rounded-2xl surface-secondary", className)}>
-      {children}
-    </Tag>
-  );
-}
 
 /** Sunken — حفرة أو حالة فارغة. بصريًا «أخفض» من محيطه. */
 export function Sunken({ children, className, as: Tag = "div", role }: SurfaceProps) {
@@ -50,14 +42,6 @@ export function Sunken({ children, className, as: Tag = "div", role }: SurfacePr
   );
 }
 
-/** Quiet — سطح القراءة والمصحف. أقرب للورق من الزجاج. */
-export function QuietPanel({ children, className, as: Tag = "div", role }: SurfaceProps) {
-  return (
-    <Tag role={role} className={cn("rounded-3xl surface-quiet", className)}>
-      {children}
-    </Tag>
-  );
-}
 
 /** Editorial — ورق دافئ للقرآن والشعر. لا زجاج ولا أزرق. */
 export function Editorial({ children, className, as: Tag = "div", role }: SurfaceProps) {
@@ -68,10 +52,6 @@ export function Editorial({ children, className, as: Tag = "div", role }: Surfac
   );
 }
 
-/** فاصل هادئ بين المناطق — شعرة لا صندوق. */
-export function Rule({ className }: { className?: string }) {
-  return <div aria-hidden className={cn("h-px w-full bg-[var(--rule)]", className)} />;
-}
 
 /* ————————————————————————————— Typography ————————————————————————————— */
 
@@ -79,24 +59,6 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
   return <p className={cn("eyebrow", className)}>{children}</p>;
 }
 
-/** عنوان الشاشة — 20px، لا عملاق. */
-export function DisplayTitle({
-  children,
-  className,
-  id,
-  as: Tag = "h1",
-}: {
-  children: ReactNode;
-  className?: string;
-  id?: string;
-  as?: "h1" | "h2";
-}) {
-  return (
-    <Tag id={id} className={cn("label-display text-foreground", className)}>
-      {children}
-    </Tag>
-  );
-}
 
 /** عنوان القسم — 13px/600. أعلى السلّم من النص، أقل من الشاشة. */
 export function SectionHead({
@@ -315,22 +277,6 @@ export function Skeleton({ className }: { className?: string }) {
   return <span aria-hidden className={cn("skeleton block", className)} />;
 }
 
-export function SkeletonLines({
-  rows = 3,
-  className,
-}: {
-  rows?: number;
-  className?: string;
-}) {
-  return (
-    <div className={cn("space-y-2", className)} role="status" aria-busy="true">
-      {Array.from({ length: rows }).map((_, index) => (
-        <Skeleton key={index} className={cn("h-3", index === rows - 1 ? "w-2/5" : "w-full")} />
-      ))}
-      <span className="sr-only">جارٍ التحميل</span>
-    </div>
-  );
-}
 
 /** تنبيه دون اتصال — صغير وغير مزعج. */
 export function OfflineNote({ children }: { children?: ReactNode }) {

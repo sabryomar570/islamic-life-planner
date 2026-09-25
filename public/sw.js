@@ -16,6 +16,10 @@ const SHELL_ASSETS = [
   "/logo.svg",
   "/icon.svg",
   "/icon-maskable.svg",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-512.png",
+  "/apple-touch-icon.png",
 ];
 
 /* نطاقات تُخزَّن أولًا (cache-first) لأنها نصوص ثابتة لا تتغيّر. */
@@ -39,7 +43,8 @@ self.addEventListener("install", (event) => {
           cache.add(new Request(url, { cache: "reload" })).catch(() => undefined),
         ),
       );
-      await self.skipWaiting();
+      // بلا skipWaiting هنا: العامل الجديد ينتظر حتى يضغط المستخدم «تحديث الآن».
+      // التفعيل الفوري كان يبدّل ملفات التطبيق تحت جلسة مفتوحة دون إخبار.
     })(),
   );
 });

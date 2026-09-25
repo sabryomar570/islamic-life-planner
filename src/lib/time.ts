@@ -110,6 +110,3 @@ export function greeting(date: Date = new Date()): string {
   return "طابت ليلتك";
 }
 
-export function isSameDay(a: string, b: string) {
-  return a === b;
-}

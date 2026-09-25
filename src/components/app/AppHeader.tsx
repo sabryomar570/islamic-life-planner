@@ -325,7 +325,7 @@ function LibrarySheet({
         side="bottom"
         className="glass-strong max-h-[86dvh] overflow-y-auto rounded-t-[1.75rem] border-white/70 bg-white/96 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-2"
       >
-        <SheetHeader className="text-right">
+        <SheetHeader className="text-start">
           <SheetTitle className="label-section">كل الأقسام</SheetTitle>
         </SheetHeader>
 
@@ -385,7 +385,7 @@ function LibraryTile({
       onClick={onOpen}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "motion-press surface-secondary flex w-full items-center gap-2.5 rounded-2xl p-2.5 text-right",
+        "motion-press surface-secondary flex w-full items-center gap-2.5 rounded-2xl p-2.5 text-start",
         active && "bg-primary/10 ring-1 ring-primary/30",
       )}
     >

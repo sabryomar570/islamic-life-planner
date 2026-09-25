@@ -119,6 +119,29 @@ export function WeeklyView({
   const actionable = suggestions.find((item) => item.kind === "move" || item.kind === "reduce");
   const completion = progress && progress.total > 0 ? progress.completed / progress.total : 0;
 
+  /** أسطر تُقرأ في جملة واحدة، لا لوحة أرقام. */
+  const weeklyFacts = useMemo(() => {
+    if (!weeklyReview) return [];
+    const facts: string[] = [];
+    if (weeklyReview.mostConsistentHabit) {
+      facts.push(
+        `أكثر ما ثبت: ${KIND_LABEL[weeklyReview.mostConsistentHabit.kind] ?? weeklyReview.mostConsistentHabit.kind} (${arabicNumber(weeklyReview.mostConsistentHabit.count)} مرة).`,
+      );
+    }
+    if (weeklyReview.mostPostponed) {
+      facts.push(
+        `أكثر ما تأجّل: ${KIND_LABEL[weeklyReview.mostPostponed.kind] ?? weeklyReview.mostPostponed.kind} (${arabicNumber(weeklyReview.mostPostponed.count)} مرة).`,
+      );
+    }
+    if (weeklyReview.successfulPeriods.length > 0) {
+      facts.push(`نوافذ التزمت بها: ${weeklyReview.successfulPeriods.join("، ")}.`);
+    }
+    if (weeklyReview.difficultPeriods.length > 0) {
+      facts.push(`نوافذ تعثّرت: ${weeklyReview.difficultPeriods.join("، ")}.`);
+    }
+    return facts;
+  }, [weeklyReview]);
+
   return (
     <div className="stack">
       {/* ——— رأس الخطة: أي أسبوع، وأين نضع جهدنا ——— */}
@@ -208,8 +231,8 @@ export function WeeklyView({
             <div className="mb-1.5 flex items-baseline justify-between gap-3 px-1">
               <h3 className={cn("label-section", isToday && "text-primary")}>
                 {weekdayShort(date)}
-                <span className="label-meta mr-2 font-normal text-muted-foreground">{day.slice(5)}</span>
-                {isToday ? <span className="label-meta mr-2 font-normal">اليوم</span> : null}
+                <span className="label-meta me-2 font-normal text-muted-foreground">{day.slice(5)}</span>
+                {isToday ? <span className="label-meta me-2 font-normal">اليوم</span> : null}
               </h3>
               <span className="label-meta text-muted-foreground">
                 {arabicNumber(items.filter((item) => item.enabled).length)} خطوة
@@ -260,20 +283,35 @@ export function WeeklyView({
           hint="تُبنى من تنفيذك الفعلي، ولا تغيّر الخطة قبل موافقتك."
         />
         {weeklyReview ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Sunken className="px-3.5 py-3">
-              <p className="label-meta text-muted-foreground">الالتزام العام</p>
-              <p className="mt-0.5 text-[15px] font-bold text-primary">
-                {arabicNumber(weeklyReview.adherence)}٪
-              </p>
-            </Sunken>
-            <Sunken className="px-3.5 py-3">
-              <p className="label-meta text-muted-foreground">أيام مراجَعة</p>
-              <p className="mt-0.5 text-[15px] font-bold">
-                {arabicNumber(weeklyReview.reviewedDays)} / ٧
-              </p>
-            </Sunken>
-          </div>
+          <>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Sunken className="px-3.5 py-3">
+                <p className="label-meta text-muted-foreground">الالتزام العام</p>
+                <p className="mt-0.5 text-[15px] font-bold text-primary">
+                  {arabicNumber(weeklyReview.adherence)}٪
+                </p>
+              </Sunken>
+              <Sunken className="px-3.5 py-3">
+                <p className="label-meta text-muted-foreground">أيام مراجَعة</p>
+                <p className="mt-0.5 text-[15px] font-bold">
+                  {arabicNumber(weeklyReview.reviewedDays)} / ٧
+                </p>
+              </Sunken>
+            </div>
+
+            {/* ما علّمت به المراجعة: ثبات habit، تأجّل عنصر، ونوافذ نجحت وأخرى تعثّرت.
+                كانت محسوبة ومخزّنة بلا قارئ — فالحلقة كانت تنتهي عند التخزين. */}
+            {weeklyFacts.length > 0 ? (
+              <ul className="mt-3 space-y-1.5">
+                {weeklyFacts.map((fact) => (
+                  <li key={fact} className="label-body flex items-start gap-2 text-muted-foreground">
+                    <span aria-hidden className="mt-[0.45rem] size-1 shrink-0 rounded-full bg-primary/45" />
+                    <span>{fact}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </>
         ) : (
           <p className="label-body mt-3 text-muted-foreground">
             لم تُنشأ مراجعة لهذا الأسبوع بعد. تتطلب بيانات تنفيذ كافية لتكون ذات معنى.

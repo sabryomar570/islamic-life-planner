@@ -7,7 +7,8 @@ const exts = [".ts", ".tsx", ".md", ".css", ".html"];
 const seen = new Set<string>();
 const bad: string[] = [];
 
-const CJK = /[\u3000-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af\uff00-\uffef]/;
+// محارف صينية/كورية/يابانية + محرف الإبدال U+FFFD: كلها إفساد مخرجات، لا محتوى.
+const CJK = /[\u3000-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af\uff00-\uffef\uFFFD]/;
 
 function walk(dir: string, depth = 0) {
   if (depth > 2) return;
@@ -44,7 +45,7 @@ function walk(dir: string, depth = 0) {
 for (const root of roots) walk(root);
 
 if (bad.length === 0) {
-  console.log("نظيف: لا محارف صينية/كورية/يابانية في الكود أو التقارير.");
+  console.log("نظيف: لا محارف صينية/كورية/يابانية ولا محارف إبدال في الكود أو التقارير.");
 } else {
   console.log(`${bad.length} سطر يحتوي محارف غريبة:\n` + bad.join("\n"));
 }

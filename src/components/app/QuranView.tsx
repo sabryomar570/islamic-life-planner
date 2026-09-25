@@ -456,7 +456,7 @@ export function QuranView({
                   type="button"
                   data-ayah={ayah.number}
                   onClick={() => setSelectedAyah(ayah)}
-                  className="block w-full rounded-lg px-1 py-1.5 text-right transition-colors hover:bg-white/55"
+                  className="block w-full rounded-lg px-1 py-1.5 text-start transition-colors hover:bg-white/55"
                 >
                   <p
                     className="mushaf-text"
@@ -600,16 +600,16 @@ export function QuranView({
           </SheetHeader>
 
           <div className="relative mt-2">
-            <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="ابحث باسم السورة أو رقمها..."
-              className="h-11 rounded-full border-white/70 bg-white/80 pr-10 text-sm"
+              className="h-11 rounded-full border-white/70 bg-white/80 ps-10 text-sm"
             />
           </div>
 
-          <div className="mt-3 flex-1 space-y-1 overflow-y-auto pl-1">
+          <div className="mt-3 flex-1 space-y-1 overflow-y-auto ps-1">
             {filtered.map((item) => (
               <button
                 key={item.number}
@@ -619,7 +619,7 @@ export function QuranView({
                   setIndexOpen(false);
                 }}
                 className={cn(
-                  "flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-right transition-colors",
+                  "flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-start transition-colors",
                   item.number === surahNumber
                     ? "bg-primary text-primary-foreground"
                     : "tile-edge hover:bg-white",
@@ -658,11 +658,11 @@ export function QuranView({
       {/* خيارات الآية */}
       <Dialog open={selectedAyah !== null} onOpenChange={(open) => !open && setSelectedAyah(null)}>
         <DialogContent dir="rtl" className="glass-strong max-w-lg rounded-3xl border-white/70 bg-white/94">
-          <DialogHeader className="text-right">
+          <DialogHeader className="text-start">
             <DialogTitle className="text-base">
               سورة {surah.name} — الآية {arabicNumber(selectedAyah?.number ?? 1)}
             </DialogTitle>
-            <DialogDescription className="text-right text-xs">
+            <DialogDescription className="text-start text-xs">
               انسخ الآية أو شاركها كما هي.
             </DialogDescription>
           </DialogHeader>

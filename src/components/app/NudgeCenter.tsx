@@ -69,7 +69,7 @@ export function NudgeCenter({
       >
         {nudge ? (
           <>
-            <DialogHeader className="text-right">
+            <DialogHeader className="text-start">
               <span className="glass-tile inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-foreground/70">
                 {nudge.id === "notifications" ? (
                   <BellRing className="size-3.5 text-primary" />
@@ -81,7 +81,7 @@ export function NudgeCenter({
                 {nudge.eyebrow}
               </span>
               <DialogTitle className="mt-3 text-lg leading-8">{nudge.title}</DialogTitle>
-              <DialogDescription className="text-right text-[13px] leading-7">
+              <DialogDescription className="text-start text-[13px] leading-7">
                 {nudge.body}
               </DialogDescription>
             </DialogHeader>

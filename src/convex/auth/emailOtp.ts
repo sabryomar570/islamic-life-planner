@@ -33,7 +33,8 @@ export const emailOtp = Email({
         {
           to: email,
           otp: token,
-          appName: process.env.VLY_APP_NAME || "a freebuff.com application",
+          // اسم التطبيق كما يظهر للمستخدم في بريد التحقق. لا اسم منصة بناة.
+          appName: process.env.VLY_APP_NAME || "عود",
         },
         {
           headers: {
