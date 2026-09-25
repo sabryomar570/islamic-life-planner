@@ -5,6 +5,14 @@ import {
   SectionHead,
 } from "@/components/app/Surfaces";
 import { RING_TONES, playRingTone, type RingTone } from "@/lib/notify";
+import {
+  AUDIO_CHANNELS,
+  playCue,
+  unlockAudio,
+  type AudioCue,
+} from "@/lib/audio";
+import { audioPreferencesOf, PRAYER_METHODS, type Preferences } from "@/hooks/use-preferences";
+import { Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -28,7 +36,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { PRAYER_METHODS, type Preferences } from "@/hooks/use-preferences";
 import type { GeoStatus } from "@/hooks/use-location";
 import { arabicNumber } from "@/lib/time";
 import {
