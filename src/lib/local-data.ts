@@ -34,6 +34,8 @@ export const OWNED_LOCAL_KEYS = [
   "oud:quran:scroll",
   "sakinah:nudges:v1",
   "sakinah:seen:v1",
+  // PHASE 3: سجل الإشعارات محلي على الجهاز، فليس ملك المستخدم وحده.
+  "oud:notifications:v1",
 ] as const;
 
 /** بادئات مفاتيح ديناميكية (مفاتيح تحمل تاريخ اليوم مثلًا). */

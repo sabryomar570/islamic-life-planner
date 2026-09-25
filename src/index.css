@@ -368,6 +368,46 @@
 
   /* ———————————————————————————PHASE 2: تدرّج السطح ——————————————————————————— */
 
+  /* PHASE 3: حالات الأزرار الموحّدة.
+     القاعدة: الحالة النشطة لا تعتمد على اللون وحده. كل حالة تحمل حلقة
+     مزدوجة وخطا داخليا رفيعا، فتُقرأ حتى في رمادي. */
+
+  .action-active {
+    box-shadow:
+      0 0 0 2px color-mix(in oklab, var(--primary) 34%, transparent),
+      inset 0 0 0 1.5px color-mix(in oklab, var(--primary) 58%, transparent);
+  }
+
+  /* النجاح: علامة صح مرسومة إلى جانب الحلقة، لا مجرد درجة خضراء. */
+  .action-success {
+    box-shadow:
+      0 0 0 2px color-mix(in oklab, var(--status-success) 38%, transparent),
+      inset 0 0 0 1.5px color-mix(in oklab, var(--status-success) 62%, transparent);
+  }
+
+  /* التعطيل لا يختفي: ينقص التشبّع ويظهر مكتفيًا بصريا. */
+  .action-disabled {
+    filter: saturate(0.3);
+    opacity: 0.5;
+  }
+
+  /* حلقة تقدّم رفيعة بدل النص، تُستعمل مع حالة التحميل. */
+  .action-spinner {
+    display: inline-block;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 9999px;
+    border: 2px solid color-mix(in oklab, currentColor 30%, transparent);
+    border-top-color: currentColor;
+    animation: action-spin 700ms linear infinite;
+  }
+
+  @keyframes action-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   /* Canvas: لا خلفية إضافية — الخلفية النسيجية في body هي الكانفس. */
 
   /* Primary surface: اللوح الرئيسي للشاشة. واحد فقط في كل شاشة. */
@@ -864,6 +904,15 @@
     transform: none;
   }
   .meter > span {
+    transition: none;
+  }
+  /* PHASE 3: لا تدور حلقة التحميل لمن يفضّل تقليل الحركة. */
+  .action-spinner {
+    animation: none;
+    border-top-color: color-mix(in oklab, currentColor 60%, transparent);
+  }
+  .action-active,
+  .action-success {
     transition: none;
   }
 }

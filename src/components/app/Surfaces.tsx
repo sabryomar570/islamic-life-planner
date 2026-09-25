@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 
 /**
@@ -106,7 +107,7 @@ export function ChoiceChip({
       className={cn(
         "motion-press touch-target rounded-full px-3.5 label-meta font-medium",
         active
-          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25 action-active"
           : "surface-secondary text-foreground/75 hover:text-foreground",
         className,
       )}
@@ -117,23 +118,66 @@ export function ChoiceChip({
   );
 }
 
+/**
+ * PHASE 3 — حالات الأزرار الموحّدة.
+ *
+ * كل زر في التطبيق يمرّ من هنا، فتبقى الحالات متطابقة: عادي · hovered ·
+ * pressed · active · disabled · loading · success.
+ *
+ * `active` و`success` تحملان إشارة لا لونية (حلقة مزدوجة + علامة صح)،
+ * فلا يعتمد الفهم على تمييز اللون وحده.
+ */
+export type ActionState = "default" | "active" | "success";
+
+type ActionExtras = {
+  /** يعطّل الزر ويضع `aria-busy` مع حلقة تقدّم. */
+  loading?: boolean;
+  state?: ActionState;
+  /** نص بديل يُقال لقارئ الشاشة أثناء التحميل. */
+  loadingLabel?: string;
+};
+
+/** أصناف مشتركة بين الزر الأساسي والثانوي حتى لا تتفرّق الحالات. */
+function actionStateClass(state: ActionState, loading: boolean | undefined) {
+  if (loading) return "action-disabled cursor-not-allowed";
+  if (state === "active") return "action-active";
+  if (state === "success") return "action-success";
+  return "";
+}
+
+/** علامة صح تظهر في حالة النجاح، وهي الإشارة غير اللونية الأوضح. */
+function ActionGlyph({ state }: { state: ActionState }) {
+  if (state !== "success") return null;
+  return <Check className="size-3.5" aria-hidden />;
+}
+
 /** زر إجراء داخل لوحة — ثانوي بطبعه. */
 export function QuietButton({
   children,
   className,
+  loading,
+  state = "default",
+  loadingLabel = "جارٍ التنفيذ",
+  disabled,
   ...props
-}: React.ComponentProps<"button">) {
+}: React.ComponentProps<"button"> & ActionExtras) {
   return (
     <button
       type="button"
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
         "motion-press touch-target inline-flex items-center justify-center gap-1.5 rounded-full px-4 label-meta font-semibold",
         "surface-secondary text-foreground/80 hover:bg-white/80",
+        "disabled:cursor-not-allowed",
+        actionStateClass(state, loading),
         className,
       )}
       {...props}
     >
-      {children}
+      {loading ? <span className="action-spinner" aria-hidden /> : <ActionGlyph state={state} />}
+      <span>{children}</span>
+      {loading ? <span className="sr-only">{loadingLabel}</span> : null}
     </button>
   );
 }
@@ -142,19 +186,28 @@ export function QuietButton({
 export function PrimaryButton({
   children,
   className,
+  loading,
+  state = "default",
+  loadingLabel = "جارٍ التنفيذ",
+  disabled,
   ...props
-}: React.ComponentProps<"button">) {
+}: React.ComponentProps<"button"> & ActionExtras) {
   return (
     <button
       type="button"
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
         "motion-press btn-primary-edge touch-target inline-flex items-center justify-center gap-2 rounded-full px-5 text-[13px] font-semibold text-primary-foreground",
         "disabled:cursor-not-allowed disabled:opacity-55",
+        actionStateClass(state, loading),
         className,
       )}
       {...props}
     >
-      {children}
+      {loading ? <span className="action-spinner" aria-hidden /> : <ActionGlyph state={state} />}
+      <span>{children}</span>
+      {loading ? <span className="sr-only">{loadingLabel}</span> : null}
     </button>
   );
 }

@@ -1,34 +1,83 @@
+/**
+ * PHASE 3 — بيت الأحاديث.
+ *
+ * ثلاث طبقات بترتيب نيّة المستخدم لا بترتيب قاعدة البيانات:
+ *   ١ حديث اليوم (لا اختيار، لا عشوائية)
+ *   ٢ حديث سياق اليوم (مرتبط بالساعة)
+ *   ٣ المكتبة (تصنيفات وبحث وقائمة قراءة)
+ *
+ * **قاعدة لا تُكسر:** ما لم يُوثَّق لا يُعرض كحديث موثوق. حالة التوثيق
+ * ظاهرة في كل بطاقة، والقارئ يستطيع فتح الحديث كاملًا في نافذة مستقلة.
+ */
+
+import { Artwork } from "@/components/app/Artworks";
+import { HadithReader } from "@/components/app/HadithReader";
 import {
   ChoiceChip,
   EmptyState,
   Panel,
   QuietButton,
   SectionHead,
+  Tag,
 } from "@/components/app/Surfaces";
 import { Input } from "@/components/ui/input";
 import {
   HADITHS,
   HADITH_SECTIONS,
-  randomHadith,
+  hadithOfTheDay,
   searchHadiths,
   sectionTitle,
   type Hadith,
   type HadithSectionId,
 } from "@/data/hadith";
-import { cn } from "@/lib/utils";
-import { arabicNumber } from "@/lib/time";
 import {
-  Bookmark,
-  BookmarkCheck,
-  Copy,
-  Dices,
-  Search,
-  Share2,
-} from "lucide-react";
+  HADITH_TOPICS,
+  REVIEW_STATUS_LABELS,
+  dayContextTopic,
+  daySeed,
+  reviewStatusOf,
+  topicOfSection,
+  topicTitle,
+  type HadithTopic,
+} from "@/lib/hadith-metadata";
+import { arabicNumber } from "@/lib/time";
+import { cn } from "@/lib/utils";
+import { Bookmark, BookmarkCheck, Dices, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 
-type Filter = HadithSectionId | "all" | "saved";
+type Filter = HadithTopic | "all" | "saved";
+
+/** شارة التوثيق: لونها وحدها لا يكفي، Alongside نص صريح. */
+function ProvenanceTag({ hadith, className }: { hadith: Hadith; className?: string }) {
+  const status = reviewStatusOf(hadith);
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 label-meta font-medium",
+        status === "verified"
+          ? "bg-[var(--status-success)]/12 text-[var(--status-success)]"
+          : status === "attributed"
+            ? "surface-secondary text-foreground/70"
+            : "bg-[var(--status-attention)]/14 text-[var(--editorial-ink)]",
+        className,
+      )}
+    >
+      {/* نقطة + نص: إشارة-shape ونص، فلا يعتمد الفهم على اللون. */}
+      <span
+        className={cn(
+          "block size-1.5 rounded-full",
+          status === "verified"
+            ? "bg-[var(--status-success)]"
+            : status === "attributed"
+              ? "bg-[var(--status-neutral)]"
+              : "bg-[var(--status-attention)]",
+        )}
+        aria-hidden
+      />
+      {REVIEW_STATUS_LABELS[status]}
+    </span>
+  );
+}
 
 export function HadithView({
   favorites,
@@ -36,69 +85,126 @@ export function HadithView({
   onToggleFavorite,
 }: {
   favorites: string[];
-  /** فحص فوري من نظام الحفظ الموحّد (يتفوّق على favorites القديمة عند توفره). */
+  /** فحص فوري من نظام الحفظ الموحّد يتقدم على القائمة القديمة. */
   isSaved?: (id: string) => boolean;
   onToggleFavorite: (id: string, kind: string, title: string) => void;
 }) {
   const check = (id: string) => (isSaved ? isSaved(id) : favorites.includes(id));
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
-  const [highlight, setHighlight] = useState<Hadith | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  // الشابتان: لا تتغيران بتغير الوقت، فلا تقفز البطاقة تحت عين المستخدم.
+  const today = useMemo(() => new Date(), []);
+  const ofTheDay = useMemo(() => hadithOfTheDay(daySeed(today)), [today]);
+  const contextTopic = useMemo(() => dayContextTopic(today), [today]);
+
+  /** حديث سياقي ثابت لليوم: يُحسب مرة واحدة لا في كل رسم. */
+  const contextual = useMemo(() => {
+    const pool = HADITHS.filter((hadith) => topicOfSection(hadith.section) === contextTopic);
+    if (pool.length === 0) return ofTheDay;
+    return pool[daySeed(today) % pool.length];
+  }, [contextTopic, ofTheDay, today]);
 
   const items = useMemo(() => {
-    const base = query.trim()
-      ? searchHadiths(query)
-      : filter === "saved"
-        ? HADITHS.filter((hadith) => check(hadith.id))
-        : filter === "all"
-          ? HADITHS
-          : HADITHS.filter((hadith) => hadith.section === filter);
-    return base;
+    if (query.trim()) return searchHadiths(query);
+    if (filter === "all") return HADITHS;
+    if (filter === "saved") return HADITHS.filter((hadith) => check(hadith.id));
+    return HADITHS.filter((hadith) => topicOfSection(hadith.section) === filter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, query, favorites, isSaved]);
 
-  const copyHadith = async (hadith: Hadith) => {
-    const text = `«${hadith.text}»\n${hadith.narrator} — ${hadith.source}\n(${sectionTitle(hadith.section)})`;
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success("نُسخ الحديث بمصدره.");
-    } catch {
-      toast.error("تعذّر النسخ من المتصفح.");
-    }
+  const open = openId ? HADITHS.find((hadith) => hadith.id === openId) ?? null : null;
+
+  const step = (direction: "next" | "prev") => {
+    if (!openId) return;
+    const at = items.findIndex((hadith) => hadith.id === openId);
+    if (at < 0) return;
+    const delta = direction === "next" ? 1 : -1;
+    const target = items[(at + delta + items.length) % items.length];
+    if (target) setOpenId(target.id);
   };
 
-  const shareHadith = async (hadith: Hadith) => {
-    const text = `«${hadith.text}»\n${hadith.narrator} — ${hadith.source}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "حديث", text });
-        return;
-      } catch {
-        /* تراجع */
-      }
-    }
-    await copyHadith(hadith);
+  const toggle = (hadith: Hadith) => {
+    onToggleFavorite(hadith.id, "hadith", hadith.text.slice(0, 40));
   };
 
   return (
     <div className="stack">
+      {/* ١ — حديث اليوم. البطل الوحيد في الشاشة. */}
+      <Panel className="overflow-hidden p-0">
+        <div className="flex items-start gap-3 p-5 pb-0 sm:p-6 sm:pb-0">
+          <div className="min-w-0 flex-1">
+            <p className="eyebrow">حديث اليوم</p>
+            <p className="label-meta mt-1 text-muted-foreground">
+              {new Date().toLocaleDateString("ar-EG", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </p>
+          </div>
+          <Artwork name="hadith" tone="soft" />
+        </div>
+
+        <p className="quran-text mt-4 px-5 text-[17px] leading-[2.4] text-[var(--editorial-ink)] sm:px-6">
+          {ofTheDay.text}
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 px-5 pb-5 sm:px-6">
+          <ProvenanceTag hadith={ofTheDay} />
+          <Tag>{topicTitle(topicOfSection(ofTheDay.section))}</Tag>
+        </div>
+
+        <div className="rule-t mx-5 sm:mx-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <p className="label-meta min-w-0 text-muted-foreground">
+              <span className="font-semibold text-foreground/75">الراوي:</span> {ofTheDay.narrator}
+              <span className="mx-2">·</span>
+              <span className="font-semibold text-foreground/75">المصدر:</span> {ofTheDay.source}
+            </p>
+            <QuietButton
+              state={check(ofTheDay.id) ? "active" : "default"}
+              onClick={() => setOpenId(ofTheDay.id)}
+            >
+              اقرأ الحديث
+            </QuietButton>
+          </div>
+        </div>
+      </Panel>
+
+      {/* ٢ — سياق اليوم. الموضوع واحد ثابت لكل ساعة. */}
+      <Panel className="p-5 sm:p-6">
+        <SectionHead
+          eyebrow="حسب وقتك الآن"
+          title="حديث هذا الوقت"
+          hint={`${topicTitle(contextTopic)} — يُختار بثبات، فيبقى المعنى واحدا كل يوم في وقته.`}
+        />
+        <HadithLine
+          hadith={contextual}
+          saved={check(contextual.id)}
+          savedId={contextual.id}
+          onOpen={setOpenId}
+          onToggle={() => toggle(contextual)}
+        />
+      </Panel>
+
+      {/* ٣ — المكتبة. */}
       <Panel className="p-5 sm:p-6">
         <SectionHead
           eyebrow="المعرفة"
-          title="الأحاديث"
+          title="المكتبة"
           hint={`${arabicNumber(HADITHS.length)} حديثًا في ${arabicNumber(
             HADITH_SECTIONS.length,
-          )} بابًا — براويه ومصدره.`}
+          )} بابًا، موزعة على ${arabicNumber(HADITH_TOPICS.length)} موضوعات.`}
           action={
             <QuietButton
               onClick={() => {
-                const next = randomHadith(highlight?.id ?? null);
-                setHighlight(next);
-                document
-                  .getElementById(`hadith-${next.id}`)
-                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                const at = Math.floor(Math.random() * HADITHS.length);
+                setFilter("all");
+                setQuery("");
+                setOpenId(HADITHS[at].id);
               }}
-              className="px-4"
             >
               <Dices className="size-3.5" />
               عشوائي
@@ -111,48 +217,46 @@ export function HadithView({
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="ابحث في نص الحديث أو الراوي أو الباب..."
+            placeholder="ابحث في نص الحديث أو الراوي أو المصدر..."
+            aria-label="البحث في الأحاديث"
             className="h-11 rounded-2xl border-[var(--rule)] bg-white/80 ps-10 text-[13px]"
           />
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <ChoiceChip active={filter === "all" && !query} onClick={() => { setFilter("all"); setQuery(""); }}>
-            كل الأبواب
-          </ChoiceChip>
-          <ChoiceChip
-            active={filter === "saved"}
-            onClick={() => {
-              setFilter("saved");
-              setQuery("");
-            }}
-          >
-            محفوظاتي{favorites.length > 0 ? ` (${arabicNumber(favorites.length)})` : ""}
-          </ChoiceChip>
-          {HADITH_SECTIONS.map((section) => (
-            <ChoiceChip
-              key={section.id}
-              active={filter === section.id && !query}
-              onClick={() => {
-                setFilter(section.id);
-                setQuery("");
-              }}
-            >
-              {section.title}
-            </ChoiceChip>
-          ))}
-        </div>
-
-        {filter !== "all" && filter !== "saved" ? (
-          <p className="label-meta mt-3 text-muted-foreground">
-            {HADITH_SECTIONS.find((section) => section.id === filter)?.hint}
-          </p>
-        ) : null}
-        {query ? (
+        {!query ? (
+          <>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ChoiceChip
+                active={filter === "all"}
+                onClick={() => setFilter("all")}
+              >
+                كل الأحاديث
+              </ChoiceChip>
+              <ChoiceChip
+                active={filter === "saved"}
+                onClick={() => setFilter("saved")}
+              >
+                محفوظاتي{favorites.length > 0 ? ` (${arabicNumber(favorites.length)})` : ""}
+              </ChoiceChip>
+            </div>
+            <div className="rail mt-2">
+              {HADITH_TOPICS.map((topic) => (
+                <ChoiceChip
+                  key={topic.id}
+                  active={filter === topic.id}
+                  aria-label={topic.hint}
+                  onClick={() => setFilter(topic.id)}
+                >
+                  {topic.title}
+                </ChoiceChip>
+              ))}
+            </div>
+          </>
+        ) : (
           <p className="label-meta mt-3 text-muted-foreground">
             نتائج البحث: {arabicNumber(items.length)}
           </p>
-        ) : null}
+        )}
       </Panel>
 
       {items.length === 0 ? (
@@ -161,77 +265,90 @@ export function HadithView({
           body={
             filter === "saved"
               ? "اضغط أيقونة الحفظ بجوار أي حديث، وسيظهر هنا مع مصدره."
-              : "جرّب كلمة أخرى أو اختر بابًا مختلفًا."
+              : "جرّب كلمة أخرى أو اختر موضوعًا مختلفًا."
           }
         />
       ) : (
-        /* قراءة تحريرية: نص الحديث هو الموضوع، والبيانات سطر تحته لا بطاقة فوقه. */
         <ul className="stack">
-          {items.map((hadith) => {
-            const saved = check(hadith.id);
-            return (
-              <li key={hadith.id}>
-                <article
-                  id={`hadith-${hadith.id}`}
-                  className={cn(
-                    "surface-primary rounded-3xl p-5 sm:p-6",
-                    highlight?.id === hadith.id && "ring-2 ring-primary/40",
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setFilter(hadith.section)}
-                      className="motion-press rounded-full surface-secondary px-3 py-1 text-[11px] font-medium text-foreground/70 hover:text-foreground"
-                    >
-                      {sectionTitle(hadith.section)}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={saved ? "إزالة من المحفوظات" : "حفظ الحديث"}
-                      aria-pressed={saved}
-                      onClick={() =>
-                        onToggleFavorite(hadith.id, "hadith", hadith.text.slice(0, 40))
-                      }
-                      className={cn(
-                        "motion-press flex size-9 items-center justify-center rounded-xl",
-                        saved
-                          ? "bg-primary text-primary-foreground"
-                          : "surface-secondary text-foreground/60 hover:text-foreground",
-                      )}
-                    >
-                      {saved ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
-                    </button>
-                  </div>
-
-                  <p className="mt-4 text-[16px] leading-9 font-medium text-foreground">
-                    «{hadith.text}»
-                  </p>
-
-                  <p className="label-meta mt-3 text-muted-foreground">
-                    <span className="font-semibold text-foreground/75">الراوي:</span> {hadith.narrator}
-                    <span className="mx-2">·</span>
-                    <span className="font-semibold text-foreground/75">المصدر:</span> {hadith.source}
-                  </p>
-
-                  <p className="label-body mt-3 text-primary/85">{hadith.action}</p>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <QuietButton onClick={() => void copyHadith(hadith)} className="px-4">
-                      <Copy className="size-3.5" />
-                      نسخ
-                    </QuietButton>
-                    <QuietButton onClick={() => void shareHadith(hadith)} className="px-4">
-                      <Share2 className="size-3.5" />
-                      مشاركة
-                    </QuietButton>
-                  </div>
-                </article>
-              </li>
-            );
-          })}
+          {items.map((hadith) => (
+            <li key={hadith.id}>
+              <HadithLine
+                hadith={hadith}
+                saved={check(hadith.id)}
+                savedId={hadith.id}
+                onOpen={setOpenId}
+                onToggle={() => toggle(hadith)}
+              />
+            </li>
+          ))}
         </ul>
       )}
+
+      <HadithReader
+        hadith={open}
+        open={open !== null}
+        onOpenChange={(next) => {
+          if (!next) setOpenId(null);
+        }}
+        saved={open ? check(open.id) : false}
+        onToggleFavorite={toggle}
+        onNavigate={step}
+      />
     </div>
+  );
+}
+
+/** سطر واحد للقراءة: الموضوع، النص، المصدر، وشارة التوثيق. */
+function HadithLine({
+  hadith,
+  saved,
+  savedId,
+  onOpen,
+  onToggle,
+}: {
+  hadith: Hadith;
+  saved: boolean;
+  savedId: string | null;
+  onOpen: (id: string) => void;
+  onToggle: () => void;
+}) {
+  return (
+    <article className="surface-secondary rounded-3xl p-4 sm:p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Tag>{topicTitle(topicOfSection(hadith.section))}</Tag>
+        <ProvenanceTag hadith={hadith} />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onOpen(hadith.id)}
+        className="motion-press mt-3 block w-full text-start"
+      >
+        <p className="text-[15px] leading-8 font-medium text-foreground">
+          «{hadith.text}»
+        </p>
+        <p className="label-meta mt-2 text-muted-foreground">
+          {hadith.narrator} — {hadith.source}
+        </p>
+      </button>
+
+      <div className="mt-3 flex items-center gap-2">
+        {savedId ? (
+          <QuietButton
+            state={saved ? "active" : "default"}
+            aria-pressed={saved}
+            aria-label={saved ? "إزالة من المحفوظات" : "حفظ الحديث"}
+            onClick={onToggle}
+          >
+            {saved ? <BookmarkCheck className="size-3.5" /> : <Bookmark className="size-3.5" />}
+            {saved ? "محفوظ" : "احفظ"}
+          </QuietButton>
+        ) : null}
+        <QuietButton onClick={() => onOpen(hadith.id)}>اقرأ</QuietButton>
+        <span className="label-meta ms-auto text-muted-foreground">
+          {sectionTitle(hadith.section as HadithSectionId)}
+        </span>
+      </div>
+    </article>
   );
 }

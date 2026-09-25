@@ -1,6 +1,10 @@
 /** تفضيلات المستخدم: الإشعارات، مواقيت التذكير، قراءة المصحف، وعرض التطبيق. */
 import { useCallback, useEffect, useState } from "react";
 import type { RingTone } from "@/lib/notify";
+import {
+  DEFAULT_AUDIO_PREFERENCES,
+  type AudioPreferences,
+} from "@/lib/audio";
 
 export type Preferences = {
   prayerAlerts: boolean;
@@ -14,10 +18,16 @@ export type Preferences = {
   fridayReminder: boolean;
   ramadanReminders: boolean;
   nudgesEnabled: boolean;
+  /** PHASE 3: المفتاح العام للصوت. إيقافه يوقف كل النغمات بلا استثناء. */
   soundOn: boolean;
-  /** رنين عند دخول وقت الصلاة + نوعه. */
+  /** نغمة مستقلة عند دخول وقت الصلاة (نفس مفتاح `prayerRing` القديم). */
   prayerRing: boolean;
   ringTone: RingTone;
+  /** PHASE 3: قنوات الصوت التفصيلية. */
+  notificationSound: boolean;
+  completionSound: boolean;
+  gentleFeedback: boolean;
+  soundVolume: number;
   /** رسالة «هل صلّيت؟» بعد كل صلاة مع سطر الصدق. */
   postPrayerPrompt: boolean;
   salawatPopup: boolean;
@@ -41,6 +51,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   soundOn: false,
   prayerRing: true,
   ringTone: "chime" as RingTone,
+  notificationSound: true,
+  completionSound: true,
+  gentleFeedback: true,
+  soundVolume: DEFAULT_AUDIO_PREFERENCES.volume,
   postPrayerPrompt: true,
   salawatPopup: true,
   method: 3,
@@ -83,6 +97,7 @@ export function readPreferences(): Preferences {
     });
     merged.leadMinutes = clamp(Math.round(merged.leadMinutes), 0, 60);
     merged.fontScale = clamp(merged.fontScale, 0.8, 2);
+    merged.soundVolume = clamp(merged.soundVolume, 0, 1);
     merged.method = PRAYER_METHODS.some((item) => item.value === merged.method)
       ? merged.method
       : DEFAULT_PREFERENCES.method;
@@ -101,6 +116,23 @@ export function writePreferences(prefs: Preferences) {
   } catch {
     /* الحافظة ممتلئة */
   }
+}
+
+/**
+ * PHASE 3 — ترجمة تفضيلات المستخدم إلى بنية الصوت.
+ *
+ * `soundOn` هو المفتاح العام، و`prayerRing` قناة الصلاة نفسها. هكذا
+ * الإعدادان القديمان يبقيان يعملان، وكل قناة لها مفتاح صريح.
+ */
+export function audioPreferencesOf(prefs: Preferences): AudioPreferences {
+  return {
+    appSounds: prefs.soundOn,
+    notificationSound: prefs.notificationSound,
+    prayerReminderSound: prefs.prayerRing,
+    completionSound: prefs.completionSound,
+    gentleFeedback: prefs.gentleFeedback,
+    volume: prefs.soundVolume,
+  };
 }
 
 export function usePreferences() {

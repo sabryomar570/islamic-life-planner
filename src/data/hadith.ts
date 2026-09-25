@@ -46,6 +46,18 @@ export type Hadith = {
   source: string;
   section: HadithSectionId;
   action: string;
+  /**
+   * PHASE 3 — بيانات المصدر القابلة للاستكمال.
+   *
+   * هذه الحقول كلها اختيارية وNone منها مسموء بألا يوجد. لا نملؤها من
+   * الذاكرة ولا من نموذج لغوي. تُملأ فقط عند إدخال موثّق يدويًا بعد
+   * مراجعة أهل العلم، وعندها ينتقل الحديث تلقائيا من «يحتاج مراجعة» إلى
+   * «موثّق» عبر `reviewStatusOf`. راجع `src/lib/hadith-metadata.ts`.
+   */
+  book?: string;
+  hadithNumber?: string;
+  /** حكم مذكور في المصدر فقط. لا نضع حكما لم يُسجّل. */
+  grade?: string;
 };
 
 export const HADITH_SECTIONS: HadithSection[] = [

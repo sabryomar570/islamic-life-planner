@@ -6,7 +6,8 @@ export type NotificationCategory =
   | "commitment"
   | "review"
   | "gentle-recovery"
-  | "occasion";
+  | "occasion"
+  | "hadith";
 
 export type NotificationCandidate = {
   id: string;
@@ -29,6 +30,8 @@ const REASONS: Record<NotificationCategory, string> = {
   review: "لحظة مراجعة اليوم أو الأسبوع",
   "gentle-recovery": "استدراك هادئ بعد انقطاع، بلا لوم",
   occasion: "مناسبة مناخرة عبر إعدادات المستخدم",
+  // حديث اليوم: إضافة PHASE 3. أولوية دنيا عمدا، فهو دعوة للقراءة لا مهمة يوم.
+  hadith: "حديث اليوم الذي يقرأه المستخدم حين يشاء",
 };
 
 export function classifyNotification<T extends NotificationCandidate>(event: T): ClassifiedNotification<T> {
@@ -39,7 +42,8 @@ export function classifyNotification<T extends NotificationCandidate>(event: T):
         : value === "wird" || value === "important-task" || value === "task" ? "important-task"
           : value === "commitment" ? "commitment"
             : value === "review" ? "review"
-              : value === "recovery" ? "gentle-recovery"
+            : value === "recovery" ? "gentle-recovery"
+              : value === "hadith" ? "hadith"
                 : "occasion";
   return {
     ...event,
@@ -50,9 +54,10 @@ export function classifyNotification<T extends NotificationCandidate>(event: T):
         : category === "important-task" ? 90
           : category === "commitment" ? 85
             : category === "review" ? 75
-              : category === "dhikr" ? 65
-                : category === "gentle-recovery" ? 35
-                  : 55,
+        : category === "dhikr" ? 65
+          : category === "gentle-recovery" ? 35
+            : category === "hadith" ? 25
+              : 55,
   };
 }
 
