@@ -18,14 +18,44 @@ const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Onboarding = lazy(() => import("./pages/Onboarding.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
-// Simple loading fallback for route transitions
+// هيكل واضح يبقي الخلفية والواجهة مثبتتين أثناء تحميل route chunk حقيقي؛
+// لا شاشة بيضاء ولا انتظار صامت.
 function RouteLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="glass animate-pulse rounded-full px-5 py-3 text-sm text-muted-foreground">
-        جارٍ التحميل...
+    <main
+      className="min-h-dvh bg-background px-4 py-6 text-foreground"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="mx-auto w-full max-w-5xl animate-pulse motion-reduce:animate-none">
+        <div className="glass-strong flex h-14 items-center justify-between rounded-2xl px-4">
+          <span className="size-10 rounded-xl bg-primary/12" />
+          <span className="h-3 w-20 rounded-full bg-primary/15" />
+          <span className="size-10 rounded-xl bg-primary/12" />
+        </div>
+        <div className="mt-5 space-y-4">
+          <div className="space-y-2">
+            <span className="block h-5 w-44 rounded-full bg-foreground/10" />
+            <span className="block h-3 w-64 max-w-full rounded-full bg-foreground/8" />
+          </div>
+          <div className="glass-strong h-36 rounded-3xl p-5">
+            <span className="block h-3 w-28 rounded-full bg-primary/15" />
+            <span className="mt-4 block h-7 w-52 max-w-full rounded-xl bg-foreground/10" />
+            <span className="mt-5 flex gap-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <span key={index} className="h-1.5 flex-1 rounded-full bg-primary/15" />
+              ))}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <span className="glass h-28 rounded-3xl" />
+            <span className="glass h-28 rounded-3xl" />
+          </div>
+        </div>
+        <span className="sr-only">جارٍ تجهيز الصفحة</span>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -66,17 +96,25 @@ class RootErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
-          <div className="max-w-lg text-center">
-            <p className="text-sm font-semibold">Preview runtime error</p>
+        <div            className="min-h-dvh flex items-center justify-center bg-background px-6 py-10 text-foreground"
+          >
+          <div className="glass-strong max-w-lg rounded-3xl p-6 text-center">
+            <p className="text-sm font-semibold">تعذّر عرض هذه الصفحة</p>
             <p className="mt-2 text-xs text-muted-foreground break-words">
               {this.state.message}
             </p>
             {this.state.stack && (
-              <pre className="mt-3 text-left text-[10px] leading-4 text-muted-foreground/80 max-h-40 overflow-auto rounded border border-border/60 p-2">
+              <pre className="mt-3 max-h-40 overflow-auto rounded-xl border border-border/60 bg-background/50 p-2 text-left text-[10px] leading-4 text-muted-foreground/80">
                 {this.state.stack}
               </pre>
             )}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="btn-primary-edge mt-5 min-h-11 rounded-full px-5 text-sm font-semibold text-primary-foreground"
+            >
+              إعادة المحاولة
+            </button>
           </div>
         </div>
       );

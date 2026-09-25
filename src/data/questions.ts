@@ -34,6 +34,29 @@ export type AnswerKey =
 
 export type ProfileAnswers = Record<AnswerKey, string>;
 
+/**Seven questions required for a useful first-run experience.*/
+export const ESSENTIAL_ANSWER_KEYS = [
+  "wakeTime",
+  "sleepTime",
+  "prayerCommitment",
+  "mostMissedPrayer",
+  "quranAmount",
+  "mainGoal",
+  "startingRitual",
+] as const satisfies readonly AnswerKey[];
+
+/**Useful profile refinements collected progressively, not forced on first run.*/
+export const OPTIONAL_ANSWER_KEYS = [
+  "dayRhythm",
+  "dayEnd",
+  "focusTime",
+  "movement",
+  "distraction",
+  "eveningReset",
+  "disciplineLevel",
+  "weeklyFocus",
+] as const satisfies readonly AnswerKey[];
+
 export type QuestionOption = {
   value: string;
   label: string;
@@ -264,8 +287,14 @@ export function pickAnswers(
   return result;
 }
 
+export function questionFor(key: AnswerKey): Question {
+  const question = QUESTIONS.find((item) => item.key === key);
+  if (!question) throw new Error(`Unknown profile question: ${key}`);
+  return question;
+}
+
 export function optionsFor(key: AnswerKey): QuestionOption[] {
-  return QUESTIONS.find((question) => question.key === key)?.options ?? [];
+  return questionFor(key).options ?? [];
 }
 
 export function labelFor(key: AnswerKey, value: string): string {

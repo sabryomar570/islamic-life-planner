@@ -7,9 +7,9 @@ export function useAuth() {
   const user = useQuery(api.users.currentUser);
   const { signIn, signOut } = useAuthActions();
 
-  // لا نُعلّق الواجهة على استعلام المستخدم: قد يتأخر أو يتعذّر (شبكة ضعيفة أو دون
-  // إنترنت) فيبدو المستخدم وكأنه خرج من حسابه. يكفي أن الجلسة صالحة.
-  const isLoading = isAuthLoading || (isAuthenticated && user === undefined);
+  // المصادقة وحدها تكفي لحماية المسار. الاسم والبريد يظهران لاحقًا داخل
+  // الترويسة، فلا نضيف انتظارًا لاستعلام ثانوي إلى بوابة التنقل.
+  const isLoading = isAuthLoading;
 
   return {
     isLoading,

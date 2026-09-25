@@ -197,6 +197,8 @@ export function HomeView({
   hijri,
   dayState,
   stats,
+  onSaveReview,
+  reviewSaving,
   onOpenSection,
   onOpenAdhkar,
   onOpenAllSections,
