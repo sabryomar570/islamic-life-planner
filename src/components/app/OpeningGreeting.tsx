@@ -95,7 +95,7 @@ export function OpeningGreeting({
                 احفظ الدعاء
               </button>
             ) : null}
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               يظهر عند كل تشغيل للتطبيق
             </span>
           </div>

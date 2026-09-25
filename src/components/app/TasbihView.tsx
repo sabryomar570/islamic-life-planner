@@ -1,11 +1,16 @@
-import { GlassCard, GlassPill, SectionTitle } from "@/components/app/GlassCard";
-import { Button } from "@/components/ui/button";
+import { ChoiceChip, Meter, Panel, QuietButton, SectionHead, Sunken } from "@/components/app/Surfaces";
 import { PRAYERS } from "@/lib/prayers";
 import { arabicNumber } from "@/lib/time";
 import { playChime, vibrate } from "@/lib/notify";
-import { cn } from "@/lib/utils";
-import { Minus, RotateCcw, Sparkles, Target } from "lucide-react";
+import { Minus, RotateCcw, Target } from "lucide-react";
 import { useEffect, useState } from "react";
+
+/**
+ * PHASE 2G — المسبحة.
+ *
+ * عدّاد ملء الشاشة: كل شيء حوله يخدم العدّ، ولا شيء يقسم الانتباه.
+ * العدّ نفسه هو الشاشة: كل ما حوله يخدمه، ولا شيء يقسم الانتباه.
+ */
 
 const STORAGE_KEY = "sakinah:tasbih:v1";
 
@@ -46,6 +51,7 @@ export function TasbihView() {
   const preset = PRESETS[presetIndex];
   const entry = state[preset.text] ?? { count: 0, total: 0 };
   const progress = Math.min((entry.count / preset.target) * 100, 100);
+  const done = entry.count >= preset.target;
 
   useEffect(() => {
     writeState(state);
@@ -54,14 +60,12 @@ export function TasbihView() {
   const tap = () => {
     setState((current) => {
       const item = current[preset.text] ?? { count: 0, total: 0 };
-      const count = item.count + 1;
       return {
         ...current,
-        [preset.text]: { count, total: item.total + 1 },
+        [preset.text]: { count: item.count + 1, total: item.total + 1 },
       };
     });
     vibrate(15);
-    // نغمة خفيفة عند إتمام العدد.
     if (entry.count + 1 === preset.target) {
       playChime();
       vibrate([40, 60, 40]);
@@ -71,71 +75,81 @@ export function TasbihView() {
   const reset = () => {
     setState((current) => ({
       ...current,
-      [preset.text]: { count: 0, total: (current[preset.text]?.total ?? 0) },
+      [preset.text]: { count: 0, total: current[preset.text]?.total ?? 0 },
     }));
     vibrate(10);
   };
 
   return (
-    <div className="space-y-5">
-      <GlassCard strong className="p-6">
-        <SectionTitle
-          icon={<Sparkles className="size-5" />}
-          title="المسبحة — ذكر بإصبع واحد"
-          hint="عدّاد محفوظ على جهازك مع اهتزاز خفيف عند كل تسبحة"
-        />
-        <div className="mt-5 flex flex-wrap gap-2">
-          {PRESETS.map((item, index) => (
-            <GlassPill
-              key={item.text}
-              active={index === presetIndex}
-              onClick={() => setPresetIndex(index)}
-            >
-              {item.text}
-            </GlassPill>
-          ))}
-        </div>
-      </GlassCard>
+    <div className="stack">
+      {/* ——— الاختيار: شريط أفقي مضغوط، لا شبكة بطاقات ——— */}
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        {PRESETS.map((item, index) => (
+          <ChoiceChip
+            key={item.text}
+            active={index === presetIndex}
+            onClick={() => setPresetIndex(index)}
+            className="whitespace-nowrap"
+          >
+            {item.text}
+          </ChoiceChip>
+        ))}
+      </div>
 
-      <GlassCard strong className="relative overflow-hidden p-8 text-center">
-        <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-emerald-200/40 blur-3xl" />
-        <p className="quran-text relative text-2xl leading-relaxed">{preset.text}</p>
-        <p className="relative mt-2 text-[11px] text-muted-foreground">{preset.source}</p>
+      {/* ——— العدّاد: العنصر المسيطر، خارج أي بطاقة جانبية ——— */}
+      <Panel className="px-5 py-8 text-center sm:py-10">
+        <p className="quran-text text-[22px] leading-relaxed text-foreground">{preset.text}</p>
+        <p className="label-meta mt-1.5 text-muted-foreground">{preset.source}</p>
 
         <button
           type="button"
           onClick={tap}
-          aria-label="تسبيحة"
-          className="relative mx-auto mt-8 flex size-48 items-center justify-center rounded-full bg-gradient-to-br from-primary/90 to-indigo-500/90 text-white shadow-xl shadow-primary/30 transition-transform active:scale-95"
+          aria-label="اضغط للعدّ"
+          className="motion-press mx-auto mt-7 flex size-56 items-center justify-center rounded-full border border-white/70 bg-[var(--surface-primary)] shadow-[0_20px_50px_-24px_oklch(0.42_0.05_255/0.45)] backdrop-blur-xl sm:size-64"
         >
-          <span className="text-5xl font-bold">{arabicNumber(entry.count)}</span>
-          <span className="absolute inset-2 rounded-full border-2 border-white/25" />
+          <span className="flex flex-col items-center">
+            <span
+              className="text-6xl font-bold leading-none text-primary tabular-nums transition-transform duration-200 sm:text-7xl"
+              key={entry.count}
+            >
+              {arabicNumber(entry.count)}
+            </span>
+            <span className="label-meta mt-2 text-muted-foreground">
+              من {arabicNumber(preset.target)}
+            </span>
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute size-[13.5rem] rounded-full border-2 border-primary/15 sm:size-60"
+          />
         </button>
 
-        <div className="relative mx-auto mt-6 max-w-xs">
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Target className="size-3.5" /> الهدف: {arabicNumber(preset.target)}
+        <div className="mx-auto mt-7 max-w-xs">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1.5 label-meta text-muted-foreground">
+              <Target className="size-3.5" />
+              الهدف {arabicNumber(preset.target)}
             </span>
-            <span>الإجمالي: {arabicNumber(entry.total)}</span>
+            <span className="label-meta text-muted-foreground">
+              الإجمالي {arabicNumber(entry.total)}
+            </span>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/70">
-            <div
-              className={cn("h-full rounded-full bg-primary transition-all")}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+          <Meter
+            value={progress}
+            tone={done ? "success" : undefined}
+            label={`التقدّم إلى ${arabicNumber(preset.target)}`}
+          />
+          {done ? (
+            <p className="label-meta mt-2 text-[var(--status-success)]">أتممت الورد — تقبّل الله منك.</p>
+          ) : null}
         </div>
 
-        <div className="relative mt-6 flex flex-wrap items-center justify-center gap-2">
-          <Button type="button" variant="outline" className="rounded-full" onClick={reset}>
-            <RotateCcw className="size-4" />
-            تصفير العدّاد
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded-full"
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <QuietButton onClick={reset}>
+            <RotateCcw className="size-3.5" />
+            تصفير
+          </QuietButton>
+          <QuietButton
             onClick={() =>
               setState((current) => ({
                 ...current,
@@ -146,20 +160,18 @@ export function TasbihView() {
               }))
             }
           >
-            <Minus className="size-4" />
-            تراجع خطوة
-          </Button>
+            <Minus className="size-3.5" />
+            تراجع
+          </QuietButton>
         </div>
-      </GlassCard>
+      </Panel>
 
-      <GlassCard soft className="p-5">
-        <p className="text-[11px] leading-6 text-muted-foreground">
-          كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن: سُبْحَانَ
-          اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ — رواه البخاري. أوقات يُستحب
-          فيها التسبيح: بعد كل صلاة ({PRAYERS.map((prayer) => prayer.name).join("، ")})
-          وقبل النوم.
-        </p>
-      </GlassCard>
+      <Sunken className="px-4 py-3">
+        <SectionHead
+          title="متى تُسبّح"
+          hint={`بعد كل صلاة: ${PRAYERS.map((prayer) => prayer.name).join("، ")} — وقبل النوم.`}
+        />
+      </Sunken>
     </div>
   );
 }

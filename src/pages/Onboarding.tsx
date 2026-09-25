@@ -1,4 +1,4 @@
-import { GlassCard } from "@/components/app/GlassCard";
+import { Panel, PrimaryButton, QuietButton, StatusDot } from "@/components/app/Surfaces";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -232,14 +232,14 @@ function TourIntro({ onStart }: { onStart: () => void }) {
 
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
-      <GlassCard strong className="w-full max-w-2xl p-5 sm:p-8">
+      <Panel className="w-full max-w-2xl p-5 sm:p-8">
         <div className="text-center">
           <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-lg shadow-primary/20">
             عود
           </span>
           <p className="mt-5 text-xs font-semibold text-primary">لنفهم يومك أولًا</p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">أهلًا بك في عود</h1>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-7 text-muted-foreground">
+          <h1 className="label-display mt-2">أهلًا بك في عود</h1>
+          <p className="label-body mx-auto mt-2 max-w-md text-muted-foreground">
             أربع خطوات قصيرة تفهمنا وقت يومك، الصلاة التي تحتاج انتباهك، وهدفك الأهم. التفاصيل
             الدقيقة يمكن أن تأتي لاحقًا.
           </p>
@@ -247,28 +247,23 @@ function TourIntro({ onStart }: { onStart: () => void }) {
 
         <div className="mt-7 grid gap-2.5 sm:grid-cols-2">
           {highlights.map((item) => (
-            <div key={item.title} className="tile-edge flex items-start gap-3 rounded-2xl p-4">
+            <div key={item.title} className="surface-secondary flex items-start gap-3 rounded-2xl p-4">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <item.icon className="size-5" />
               </span>
               <span>
                 <span className="block text-sm font-semibold">{item.title}</span>
-                <span className="mt-1 block text-xs leading-5 text-muted-foreground">{item.text}</span>
+                <span className="label-body mt-1 block text-muted-foreground">{item.text}</span>
               </span>
             </div>
           ))}
         </div>
 
-        <Button
-          type="button"
-          size="lg"
-          className="btn-primary-edge mt-7 min-h-12 w-full rounded-full font-semibold"
-          onClick={onStart}
-        >
+        <PrimaryButton onClick={onStart} className="mt-7 w-full">
           لنبدأ
           <ChevronLeft className="size-4" />
-        </Button>
-      </GlassCard>
+        </PrimaryButton>
+      </Panel>
     </main>
   );
 }
@@ -392,7 +387,7 @@ function ChoiceCards({
         </span>
         <div>
           <h3 className="text-sm font-semibold">{question.title}</h3>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{question.hint}</p>
+          <p className="label-body mt-1 text-muted-foreground">{question.hint}</p>
         </div>
       </div>
       <div className={cn("mt-4 grid gap-2.5", compact ? "grid-cols-2" : "sm:grid-cols-2")}>
@@ -406,17 +401,17 @@ function ChoiceCards({
               aria-pressed={selected}
               onClick={() => onChange(option.value)}
               className={cn(
-                "group relative flex min-h-24 items-start gap-3 rounded-2xl border p-3.5 text-right transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                "motion-press flex min-h-24 items-start gap-3 rounded-2xl p-3.5 text-right",
                 selected
-                  ? "border-primary/45 bg-primary/10 shadow-[0_12px_28px_-20px_oklch(0.45_0.14_257/0.65)]"
-                  : "border-border/65 bg-background/58 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-background/82",
+                  ? "bg-primary/10 ring-1 ring-primary/40"
+                  : "surface-secondary hover:bg-white/80",
               )}
             >
               {Icon ? (
                 <span
                   className={cn(
                     "flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
-                    selected ? "bg-primary text-primary-foreground" : "bg-primary/9 text-primary",
+                    selected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
                   )}
                 >
                   <Icon className="size-4" />
@@ -425,15 +420,15 @@ function ChoiceCards({
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold leading-5">{option.label}</span>
                 {option.hint ? (
-                  <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">
+                  <span className="label-meta mt-1 block leading-5 text-muted-foreground">
                     {option.hint}
                   </span>
                 ) : null}
               </span>
               <span
                 className={cn(
-                  "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-                  selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                  "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                  selected ? "border-primary bg-primary text-primary-foreground" : "border-[var(--rule)]",
                 )}
               >
                 {selected ? <Check className="size-3" /> : null}
@@ -732,83 +727,70 @@ function SavedState({
   onFinish: () => void;
 }) {
   return (
-    <GlassCard strong className="stage-enter overflow-hidden p-0">
-      <div className="border-b border-border/55 bg-primary/7 px-5 py-7 text-center sm:px-8">
-        <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-500/12 text-emerald-600">
+    <Panel className="motion-swap overflow-hidden">
+      <div className="rule-b px-5 py-7 text-center sm:px-8">
+        <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-[var(--status-success)]/12 text-[var(--status-success)]">
           <Check className="size-7" />
         </span>
         <p className="mt-4 text-xs font-semibold text-primary">اكتمل الأساس</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">
+        <h1 className="label-display mt-2">
           {isEdit ? "حُفظت تعديلاتك" : "صار عود أقرب إلى يومك"}
         </h1>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-7 text-muted-foreground">
+        <p className="label-body mx-auto mt-2 max-w-md text-muted-foreground">
           استُنتج مكانك: <span className="font-semibold text-foreground">{locationLabel}</span>. يمكنك
           تغييره لاحقًا من الإعدادات.
         </p>
       </div>
 
-      <div className="space-y-4 p-5 sm:p-7">
-        <div className="glass-tile flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+      <div className="stack-sm p-5 sm:p-7">
+        <div className="surface-secondary flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
           <div className="max-w-sm">
             <p className="flex items-center gap-2 text-sm font-semibold">
               <Bell className="size-4 text-primary" />
               إشعارات الصلاة والورد
             </p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            <p className="label-body mt-1 text-muted-foreground">
               لا يصل شيء قبل إذنك، ويمكنك تغيير الإعداد لاحقًا.
             </p>
           </div>
           {notifyState === "granted" ? (
-            <span className="rounded-full bg-emerald-500/12 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--status-success)]">
+              <StatusDot state="success" />
               مفعّلة
             </span>
           ) : (
-            <Button
-              type="button"
-              className="btn-edge min-h-11 rounded-full"
-              onClick={onAskNotifications}
-            >
+            <PrimaryButton onClick={onAskNotifications} className="px-4 text-[12px]">
               اسمح بالإشعارات
-            </Button>
+            </PrimaryButton>
           )}
         </div>
 
         {!isEdit ? (
-          <div className="rounded-3xl border border-primary/15 bg-primary/6 p-4">
+          <div className="rounded-2xl bg-primary/6 p-4">
             <div className="flex items-start gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <Sparkles className="size-5" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">تفاصيل اختيارية… بلا استجواب</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                <p className="label-body mt-1 text-muted-foreground">
                   يمكنك إضافة شكل يومك، ما يستنزفك، وأسلوب المتابعة الآن أو من الإعدادات لاحقًا.
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="btn-edge mt-3 min-h-11 rounded-full"
-                  onClick={onAddDetails}
-                >
+                <QuietButton onClick={onAddDetails} className="mt-3 px-4 text-[12px]">
                   أضف تفاصيلي
-                  <ChevronLeft className="size-4" />
-                </Button>
+                  <ChevronLeft className="size-3.5" />
+                </QuietButton>
               </div>
             </div>
           </div>
         ) : null}
 
-        <Button
-          type="button"
-          size="lg"
-          className="btn-primary-edge min-h-12 w-full rounded-full font-semibold"
-          onClick={onFinish}
-        >
+        <PrimaryButton onClick={onFinish} className="w-full">
           {isEdit ? "العودة إلى الرئيسية" : "ابدأ يومك مع عود"}
           <ChevronLeft className="size-4" />
-        </Button>
+        </PrimaryButton>
       </div>
-    </GlassCard>
+    </Panel>
   );
 }
 
@@ -880,15 +862,15 @@ export default function Onboarding() {
             <span className="size-11 rounded-2xl bg-primary/15" />
             <span className="h-3 w-36 rounded-full bg-foreground/10" />
           </div>
-          <GlassCard strong className="min-h-[28rem] p-6">
-            <span className="block h-3 w-28 rounded-full bg-primary/15" />
-            <span className="mt-4 block h-7 w-72 max-w-full rounded-xl bg-foreground/10" />
-            <span className="mt-3 block h-3 w-full rounded-full bg-foreground/8" />
+          <Panel className="min-h-[28rem] p-6">
+            <span className="skeleton block h-3 w-28" />
+            <span className="skeleton mt-4 block h-7 w-72 max-w-full" />
+            <span className="skeleton mt-3 block h-3 w-full" />
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              <span className="h-36 rounded-3xl bg-primary/8" />
-              <span className="h-36 rounded-3xl bg-primary/8" />
+              <span className="skeleton h-36 rounded-3xl" />
+              <span className="skeleton h-36 rounded-3xl" />
             </div>
-          </GlassCard>
+          </Panel>
           <span className="sr-only">جارٍ تحميل ملفك</span>
         </div>
       </main>
@@ -1000,10 +982,10 @@ export default function Onboarding() {
           />
         ) : (
           <>
-            <GlassCard strong className="overflow-hidden p-0">
-              <div className="border-b border-border/55 px-5 pb-5 pt-6 sm:px-7">
-                <div className="flex items-center justify-between gap-3 text-[11px]">
-                  <span className="rounded-full bg-primary/9 px-3 py-1.5 font-semibold text-primary">
+            <Panel className="overflow-hidden">
+              <div className="rule-b px-5 pb-5 pt-6 sm:px-7">
+                <div className="flex items-center justify-between gap-3 label-meta">
+                  <span className="font-semibold text-primary">
                     {inDetails ? "اختياري" : "الأساس"} · {arabicNumber(visibleIndex + 1)} من{" "}
                     {arabicNumber(visibleStages.length)}
                   </span>
@@ -1018,10 +1000,8 @@ export default function Onboarding() {
 
               <div key={stage.id} className="stage-enter p-5 sm:p-7">
                 <div className="max-w-2xl">
-                  <h1 className="text-xl font-bold leading-8 tracking-tight sm:text-2xl sm:leading-9">
-                    {stage.title}
-                  </h1>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">{stage.description}</p>
+                  <h1 className="label-display">{stage.title}</h1>
+                  <p className="label-body mt-2 text-muted-foreground">{stage.description}</p>
                 </div>
 
                 <div className="mt-6">
@@ -1035,14 +1015,14 @@ export default function Onboarding() {
 
                 {error ? (
                   <div
-                    className="mt-5 rounded-2xl border border-rose-500/20 bg-rose-500/8 p-3 text-sm text-rose-700"
+                    className="mt-5 rounded-2xl bg-[var(--status-missed)]/8 p-3 text-[13px] text-[var(--status-missed)]"
                     role="alert"
                   >
                     {error}
                   </div>
                 ) : null}
 
-                <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-border/55 pt-5">
+                <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--rule)] pt-5">
                   <Button
                     type="button"
                     variant="ghost"
@@ -1082,7 +1062,7 @@ export default function Onboarding() {
                   </div>
                 </div>
               </div>
-            </GlassCard>
+            </Panel>
 
             {isEssentialProfileComplete(answers) ? (
               <p className="flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">

@@ -1,6 +1,4 @@
-import { GlassCard } from "@/components/app/GlassCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Panel, PrimaryButton, QuietButton, SectionHead, StatusDot, Sunken } from "@/components/app/Surfaces";
 import {
   BLOCKER_LABELS,
   MOOD_LABELS,
@@ -10,8 +8,15 @@ import {
   type ReviewMood,
 } from "@/lib/coach";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, ClipboardCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Loader2 } from "lucide-react";
 import { useState } from "react";
+
+/**
+ * PHASE 2K — مراجعة اليوم.
+ *
+ * طقس قصير: سؤال ← اختيار ← تأمّل ← إنهاء هادئ.
+ * لا حقل يُملأ بلا سبب، وكل سؤال يُبنى على ما سبق — والإجابات كلها اختيارية بعد الأولين.
+ */
 
 export type DayReviewRecord = {
   mood: ReviewMood;
@@ -28,56 +33,73 @@ export type DayReviewRecord = {
   tomorrowAdjustment: string;
 };
 
-const MOODS: ReviewMood[] = ["bad", "ok", "good", "great"];
-const BLOCKERS: ReviewBlocker[] = ["none", "busy", "tired", "forgot", "mood"];
+const MOODS: { value: ReviewMood; label: string; hint: string }[] = [
+  { value: "bad", label: "صعب", hint: "يوم أرهقك" },
+  { value: "ok", label: "عادي", hint: "مرّ دون انفعال" },
+  { value: "good", label: "جيد", hint: "أنجزت أكثر مما توقعت" },
+  { value: "great", label: "ممتاز", hint: "يوم تحب أن تستعيده" },
+];
 
-/**
- * مراجعة اليوم: مزاج اليوم وخلاصته، ثم ما نجح وتعثر وسببه وتعديل الغد.
- * تُغلق المراجعة اليوم نفسه، وتُشتق عدادات الخطة من سجلاتها لا من أرقام يدوية.
- */
+const BLOCKERS: { value: ReviewBlocker; label: string; hint: string }[] = [
+  { value: "none", label: "لا شيء", hint: "لا عائق حقيقي" },
+  { value: "busy", label: "انشغال", hint: "الوقت ضاق" },
+  { value: "tired", label: "إرهاق", hint: "طاقتك لم تكفِ" },
+  { value: "forgot", label: "نسيان", hint: "لم أتذكّر" },
+  { value: "mood", label: "حالة نفسية", hint: "لم أكن مرتاحًا" },
+];
+
+const STEPS = ["الحال", "العائق", "التأمّل", "الخلاصة"] as const;
+
 export function DailyReview({
   visible,
   review,
   prayedToday,
   saving,
   onSave,
+  /** موسّع: يُعرض كمهمة مستقلة في «متابعتي» لا كطسق مصغّر في الرئيسية. */
+  expanded = false,
 }: {
   visible: boolean;
   review: DayReviewRecord | null;
   prayedToday: number;
   saving: boolean;
   onSave: (input: DayReviewRecord) => void;
+  expanded?: boolean;
 }) {
+  const [step, setStep] = useState(0);
   const [mood, setMood] = useState<ReviewMood | null>(null);
   const [blocker, setBlocker] = useState<ReviewBlocker | null>(null);
-  const [note, setNote] = useState("");
   const [succeeded, setSucceeded] = useState("");
   const [failed, setFailed] = useState("");
   const [why, setWhy] = useState("");
   const [tomorrowAdjustment, setTomorrowAdjustment] = useState("");
+  const [note, setNote] = useState("");
   const [postponed, setPostponed] = useState(false);
 
   if (!visible) return null;
   if (postponed && !review) return null;
 
+  /* ——————————— الحالة المكتملة: خلاصة هادئة لا جدول ——————————— */
   if (review) {
     return (
-      <GlassCard className="p-4">
-        <div className="flex items-center justify-between gap-2">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-            <ClipboardCheck className="size-3.5 text-emerald-600" />
-            مراجعة اليوم — تمّت
+      <Panel className={expanded ? "p-5 sm:p-6" : "p-4 sm:p-5"}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="flex items-center gap-1.5 text-[12px] font-semibold">
+            <CheckCircle2 className="size-4 text-[var(--status-success)]" />
+            مراجعة اليوم
           </p>
-          <span className="rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+          <span className="flex items-center gap-1.5 rounded-full bg-[var(--status-success)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--status-success)]">
+            <StatusDot state="success" />
             {MOOD_LABELS[review.mood]}
           </span>
         </div>
-        <p className="mt-2 text-[12px] leading-6">
-          أكبر عائق: <span className="font-semibold">{BLOCKER_LABELS[review.blocker]}</span>
-          {" — "}
+
+        <p className="label-body mt-2 text-muted-foreground">
+          أكبر عائق: <span className="font-semibold text-foreground">{BLOCKER_LABELS[review.blocker]}</span> —{" "}
           {reviewSummaryLine(prayedToday)}
         </p>
-        <div className="mt-3 grid grid-cols-5 gap-1.5 text-center text-[10px] text-muted-foreground">
+
+        <dl className="mt-3 grid grid-cols-5 gap-1 text-center">
           {[
             ["مخطط", review.plannedCount],
             ["تم", review.completedCount],
@@ -85,157 +107,299 @@ export function DailyReview({
             ["مؤجل", review.postponedCount],
             ["لم يتم", review.skippedCount],
           ].map(([label, value]) => (
-            <span key={label} className="rounded-xl bg-white/65 px-1 py-2">
-              <strong className="block text-sm text-foreground">{value}</strong>
-              {label}
-            </span>
+            <div key={label} className="rounded-xl surface-sunken px-1 py-2">
+              <dd className="text-[13px] font-bold">{value}</dd>
+              <dt className="label-meta text-muted-foreground">{label}</dt>
+            </div>
           ))}
-        </div>
+        </dl>
+
         {review.succeeded ? (
-          <p className="mt-2 text-[11px] leading-5"><strong>ما نجح:</strong> {review.succeeded}</p>
-        ) : null}
-        {review.failed ? (
-          <p className="mt-1 text-[11px] leading-5"><strong>ما تعثر:</strong> {review.failed}</p>
-        ) : null}
-        {review.why ? (
-          <p className="mt-1 text-[11px] leading-5"><strong>السبب:</strong> {review.why}</p>
-        ) : null}
-        <p className="mt-2 rounded-xl bg-primary/8 px-3 py-2 text-[11px] leading-5 text-foreground/85">
-          غدًا: {review.tomorrowAdjustment || REVIEW_TIPS[review.blocker]}
-        </p>
-        {review.note ? (
-          <p className="mt-2 rounded-xl bg-white/70 px-3 py-2 text-[11px] text-muted-foreground">
-            «{review.note}»
+          <p className="label-body mt-3">
+            <span className="font-semibold">ما نجح:</span> {review.succeeded}
           </p>
         ) : null}
-      </GlassCard>
+        {review.failed ? (
+          <p className="label-body mt-1">
+            <span className="font-semibold">ما تعثر:</span> {review.failed}
+          </p>
+        ) : null}
+        {review.why ? (
+          <p className="label-body mt-1">
+            <span className="font-semibold">السبب:</span> {review.why}
+          </p>
+        ) : null}
+
+        <Sunken className="mt-3 px-3.5 py-2.5">
+          <p className="label-body text-foreground/85">
+            <span className="font-semibold">غدًا:</span>{" "}
+            {review.tomorrowAdjustment || REVIEW_TIPS[review.blocker]}
+          </p>
+        </Sunken>
+
+        {review.note ? (
+          <p className="label-meta mt-2 text-muted-foreground">«{review.note}»</p>
+        ) : null}
+      </Panel>
     );
   }
 
-  const canSave = mood !== null && blocker !== null && !saving;
+  /* ——————————— الطقس: خطوة واحدة على الشاشة ——————————— */
+  const canAdvance =
+    step === 0 ? mood !== null : step === 1 ? blocker !== null : true;
+
+  const commit = () => {
+    if (!mood || !blocker) return;
+    onSave({
+      mood,
+      blocker,
+      note: note.trim(),
+      plannedCount: 0,
+      completedCount: 0,
+      partialCount: 0,
+      postponedCount: 0,
+      skippedCount: 0,
+      succeeded: succeeded.trim(),
+      failed: failed.trim(),
+      why: why.trim(),
+      tomorrowAdjustment: tomorrowAdjustment.trim(),
+    });
+  };
 
   return (
-    <GlassCard strong className="p-4">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-        <ClipboardCheck className="size-3.5 text-primary" />
-        مراجعة يومك — دقيقة واحدة
-      </p>
-      <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{reviewSummaryLine(prayedToday)}</p>
+    <Panel className={cn("overflow-hidden", expanded ? "p-0" : "")}>
+      <div className={cn(expanded ? "p-5 sm:p-6" : "p-4 sm:p-5")}>
+        <div className="flex items-center justify-between gap-3">
+          <SectionHead
+            eyebrow="طقس المساء"
+            title="مراجعة اليوم"
+            hint={reviewSummaryLine(prayedToday)}
+            className="min-w-0"
+          />
+          <span className="shrink-0 text-[11px] text-muted-foreground">
+            {arabicStep(step + 1)} من {arabicStep(STEPS.length)}
+          </span>
+        </div>
 
-      <div className="mt-3">
-        <p className="text-[11px] font-medium">كيف كان يومك؟</p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {MOODS.map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setMood(value)}
+        {/* تقدّم هادئ: أربع شرطات، لا رقم كبير. */}
+        <div className="mt-3 flex gap-1" aria-hidden>
+          {STEPS.map((name, index) => (
+            <span
+              key={name}
               className={cn(
-                "rounded-full px-3 py-1.5 text-[11px] font-medium transition-all",
-                mood === value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-white/70 text-foreground/70 hover:bg-white ring-1 ring-white/80",
+                "h-1 flex-1 rounded-full transition-colors",
+                index <= step ? "bg-primary" : "bg-[var(--status-idle)]",
               )}
-            >
-              {MOOD_LABELS[value]}
-            </button>
+            />
           ))}
         </div>
       </div>
 
-      <div className="mt-3">
-        <p className="text-[11px] font-medium">ما أكبر عائق اليوم؟</p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {BLOCKERS.map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setBlocker(value)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-[11px] font-medium transition-all",
-                blocker === value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-white/70 text-foreground/70 hover:bg-white ring-1 ring-white/80",
-              )}
-            >
-              {BLOCKER_LABELS[value]}
-            </button>
-          ))}
-        </div>
+      <div className={cn("rule-t", expanded ? "px-5 py-5 sm:px-6" : "px-4 py-4 sm:px-5")}>
+        {step === 0 ? (
+          <fieldset>
+            <legend className="label-section">كيف كان يومك؟</legend>
+            <p className="label-meta mt-1 text-muted-foreground">سؤال واحد، بلا رقم ولا حساب.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {MOODS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setMood(option.value)}
+                  aria-pressed={mood === option.value}
+                  className={cn(
+                    "motion-press flex min-h-[68px] flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-2 text-center",
+                    mood === option.value
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                      : "surface-secondary text-foreground/80 hover:bg-white/80",
+                  )}
+                >
+                  <span className="text-[13px] font-semibold">{option.label}</span>
+                  <span
+                    className={cn(
+                      "text-[11px] leading-4",
+                      mood === option.value ? "text-primary-foreground/80" : "text-muted-foreground",
+                    )}
+                  >
+                    {option.hint}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
+
+        {step === 1 ? (
+          <fieldset>
+            <legend className="label-section">ما أكبر عائق اليوم؟</legend>
+            <p className="label-meta mt-1 text-muted-foreground">
+              صراحتك هنا هي ما يجعل الاقتراحات التي ستأتي صادقة.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {BLOCKERS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setBlocker(option.value)}
+                  aria-pressed={blocker === option.value}
+                  className={cn(
+                    "motion-press flex min-h-[68px] flex-col items-center justify-center gap-0.5 rounded-2xl px-2 py-2 text-center",
+                    blocker === option.value
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                      : "surface-secondary text-foreground/80 hover:bg-white/80",
+                  )}
+                >
+                  <span className="text-[13px] font-semibold">{option.label}</span>
+                  <span
+                    className={cn(
+                      "text-[11px] leading-4",
+                      blocker === option.value ? "text-primary-foreground/80" : "text-muted-foreground",
+                    )}
+                  >
+                    {option.hint}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
+
+        {step === 2 ? (
+          <div>
+            <p className="label-section">سطران لنفسك — كلٌّ منهما اختياري</p>
+            <div className="mt-3 space-y-2">
+              <ReflectionField
+                label="ما الذي نجح اليوم؟"
+                value={succeeded}
+                onChange={setSucceeded}
+                maxLength={240}
+              />
+              <ReflectionField
+                label="ما الذي تعثر؟"
+                value={failed}
+                onChange={setFailed}
+                maxLength={240}
+              />
+              <ReflectionField
+                label="لماذا؟"
+                value={why}
+                onChange={setWhy}
+                maxLength={240}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {step === 3 ? (
+          <div>
+            <p className="label-section">تعديل واحد واضح للغد</p>
+            <p className="label-meta mt-1 text-muted-foreground">
+              {blocker ? REVIEW_TIPS[blocker] : "اكتب شيئًا واحدًا تغيّره غدًا."}
+            </p>
+            <div className="mt-3 space-y-2">
+              <ReflectionField
+                label="ما التعديل؟"
+                value={tomorrowAdjustment}
+                onChange={setTomorrowAdjustment}
+                maxLength={240}
+                placeholder="مثال: أبدأ أول قفزة بعد صلاة الفجر مباشرة"
+              />
+              <ReflectionField
+                label="ملاحظة لنفسك (اختياري)"
+                value={note}
+                onChange={setNote}
+                maxLength={160}
+              />
+            </div>
+            <Sunken className="mt-3 px-3.5 py-2.5">
+              <p className="label-body text-foreground/85">
+                <span className="font-semibold">غدًا:</span>{" "}
+                {tomorrowAdjustment.trim() || (blocker ? REVIEW_TIPS[blocker] : "خطوة واحدة ثابتة.")}
+              </p>
+            </Sunken>
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-3 grid gap-2">
-        <Input
-          value={succeeded}
-          onChange={(event) => setSucceeded(event.target.value.slice(0, 240))}
-          placeholder="ما الذي نجح اليوم؟ (اختياري)"
-          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
-          maxLength={240}
-        />
-        <Input
-          value={failed}
-          onChange={(event) => setFailed(event.target.value.slice(0, 240))}
-          placeholder="ما الذي تعثر؟ (اختياري)"
-          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
-          maxLength={240}
-        />
-        <Input
-          value={why}
-          onChange={(event) => setWhy(event.target.value.slice(0, 240))}
-          placeholder="لماذا؟ (اختياري)"
-          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
-          maxLength={240}
-        />
-        <Input
-          value={tomorrowAdjustment}
-          onChange={(event) => setTomorrowAdjustment(event.target.value.slice(0, 240))}
-          placeholder="تعديل واحد واضح للغد (اختياري)"
-          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
-          maxLength={240}
-        />
-        <Input
-          value={note}
-          onChange={(event) => setNote(event.target.value.slice(0, 160))}
-          placeholder="ملاحظة لنفسك (اختياري)"
-          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
-          maxLength={160}
-        />
-      </div>
+      {/* ——— التنقّل بين الخطوات: إجراء واحد صريح في كل مرة ——— */}
+      <div
+        className={cn(
+          "rule-t flex items-center justify-between gap-2",
+          expanded ? "px-5 py-4 sm:px-6" : "px-4 py-3.5 sm:px-5",
+        )}
+      >
+        {step === 0 ? (
+          <button
+            type="button"
+            onClick={() => setPostponed(true)}
+            className="touch-target text-[12px] text-muted-foreground underline-offset-4 hover:underline"
+          >
+            لاحقًا
+          </button>
+        ) : (
+          <QuietButton onClick={() => setStep((value) => Math.max(0, value - 1))} className="px-4">
+            <ArrowLeft className="size-3.5" />
+            رجوع
+          </QuietButton>
+        )}
 
-      <div className="mt-3.5 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setPostponed(true)}
-          className="text-[11px] text-muted-foreground underline-offset-4 hover:underline"
-        >
-          لاحقًا
-        </button>
-        <Button
-          type="button"
-          className="btn-edge rounded-full px-5"
-          disabled={!canSave}
-          onClick={() => {
-            if (!mood || !blocker) return;
-            onSave({
-              mood,
-              blocker,
-              note: note.trim(),
-              plannedCount: 0,
-              completedCount: 0,
-              partialCount: 0,
-              postponedCount: 0,
-              skippedCount: 0,
-              succeeded: succeeded.trim(),
-              failed: failed.trim(),
-              why: why.trim(),
-              tomorrowAdjustment: tomorrowAdjustment.trim(),
-            });
-          }}
-        >
-          {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-          حفظ المراجعة
-        </Button>
+        {step < STEPS.length - 1 ? (
+          <PrimaryButton
+            onClick={() => setStep((value) => value + 1)}
+            disabled={!canAdvance}
+            className="px-5 text-[12px]"
+          >
+            التالي
+            <ArrowLeft className="size-3.5" />
+          </PrimaryButton>
+        ) : (
+          <PrimaryButton
+            onClick={commit}
+            disabled={saving}
+            className="px-5 text-[12px]"
+          >
+            {saving ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Check className="size-3.5" />
+            )}
+            إنهاء المراجعة
+          </PrimaryButton>
+        )}
       </div>
-    </GlassCard>
+    </Panel>
   );
+}
+
+function ReflectionField({
+  label,
+  value,
+  onChange,
+  maxLength,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  maxLength: number;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="label-meta text-muted-foreground">{label}</span>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value.slice(0, maxLength))}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        className="mt-1 h-11 w-full rounded-2xl border border-[var(--rule)] bg-white/80 px-3.5 text-[12.5px] outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-primary"
+      />
+    </label>
+  );
+}
+
+const ARABIC_STEPS = ["١", "٢", "٣", "٤"];
+
+function arabicStep(value: number) {
+  return ARABIC_STEPS[value - 1] ?? String(value);
 }

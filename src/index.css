@@ -77,6 +77,51 @@
   --sidebar-accent-foreground: oklch(0.3 0.03 264);
   --sidebar-border: oklch(0.915 0.012 250);
   --sidebar-ring: oklch(0.615 0.192 257);
+
+  /* ————————————————————————————————————————————————————————————
+     PHASE 2 — نظام السطح والحركة.
+     القاعدة الحاكمة: ليست كل منطقة بطاقة. تدرّج هرمي من
+     canvas → primary → secondary → compact control → plain content.
+    Glassmorphism يخدم المرحلتين الأولى والثانية فقط.
+     ———————————————————————————————————————————————————————————— */
+
+  /* السطح: أربع درجات فقط، تُختار بالرتبة لا بالذوق. */
+  --surface-primary: rgba(255, 255, 255, 0.64);
+  --surface-secondary: rgba(255, 255, 255, 0.4);
+  --surface-sunken: rgba(243, 246, 252, 0.72);
+  --surface-quiet: rgba(255, 255, 255, 0.86);
+  --surface-veil: rgba(255, 255, 255, 0.94);
+
+  /* الحواف: شعرة داخلية أفتح، وخط فاصل هادئ بين المناطق. */
+  --hairline: rgba(255, 255, 255, 0.72);
+  --hairline-soft: rgba(255, 255, 255, 0.52);
+  --rule: oklch(0.895 0.012 250);
+
+  /* الحالات: تُستخدم في النقاط والشرطات، لا في تلوين الشاشة كلها. */
+  --status-success: oklch(0.64 0.145 158);
+  --status-attention: oklch(0.74 0.145 72);
+  --status-missed: oklch(0.64 0.185 18);
+  --status-neutral: oklch(0.66 0.028 255);
+  --status-idle: oklch(0.9 0.01 250);
+
+  /* سطح تحريري دافئ للقرآن والشعر — أبعد عن الزجاج الأزرق. */
+  --editorial-wash: oklch(0.978 0.014 84);
+  --editorial-ink: oklch(0.29 0.028 62);
+
+  /* الحركة: 180–300ms، هادئة، وتُلغى كليًا عند reduced-motion. */
+  --motion-fast: 180ms;
+  --motion-base: 240ms;
+  --motion-slow: 300ms;
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* المسافة: سلّم واحد 4/8/12/16/24/32 — لا قيم حرة. */
+  --page-pad: 1rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --page-pad: 1.5rem;
+  }
 }
 
 .dark {
@@ -321,6 +366,251 @@
     pointer-events: none;
   }
 
+  /* ———————————————————————————PHASE 2: تدرّج السطح ——————————————————————————— */
+
+  /* Canvas: لا خلفية إضافية — الخلفية النسيجية في body هي الكانفس. */
+
+  /* Primary surface: اللوح الرئيسي للشاشة. واحد فقط في كل شاشة. */
+  .surface-primary {
+    background: var(--surface-primary);
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      0 18px 40px -24px oklch(0.42 0.05 255 / 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  /* Secondary surface: عنصر داخل اللوح — أخف، بلا ضباب مزدوج. */
+  .surface-secondary {
+    background: var(--surface-secondary);
+    border: 1px solid var(--hairline-soft);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  }
+
+  /* Sunken: حفرة أو حالة فارغة — بصريًا «أخفض». */
+  .surface-sunken {
+    background: var(--surface-sunken);
+    border: 1px solid var(--rule);
+    box-shadow: inset 0 1px 2px oklch(0.6 0.03 255 / 0.06);
+  }
+
+  /* Quiet: أسطح القراءة والمصحف — أقرب للورق. */
+  .surface-quiet {
+    background: var(--surface-quiet);
+    border: 1px solid var(--rule);
+  }
+
+  /* Editorial: ورق دافئ للقرآن والشعر — لا زجاج ولا أزرق. */
+  .surface-editorial {
+    background: var(--editorial-wash);
+    border: 1px solid oklch(0.9 0.022 82);
+    color: var(--editorial-ink);
+  }
+
+  /* Plain content: نص على الكانفس مباشرة بلا حاوية زجاجية. */
+  .surface-plain {
+    background: transparent;
+  }
+
+  /* فاصل هادئ بين المناطق — شعرة لا صندوق. */
+  .rule-t {
+    border-top: 1px solid var(--rule);
+  }
+  .rule-b {
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* ———————————————————————————PHASE 2: الطباعة ——————————————————————————— */
+
+  /* تسمية القسم: 13px/600 — أعلى سلّم بصري من النص، أقل من h1. */
+  .label-section {
+    font-size: 0.8125rem;
+    line-height: 1.2rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* عنوان الشاشة: 20px — لا عملاق. */
+  .label-display {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  /* نص المحتوى: 13px/1.9 — مريح للعربية دون إ crowding. */
+  .label-body {
+    font-size: 0.8125rem;
+    line-height: 1.9;
+  }
+
+  /* بيانات دقيقة: 11px كحد أدنى (لا 10px — غير مقروء). */
+  .label-meta {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+  }
+
+  .eyebrow {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--primary);
+  }
+
+  /* ———————————————————————————PHASE 2: الحركة ——————————————————————————— */
+
+  .motion-press {
+    transition:
+      transform var(--motion-fast) var(--ease-calm),
+      background-color var(--motion-fast) var(--ease-calm),
+      border-color var(--motion-fast) var(--ease-calm),
+      color var(--motion-fast) var(--ease-calm),
+      opacity var(--motion-fast) var(--ease-calm);
+  }
+  .motion-press:active {
+    transform: scale(0.985);
+  }
+
+  .motion-swap {
+    animation: stage-enter var(--motion-base) var(--ease-calm) both;
+  }
+
+  /* ———————————————————————————PHASE 2: إمكانية الوصول ——————————————————————————— */
+
+  /* هدف لمس موحّد 44×44 لكل عنصر تفاعلي أساسي. */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+
+  /* حلقة تركيز واحدة تُطبَّق على أي عنصر تفاعلي عبر :focus-visible. */
+  :where(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  /* هيكل عظمي يطابق الترتيب النهائي بدل «جارٍ التحميل…». */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.82) 50%,
+      rgba(255, 255, 255, 0.5) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-sweep 1.4s ease-in-out infinite;
+    border-radius: 0.5rem;
+  }
+
+  /* ———————————————————————————PHASE 2: الخط الزمني ——————————————————————————— */
+
+  /* محور الصلاة: خط رأسي واحد يربط الفقرات — لا صندوق لكل فقرة. */
+  .timeline-spine {
+    position: relative;
+  }
+  .timeline-spine::before {
+    content: "";
+    position: absolute;
+    inset-block: 0.75rem 1.5rem;
+    inset-inline-start: 0.4375rem;
+    width: 2px;
+    border-radius: 9999px;
+    background: linear-gradient(
+      180deg,
+      var(--rule) 0%,
+      var(--rule) 70%,
+      transparent 100%
+    );
+  }
+
+  /* عقدة على المحور: حلقة ناعمة تُبرز الحالة. */
+  .timeline-node {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 9999px;
+    background: var(--status-idle);
+    box-shadow: 0 0 0 4px var(--background);
+  }
+  .timeline-node[data-state="done"] {
+    background: var(--status-success);
+  }
+  .timeline-node[data-state="active"] {
+    background: var(--primary);
+    box-shadow: 0 0 0 4px var(--background), 0 0 0 6px color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+  .timeline-node[data-state="past"] {
+    background: var(--status-neutral);
+  }
+
+  /* ———————————————————————————PHASE 2: المقياس ——————————————————————————— */
+
+  /* شريط رفيع يقرأ كبيانات لا كزخرفة. */
+  .meter {
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--status-idle);
+    overflow: hidden;
+  }
+  .meter > span {
+    display: block;
+    height: 100%;
+    border-radius: 9999px;
+    background: var(--primary);
+    transition: width var(--motion-slow) var(--ease-calm);
+  }
+  .meter[data-tone="success"] > span {
+    background: var(--status-success);
+  }
+  .meter[data-tone="attention"] > span {
+    background: var(--status-attention);
+  }
+  .meter[data-tone="missed"] > span {
+    background: var(--status-missed);
+  }
+
+  /* نقطة حالة صغيرة موحّدة لكل التطبيق. */
+  .status-dot {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+
+  /* ———————————————————————————PHASE 2: إيقاع الصفحة ——————————————————————————— */
+
+  /* حاوية الصفحة: 16px على الموبايل، 24px من sm وما فوق. */
+  .page {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: var(--page-pad);
+  }
+
+  /* فاصل الأقسام: مسافة تتنفس، لا بطاقة إضافية. */
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .stack-sm {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* ———————————————————————————الطباعة القديمة تبقى كما هي ——————————————————————————— */
+
   .quran-text {
     font-family: "Amiri", "Scheherazade New", "Traditional Arabic", serif;
     line-height: 2.35;
@@ -534,6 +824,15 @@
   }
 }
 
+@keyframes skeleton-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stage-enter {
     animation: none;
@@ -543,6 +842,29 @@
   }
   .glass-hover:hover {
     transform: none;
+  }
+  /* PHASE 2: إلغاء كل حركة عارضة — يبقى اللون وانتقال الحالة فورًا. */
+  .skeleton {
+    animation: none;
+    background: rgba(255, 255, 255, 0.62);
+  }
+  .motion-swap {
+    animation: none;
+  }
+  .motion-press,
+  .glass-hover,
+  .btn-edge,
+  .btn-primary-edge {
+    transition-duration: 1ms;
+  }
+  .motion-press:active,
+  .glass-hover:hover,
+  .btn-edge:hover:not(:disabled),
+  .btn-primary-edge:hover:not(:disabled) {
+    transform: none;
+  }
+  .meter > span {
+    transition: none;
   }
 }
 

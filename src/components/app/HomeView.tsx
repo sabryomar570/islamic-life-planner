@@ -1,8 +1,15 @@
 import { DailyReview, type DayReviewRecord } from "@/components/app/DailyReview";
-import { LifeSystemPanel } from "@/components/app/LifeSystemPanel";
-import { GlassCard } from "@/components/app/GlassCard";
+import { DayTimeline } from "@/components/app/DayTimeline";
+import { NextPrayerHero } from "@/components/app/NextPrayerHero";
+import {
+  Meter,
+  Panel,
+  PrimaryButton,
+  QuietButton,
+  SectionHead,
+  Sunken,
+} from "@/components/app/Surfaces";
 import { ADHKAR_GROUPS, type AdhkarGroupId } from "@/data/adhkar";
-import { duaOfTheDay } from "@/data/duas";
 import type { ProfileAnswers } from "@/data/questions";
 import { getSurah } from "@/data/quran";
 import { useNow } from "@/hooks/use-clock";
@@ -11,24 +18,20 @@ import type { AdaptiveSuggestion } from "@/lib/adaptive-planning";
 import type { DailyPlan } from "@/lib/daily-plan";
 import type { ProgressSummary } from "@/lib/progress";
 import type { WeeklyReview } from "@/lib/weekly-review";
-import {
-  planLine,
-  reviewDue,
-  focusMetric,
-  type WeeklyFocus,
-} from "@/lib/coach";
-import { toArabicDigits } from "@/lib/hijri";
-import { PRAYERS, nextPrayer, type Timings } from "@/lib/prayers";
-import { arabicNumber, formatArabicTime, formatGregorian, greeting } from "@/lib/time";
+import { focusMetric, planLine, reviewDue, type WeeklyFocus } from "@/lib/coach";
+import { PRAYERS, type PrayerKey, type PrayerStatus, type Timings } from "@/lib/prayers";
+import { arabicNumber, formatGregorian, greeting } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import {
-  BookOpen,
-  ChevronLeft,
-  Moon,
-  Sparkles,
-  Sun,
-} from "lucide-react";
+import { BookOpen, Check, ChevronLeft, Moon, Sun, Target } from "lucide-react";
 import { useMemo, useState } from "react";
+
+/**
+ * PHASE 2A — الشاشة الأولى.
+ *
+ * الترتيب يجيب على أسئلة اليوم بالترتيب الذي يسألها المستخدم عن نفسه:
+ * ما الوقت؟ → ما الصلاة القادمة؟ → ماذا أفعل الآن؟ → أين القرآن والأذكار؟ → كيف أمضي؟
+ * ليست عمود بطاقات؛ كل قسم يحمل وزنًا مختلفًا ويشغل السطح الذي يستحقه.
+ */
 
 export type HomeSection =
   | "prayers"
@@ -38,6 +41,9 @@ export type HomeSection =
   | "hadith"
   | "poetry"
   | "occasions"
+  | "adhkar"
+  | "stats"
+  | "weekly"
   | "settings";
 
 const WIRD_LABEL: Record<string, string> = {
@@ -60,23 +66,6 @@ export type WeekStats = {
   daily: { date: string; done: number; logged: number; adhkar: number; reviewed: boolean }[];
 };
 
-function pad(value: number) {
-  return toArabicDigits(String(value).padStart(2, "0"));
-}
-
-function LiveCountdown({ target, className }: { target: Date; className?: string }) {
-  const now = useNow(1000);
-  const total = Math.max(0, Math.floor((target.getTime() - now.getTime()) / 1000));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const seconds = total % 60;
-  return (
-    <span className={cn("tabular-nums", className)}>
-      {pad(hours)}:{pad(minutes)}:{pad(seconds)}
-    </span>
-  );
-}
-
 function readSurahNumber() {
   try {
     const parsed = Number(window.localStorage.getItem(LAST_READ_KEY));
@@ -98,45 +87,6 @@ function readBookmark() {
   }
 }
 
-function SectionCard({
-  title,
-  eyebrow,
-  children,
-  action,
-  onClick,
-}: {
-  title: string;
-  eyebrow: string;
-  children: React.ReactNode;
-  action: string;
-  onClick: () => void;
-}) {
-  return (
-    <GlassCard strong className="overflow-hidden p-0">
-      <div className="p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold text-primary">{eyebrow}</p>
-            <h2 className="mt-1 text-lg font-bold tracking-tight">{title}</h2>
-          </div>
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Sparkles className="size-5" />
-          </span>
-        </div>
-        <div className="mt-4">{children}</div>
-      </div>
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex min-h-12 w-full items-center justify-between border-t border-border/55 px-5 text-sm font-semibold text-primary transition-colors hover:bg-primary/5 sm:px-6"
-      >
-        {action}
-        <ChevronLeft className="size-4" />
-      </button>
-    </GlassCard>
-  );
-}
-
 export function HomeView({
   userName,
   profile,
@@ -149,6 +99,7 @@ export function HomeView({
   reviewSaving,
   onOpenSection,
   onOpenAdhkar,
+  onLogPrayer,
   dailyPlan,
   planOutcomes,
   dailyScore,
@@ -172,16 +123,14 @@ export function HomeView({
     prayers: Record<string, string>;
     adhkar: string[];
     favorites: string[];
-    review: Omit<DayReviewRecord, "mood" | "blocker"> & {
-      mood: string;
-      blocker: string;
-    } | null;
+    review: Omit<DayReviewRecord, "mood" | "blocker"> & { mood: string; blocker: string } | null;
   };
   stats?: WeekStats | null;
   onSaveReview: (review: DayReviewRecord) => void;
   reviewSaving: boolean;
   onOpenSection: (section: HomeSection) => void;
   onOpenAdhkar: (group: AdhkarGroupId) => void;
+  onLogPrayer: (prayer: PrayerKey, status: PrayerStatus) => void;
   dailyPlan: DailyPlan | null;
   planOutcomes: readonly PlanItemOutcome[];
   dailyScore: DailyScore | null;
@@ -199,20 +148,13 @@ export function HomeView({
   const now = useNow(30_000);
   const [lastSurah] = useState<number | null>(() => readSurahNumber());
   const [bookmark] = useState<{ surah: number; ayah: number } | null>(() => readBookmark());
-  const dailyDua = useMemo(() => duaOfTheDay(now), [now]);
 
-  const next = nextPrayer(timings, now);
-  const nextTarget = useMemo(() => {
-    const minutes = Number(next.time.split(":")[0]) * 60 + Number(next.time.split(":")[1]);
-    const target = new Date(now);
-    target.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
-    if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
-    return target;
-  }, [next.time, now]);
+  const nowLabel = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   const prayedCount = PRAYERS.filter(
     (prayer) => dayState.prayers[prayer.key] === "jamaah" || dayState.prayers[prayer.key] === "ontime",
   ).length;
+
   const dailyDhikr = useMemo(() => {
     const group = ADHKAR_GROUPS.find((item) => item.id === "morning") ?? ADHKAR_GROUPS[0];
     return group.items[now.getDate() % group.items.length];
@@ -224,8 +166,9 @@ export function HomeView({
     : lastSurah
       ? `سورة ${surahName(lastSurah)}`
       : "لم تبدأ القراءة بعد";
+
   const review = dayState.review as DayReviewRecord | null;
-  const plan = planLine({
+  const planLineText = planLine({
     dayRhythm: profile.dayRhythm,
     dayEnd: profile.dayEnd,
     focusTime: profile.focusTime,
@@ -240,194 +183,155 @@ export function HomeView({
       : "prayer";
   const weeklyMetric = stats ? focusMetric(weeklyFocus, stats.daily) : null;
 
+  // الاقتراح التكيّفي لا يعلو على الخطة؛ يظهر عند وجود سبب حقيقي فقط.
+  const actionable = adaptiveSuggestions.find(
+    (item) => item.kind === "move" || item.kind === "reduce",
+  );
+
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3 px-1">
+    <div className="stack">
+      {/* ——— 1) الترويسة: صغيرة، تُخبر بالوقت والمكان ولا تنافس البطل ——— */}
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight">
+          <h1 className="label-display">
             {greeting(now)}
-            {userName ? `، ${userName}` : ""}
+            {userName ? `، ${userName.split(" ")[0]}` : ""}
           </h1>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="label-meta mt-1 text-muted-foreground">
             {formatGregorian(now)}
-            {hijri ? ` • ${hijri}` : ""}
+            {hijri ? ` · ${hijri}` : ""}
           </p>
         </div>
-        <span className="max-w-full truncate rounded-full bg-white/70 px-3 py-1.5 text-[11px] font-medium text-foreground/70 ring-1 ring-white/80">
-          {locationLabel}
-        </span>
+        <p className="label-meta truncate text-muted-foreground">{locationLabel}</p>
       </header>
 
-      <LifeSystemPanel
-        plan={dailyPlan}
-        outcomes={planOutcomes}
-        score={dailyScore}
-        progress={lifeProgress}
-        weeklyReview={weeklyReview}
-        suggestions={adaptiveSuggestions}
-        savingItemId={savingItemId}
-        applyingSuggestion={applyingSuggestion}
-        reviewing={reviewingWeek}
-        onSetOutcome={onSetPlanOutcome}
-        onResetOutcome={onResetPlanOutcome}
-        onSaveWeeklyReview={onSaveWeeklyReview}
-        onApplySuggestion={onApplySuggestion}
+      {/* ——— 2) بطل الشاشة: الصلاة القادمة ——— */}
+      <NextPrayerHero
+        timings={timings}
+        dayState={dayState}
+        onOpenPrayers={() => onOpenSection("prayers")}
+        onLogCurrent={onLogPrayer}
       />
 
-      <section aria-labelledby="next-prayer-title">
-        <GlassCard strong className="overflow-hidden p-0">
-          <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
-            <div>
-              <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Moon className="size-4 text-primary" />
-                الصلاة القادمة
-              </p>
-              <h2 id="next-prayer-title" className="mt-2 text-2xl font-bold text-primary">
-                {next.name}
-              </h2>
-              <p className="mt-1 text-base font-semibold text-foreground/80">
-                {formatArabicTime(next.time)}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-primary/8 px-4 py-3 text-center">
-              <p className="text-[11px] text-muted-foreground">المتبقّي</p>
-              <LiveCountdown target={nextTarget} className="mt-1 block text-2xl font-bold tracking-tight" />
-            </div>
-          </div>
-          <div className="border-t border-border/55 px-5 py-4 sm:px-6">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold text-foreground/75">
-                صلّيت اليوم {arabicNumber(prayedCount)} من {arabicNumber(PRAYERS.length)}
-              </p>
-              <button
-                type="button"
-                onClick={() => onOpenSection("prayers")}
-                className="flex min-h-10 items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-              >
-                فتح سجل الصلاة
-                <ChevronLeft className="size-4" />
-              </button>
-            </div>
-            <div className="mt-3 flex items-center gap-1.5" aria-label="حالة صلوات اليوم">
-              {PRAYERS.map((prayer) => {
-                const status = dayState.prayers[prayer.key];
-                return (
-                  <span
-                    key={prayer.key}
-                    title={`${prayer.name} — ${formatArabicTime(timings[prayer.key])}`}
-                    className={cn(
-                      "h-1.5 flex-1 rounded-full",
-                      status === "jamaah" || status === "ontime"
-                        ? "bg-emerald-500/80"
-                        : status === "late"
-                          ? "bg-amber-400/80"
-                          : status === "missed"
-                            ? "bg-rose-400/80"
-                            : "bg-white/80 ring-1 ring-white/90",
-                    )}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </GlassCard>
-      </section>
-
-      {profile.mainGoal === "prayer" ? (
-        <SectionCard
-          eyebrow="تركيزك الأول"
-          title="سجّل حضورك بصدق"
-          action="افتح سجل الصلاة"
-          onClick={() => onOpenSection("prayers")}
-        >
-          <p className="text-sm leading-7 text-muted-foreground">
-            بقيت {arabicNumber(Math.max(0, PRAYERS.length - prayedCount))} صلوات اليوم. السجل
-            الصادق أهم من يوم ممتاز.
-          </p>
-        </SectionCard>
-      ) : profile.mainGoal === "quran" ? (
-        <SectionCard
-          eyebrow="وردك اليومي"
-          title={WIRD_LABEL[profile.quranAmount] ?? "صفحة واحدة"}
-          action={positionLabel === "لم تبدأ القراءة بعد" ? "ابدأ وردك" : "تابع القراءة"}
-          onClick={() => onOpenSection("quran")}
-        >
-          <p className="text-sm font-semibold text-foreground">{positionLabel}</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">خطوة صغيرة ثابتة أفضل من خطة كبيرة تتأجل.</p>
-        </SectionCard>
-      ) : profile.mainGoal === "adhkar" ? (
-        <SectionCard
-          eyebrow="ورد الأذكار"
-          title={`${arabicNumber(dayState.adhkar.length)} من ${arabicNumber(3)} مجموعات`}
-          action="أكمل أذكارك"
-          onClick={() => onOpenAdhkar("morning")}
-        >
-          <p className="text-sm leading-7 text-muted-foreground">
-            {dayState.adhkar.length >= 3
-              ? "أتممت مجموعات اليوم الأساسية، بارك الله فيك."
-              : "لا يلزم أن تفعلها جميعًا دفعة واحدة؛ ابدأ بذكاء واحد."}
-          </p>
-        </SectionCard>
+      {/* ——— 3) خطة اليوم، مرتسية بالصلاة ——— */}
+      {dailyPlan ? (
+        <DayTimeline
+          plan={dailyPlan}
+          outcomes={planOutcomes}
+          currentTime={nowLabel}
+          savingItemId={savingItemId}
+          onSetOutcome={onSetPlanOutcome}
+          onResetOutcome={onResetPlanOutcome}
+        />
       ) : (
-        <SectionCard
-          eyebrow="دعاء اليوم"
-          title="دعاءٌ لما يهمّك"
-          action="افتح الأدعية"
-          onClick={() => onOpenSection("duas")}
-        >
-          <p className="quran-text line-clamp-3 text-base leading-8">{dailyDua.text}</p>
-          <p className="mt-2 text-[11px] text-primary">{dailyDua.reference}</p>
-        </SectionCard>
+        <Panel className="px-5 py-6 sm:px-6">
+          <SectionHead
+            eyebrow="خطة اليوم"
+            title="نجهّز خطتك من نموذج حياتك"
+            hint="لن نضيف مهمة لم تخترها — انتظر لحظة واحدة."
+          />
+        </Panel>
       )}
 
-      <section aria-labelledby="today-essentials-title">
-        <div className="mb-2.5 flex items-center justify-between px-1">
-          <h2 id="today-essentials-title" className="text-sm font-bold">
-            معك اليوم
-          </h2>
-          <span className="text-[11px] text-muted-foreground">خطوتان قصيرتان</span>
+      {/* ——— 4) تركيزك اليوم: جملة واحدة، لا صندوق توصيات ——— */}
+      <Panel className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="eyebrow flex items-center gap-1.5">
+              <Target className="size-3.5" />
+              تركيزك اليوم
+            </p>
+            <p className="mt-2 text-[15px] leading-8 font-semibold text-foreground">
+              {dailyPlan?.primaryAction?.item.title ??
+                (profile.mainGoal === "quran"
+                  ? `وردك: ${WIRD_LABEL[profile.quranAmount] ?? "صفحة واحدة"}`
+                  : profile.mainGoal === "adhkar"
+                    ? "أذكار الصباح والمساء"
+                    : profile.mainGoal === "prayer"
+                      ? "الصلاة في وقتها"
+                      : "خطوة واحدة تُنجَز اليوم")}
+            </p>
+            <p className="label-body mt-1.5 text-muted-foreground">
+              {dailyPlan?.nextAnchor.prompt ?? planLineText}
+            </p>
+          </div>
+          {dailyScore ? (
+            <div className="shrink-0 text-end">
+              <p className="text-2xl font-bold text-primary">{arabicNumber(dailyScore.score)}</p>
+              <p className="label-meta text-muted-foreground">تقدم اليوم</p>
+            </div>
+          ) : null}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <GlassCard className="flex min-h-36 flex-col p-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                <Sun className="size-4 text-primary" />
-                ذكر الصباح
-              </span>
-              <button
-                type="button"
-                onClick={() => onOpenAdhkar("morning")}
-                className="text-[11px] font-semibold text-primary hover:underline"
-              >
-                فتح
-              </button>
-            </div>
-            <p className="quran-text mt-3 line-clamp-3 flex-1 text-sm leading-7">{dailyDhikr.text}</p>
-            <p className="mt-2 line-clamp-1 text-[10px] text-muted-foreground">{dailyDhikr.source}</p>
-          </GlassCard>
 
-          <GlassCard className="flex min-h-36 flex-col p-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                <BookOpen className="size-4 text-primary" />
-                آخر موضع للمصحف
-              </span>
-              <button
-                type="button"
-                onClick={() => onOpenSection("quran")}
-                className="text-[11px] font-semibold text-primary hover:underline"
+        {actionable ? (
+          <div className="mt-4 rounded-2xl surface-sunken p-3">
+            <p className="text-[12px] font-semibold">اقتراح لتعديل الخطة</p>
+            <p className="label-meta mt-1 leading-5 text-muted-foreground">{actionable.reason}</p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <PrimaryButton
+                onClick={() => onApplySuggestion(actionable)}
+                disabled={applyingSuggestion}
+                className="h-9 px-4 text-[12px]"
               >
-                متابعة
-              </button>
+                <Check className="size-3.5" />
+                موافقتي وتطبيقه
+              </PrimaryButton>
+              <QuietButton onClick={() => onOpenSection("weekly")} className="h-9 px-4">
+                الخطة الأسبوعية
+              </QuietButton>
             </div>
-            <p className="mt-4 flex-1 text-sm font-semibold leading-7">{positionLabel}</p>
-            <p className="mt-2 text-[10px] text-muted-foreground">يُحفظ الموضع على جهازك.</p>
-          </GlassCard>
+          </div>
+        ) : null}
+      </Panel>
+
+      {/* ——— 5) القرآن والأذكار: وصفتان لا بطاقتان ضخمتان ——— */}
+      <section aria-labelledby="today-readings">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => onOpenSection("quran")}
+            className="motion-press surface-primary flex items-start gap-3 rounded-3xl p-4 text-right sm:p-5"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <BookOpen className="size-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[12px] font-semibold text-muted-foreground">القرآن</span>
+              <span className="mt-0.5 block truncate text-[13px] font-semibold text-foreground">
+                {positionLabel}
+              </span>
+              <span className="label-meta mt-0.5 block text-muted-foreground">
+                {WIRD_LABEL[profile.quranAmount] ?? "صفحة واحدة"} · تابع من حيث توقفت
+              </span>
+            </span>
+            <ChevronLeft className="mt-1 size-4 shrink-0 text-muted-foreground" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenAdhkar("morning")}
+            className="motion-press surface-primary flex items-start gap-3 rounded-3xl p-4 text-right sm:p-5"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Sun className="size-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[12px] font-semibold text-muted-foreground">أذكار الصباح</span>
+              <span className="quran-text mt-0.5 line-clamp-2 block text-[13px] leading-7 text-foreground/90">
+                {dailyDhikr.text}
+              </span>
+              <span className="label-meta mt-0.5 block truncate text-muted-foreground">
+                {dayState.adhkar.includes("morning") ? "أتممته اليوم ✓" : dailyDhikr.source}
+              </span>
+            </span>
+            <ChevronLeft className="mt-1 size-4 shrink-0 text-muted-foreground" />
+          </button>
         </div>
       </section>
 
+      {/* ——— 6) الأذكار المتبقية: صف واحد مضغوط ——— */}
       <section aria-label="أذكار اليوم">
-        <div className="grid grid-cols-3 gap-2.5">
+        <ul className="grid grid-cols-3 gap-2">
           {(
             [
               { id: "morning" as AdhkarGroupId, label: "الصباح", icon: Sun },
@@ -438,26 +342,30 @@ export function HomeView({
             const group = ADHKAR_GROUPS.find((entry) => entry.id === item.id);
             const done = dayState.adhkar.includes(item.id);
             return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onOpenAdhkar(item.id)}
-                className={cn(
-                  "tile-edge flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-3",
-                  done && "border-emerald-400/45 bg-emerald-500/6",
-                )}
-              >
-                <item.icon className={cn("size-5", done ? "text-emerald-600" : "text-primary")} />
-                <span className="text-[11px] font-semibold">أذكار {item.label}</span>
-                <span className="text-[10px] text-muted-foreground">
-                  {done ? "تمّت ✓" : `${arabicNumber(group?.items.length ?? 0)} ذكرًا`}
-                </span>
-              </button>
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpenAdhkar(item.id)}
+                  className={cn(
+                    "motion-press surface-secondary flex min-h-[76px] w-full flex-col items-center justify-center gap-1 rounded-2xl p-2",
+                    done && "bg-[var(--status-success)]/8",
+                  )}
+                >
+                  <item.icon
+                    className={cn("size-[18px]", done ? "text-[var(--status-success)]" : "text-primary")}
+                  />
+                  <span className="text-[11px] font-semibold">أذكار {item.label}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {done ? "تمّت ✓" : `${arabicNumber(group?.items.length ?? 0)} ذكرًا`}
+                  </span>
+                </button>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </section>
 
+      {/* ——— 7) مراجعة اليوم: طقس صغير لا استبيان ——— */}
       <DailyReview
         visible={Boolean(review) || reviewDue(now, { dayEnd: profile.dayEnd })}
         review={review}
@@ -466,43 +374,85 @@ export function HomeView({
         onSave={onSaveReview}
       />
 
-      {stats && weeklyMetric && stats.daily.some((day) => day.logged > 0) ? (
-        <GlassCard className="p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
+      {/* ——— 8) تقدّم الأسبوع: أرقام مختصرة لا عشر بطاقات إحصاء ——— */}
+      {stats && stats.days > 0 ? (
+        <Panel className="p-5 sm:p-6">
+          <SectionHead
+            eyebrow="متابعتي"
+            title="كيف يسير أسبوعك"
+            action={
+              <button
+                type="button"
+                onClick={() => onOpenSection("stats")}
+                className="touch-target inline-flex items-center gap-1 rounded-full px-3 text-[12px] font-semibold text-primary"
+              >
+                الإحصاءات
+                <ChevronLeft className="size-3.5" />
+              </button>
+            }
+          />
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground">تركيز هذا الأسبوع</p>
-              <h2 className="mt-1 text-base font-bold">
-                {weeklyFocus === "prayer"
-                  ? "الصلاة في وقتها"
-                  : weeklyFocus === "adhkar"
-                    ? "الأذكار"
-                    : "الاستمرار"}
-              </h2>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="label-meta text-muted-foreground">الصلاة في وقتها</p>
+                <p className="text-[13px] font-bold text-foreground">{arabicNumber(stats.prayerRate)}٪</p>
+              </div>
+              <Meter className="mt-1.5" value={stats.prayerRate} tone="success" label="نسبة الصلاة في وقتها" />
             </div>
-            <button
-              type="button"
-              onClick={() => onOpenSection("prayers")}
-              className="text-[11px] font-semibold text-primary hover:underline"
-            >
-              التفاصيل
-            </button>
-          </div>
-          <div className="mt-4 flex items-end justify-between gap-4">
             <div>
-              <p className="text-2xl font-bold text-primary">
-                {arabicNumber(weeklyMetric.done)}/{arabicNumber(weeklyMetric.total)}
-              </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">{weeklyMetric.unit}</p>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="label-meta text-muted-foreground">أيام فيها أذكار</p>
+                <p className="text-[13px] font-bold text-foreground">{arabicNumber(stats.adhkarRate)}٪</p>
+              </div>
+              <Meter className="mt-1.5" value={stats.adhkarRate} label="نسبة الأيام التي فيها أذكار" />
             </div>
-            <div className="text-end">
-              <p className="text-xl font-bold">{arabicNumber(stats.streak)}</p>
-              <p className="mt-1 text-[10px] text-muted-foreground">أيام متصلة كاملة</p>
+            <div>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="label-meta text-muted-foreground">سجل خطة الأسبوع</p>
+                <p className="text-[13px] font-bold text-foreground">
+                  {arabicNumber(lifeProgress?.currentStreak ?? stats.streak)}
+                </p>
+              </div>
+              <Meter
+                className="mt-1.5"
+                value={Math.min(100, (lifeProgress?.currentStreak ?? stats.streak) * 14)}
+                tone="attention"
+                label="أيام متصلة"
+              />
             </div>
           </div>
-        </GlassCard>
+
+          {weeklyMetric ? (
+            <p className="label-meta mt-4 text-muted-foreground">
+              تركيز الأسبوع:{" "}
+              {weeklyFocus === "prayer" ? "الصلاة في وقتها" : weeklyFocus === "adhkar" ? "الأذكار" : "الاستمرار"} —{" "}
+              {arabicNumber(weeklyMetric.done)} من {arabicNumber(weeklyMetric.total)} {weeklyMetric.unit}.
+            </p>
+          ) : null}
+
+          {lifeProgress ? (
+            <p className="label-meta mt-1 text-muted-foreground">
+              من خطة الأسبوع: {arabicNumber(lifeProgress.weekly.completed)} خطوة منفَّذة ·{" "}
+              {arabicNumber(lifeProgress.weekly.reviewedDays)} يوم مراجَع.
+            </p>
+          ) : null}
+        </Panel>
       ) : null}
 
-      <p className="px-2 text-center text-[11px] leading-6 text-muted-foreground">{plan}</p>
+      {/* ——— 9) اقتراح تكيّفي أسبوعي: سطر واحد ——— */}
+      {weeklyReview ? (
+        <Sunken className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <p className="label-meta min-w-0 flex-1 text-muted-foreground">
+            مراجعة الأسبوع: التزام {arabicNumber(weeklyReview.adherence)}٪ عبر {arabicNumber(weeklyReview.reviewedDays)} أيام.
+          </p>
+          <QuietButton onClick={onSaveWeeklyReview} disabled={reviewingWeek} className="h-9 px-4">
+            {reviewingWeek ? "جارٍ الحفظ…" : "تحديث المراجعة"}
+          </QuietButton>
+        </Sunken>
+      ) : null}
+
+      <p className="px-2 text-center text-[11px] leading-6 text-muted-foreground">{planLineText}</p>
     </div>
   );
 }

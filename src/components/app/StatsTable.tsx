@@ -1,9 +1,14 @@
-import { GlassCard, SectionTitle } from "@/components/app/GlassCard";
-import { Progress } from "@/components/ui/progress";
+import { Meter, Panel, SectionHead, StatusDot, Sunken } from "@/components/app/Surfaces";
 import { PRAYERS } from "@/lib/prayers";
 import { arabicNumber, dateKey, weekdayShort } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { Activity, CalendarDays, Flame, TrendingUp } from "lucide-react";
+
+/**
+ * PHASE 2 — الإحصاءات.
+ *
+ * مقياس أول واحد، ثم ثانويات تشرحه، ثم تاريخ بصري. لا اثنتا عشرة بطاقة.
+ * الأرقام كلها من سجل المستخدم نفسه؛ لا نسبة بلا denominator.
+ */
 
 export type DetailedStats = {
   days: number;
@@ -22,14 +27,13 @@ export type DetailedStats = {
   longestRun: number;
 };
 
-const STATUS_TONE: Record<string, string> = {
-  jamaah: "bg-emerald-500",
-  ontime: "bg-sky-500",
-  late: "bg-amber-500",
-  missed: "bg-rose-500",
-};
+function toneFor(status: string | undefined) {
+  if (status === "jamaah" || status === "ontime") return "success";
+  if (status === "late") return "attention";
+  if (status === "missed") return "missed";
+  return "idle";
+}
 
-/** جدول إحصاءات حقيقي مبني بالكامل على سجل المستخدم في قاعدة البيانات. */
 export function StatsTable({
   stats,
   history,
@@ -44,145 +48,146 @@ export function StatsTable({
   const maxDone = Math.max(...last14.map((day) => day.done), 1);
 
   return (
-    <div className="space-y-5">
-      <GlassCard strong className="p-6">
-        <SectionTitle
-          icon={<Activity className="size-5" />}
-          title="إحصاءاتك — من سجلّك الحقيقي"
-          hint={`آخر ${arabicNumber(stats.days)} يومًا في الصلوات والأذكار، محسوبة من ما سجّلته بنفسك`}
+    <div className="stack">
+      {/* ——— المقياس الأول ——— */}
+      <Panel className="p-5 sm:p-6">
+        <SectionHead
+          eyebrow="متابعتي"
+          title="نسبة الصلاة في وقتها"
+          hint={`محسوبة من آخر ${arabicNumber(stats.days)} يومًا في سجلّك — لا تقدير ولا افتراض.`}
         />
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="glass-tile rounded-2xl p-4">
-            <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <TrendingUp className="size-4 text-sky-500" /> نسبة الصلاة في وقتها
-            </p>
-            <p className="mt-1 text-2xl font-bold text-primary">
-              {arabicNumber(stats.prayerRate)}٪
-            </p>
-            <Progress value={stats.prayerRate} className="mt-2 h-1.5 bg-white/60" />
-          </div>
-          <div className="glass-tile rounded-2xl p-4">
-            <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <Flame className="size-4 text-orange-500" /> الاستمرارية الحالية
-            </p>
-            <p className="mt-1 text-2xl font-bold text-primary">
-              {arabicNumber(stats.streak)} يوم
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              أطول سلسلة: {arabicNumber(stats.longestRun)} يومًا
-            </p>
-          </div>
-          <div className="glass-tile rounded-2xl p-4">
-            <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <CalendarDays className="size-4 text-emerald-500" /> أيام فيها أذكار
-            </p>
-            <p className="mt-1 text-2xl font-bold text-primary">
-              {arabicNumber(stats.adhkarRate)}٪
-            </p>
-            <Progress value={stats.adhkarRate} className="mt-2 h-1.5 bg-white/60" />
-          </div>
-          <div className="glass-tile rounded-2xl p-4">
-            <p className="text-[11px] text-muted-foreground">الجماعة والوقت</p>
-            <p className="mt-1 text-lg font-bold text-emerald-600">
-              {arabicNumber(stats.jamaah)} جماعة • {arabicNumber(stats.ontime)} وقت
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              متأخرة {arabicNumber(stats.late)} • فائتة {arabicNumber(stats.missed)}
-            </p>
-          </div>
+        <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-2">
+          <p className="text-4xl font-bold text-primary tabular-nums">
+            {arabicNumber(stats.prayerRate)}٪
+          </p>
+          <p className="label-body pb-1 text-muted-foreground">
+            {arabicNumber(stats.jamaah)} في جماعة · {arabicNumber(stats.ontime)} في الوقت
+          </p>
         </div>
-      </GlassCard>
+        <Meter className="mt-3" value={stats.prayerRate} tone="success" label="نسبة الصلاة في وقتها" />
+        <p className="label-meta mt-2 text-muted-foreground">
+          متأخرة {arabicNumber(stats.late)} · فائتة {arabicNumber(stats.missed)}
+        </p>
+      </Panel>
 
-      <GlassCard className="p-6">
-        <SectionTitle
-          icon={<Activity className="size-5" />}
-          title="آخر ١٤ يومًا — يومًا بيوم"
-          hint="عدد الصلوات المكتملة (من ٥) في كل يوم، مع الأذكار المنجزة"
+      {/* ——— ثانويات: تشرح الأول ——— */}
+      <Panel className="p-5 sm:p-6">
+        <SectionHead title="ما الذي يفسّر الرقم" />
+        <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Sunken className="px-3.5 py-3">
+            <dt className="label-meta text-muted-foreground">أيام متصلة</dt>
+            <dd className="mt-0.5 text-[15px] font-bold text-foreground">
+              {arabicNumber(stats.streak)}
+            </dd>
+            <dd className="label-meta text-muted-foreground">
+              أطول سلسلة {arabicNumber(stats.longestRun)}
+            </dd>
+          </Sunken>
+          <Sunken className="px-3.5 py-3">
+            <dt className="label-meta text-muted-foreground">أيام فيها أذكار</dt>
+            <dd className="mt-0.5 text-[15px] font-bold text-foreground">
+              {arabicNumber(stats.adhkarRate)}٪
+            </dd>
+          </Sunken>
+          <Sunken className="col-span-2 px-3.5 py-3 sm:col-span-1">
+            <dt className="label-meta text-muted-foreground">أقوى وأضعف</dt>
+            <dd className="mt-0.5 text-[13px] font-semibold">
+              {prayerName(stats.best)} · {prayerName(stats.weakest)}
+            </dd>
+          </Sunken>
+        </dl>
+        {stats.weakest ? (
+          <p className="label-body mt-4 text-muted-foreground">
+            ابدأ بأضعف صلاة: نبّهها في وقتها أسبوعًا كاملًا قبل أن تقيس أي شيء آخر.
+          </p>
+        ) : null}
+      </Panel>
+
+      {/* ——— تاريخ بصري ——— */}
+      <Panel className="p-5 sm:p-6">
+        <SectionHead
+          title="آخر ١٤ يومًا"
+          hint="ارتفاع العمود = عدد الصلوات المكتملة من ٥ في ذلك اليوم."
         />
-
-        <div className="mt-5 flex items-end gap-1.5" dir="rtl">
+        <ul className="mt-5 flex items-end gap-1.5">
           {last14.map((day) => (
-            <div key={day.date} className="flex flex-1 flex-col items-center gap-1.5">
-              <span className="text-[9px] text-muted-foreground">
+            <li key={day.date} className="flex flex-1 flex-col items-center gap-1.5">
+              <span className="label-meta text-muted-foreground tabular-nums">
                 {arabicNumber(day.done)}
               </span>
               <div
                 className={cn(
-                  "w-full rounded-t-lg transition-all",
+                  "w-full rounded-t-lg transition-[height] duration-300",
                   day.done === 5
-                    ? "bg-emerald-500/85"
+                    ? "bg-[var(--status-success)]"
                     : day.done >= 3
-                      ? "bg-sky-500/80"
+                      ? "bg-[var(--status-neutral)]"
                       : day.done >= 1
-                        ? "bg-amber-400/80"
-                        : "bg-rose-400/70",
+                        ? "bg-[var(--status-attention)]"
+                        : "bg-[var(--status-missed)]",
                 )}
                 style={{ height: `${Math.max((day.done / maxDone) * 64, 6)}px` }}
-                title={`${day.date}: ${day.done} صلوات • ${day.adhkar} أذكار`}
+                title={`${day.date}: ${day.done} صلوات · ${day.adhkar} أذكار`}
               />
-              <span className="text-[9px] text-muted-foreground">
-                {day.date.slice(8)}
-              </span>
-            </div>
+              <span className="label-meta text-muted-foreground">{day.date.slice(8)}</span>
+            </li>
           ))}
-        </div>
-      </GlassCard>
+        </ul>
+      </Panel>
 
-      <GlassCard className="p-6">
-        <SectionTitle
-          icon={<CalendarDays className="size-5" />}
-          title="جدول الصلوات — الأسبوع الأخير"
-          hint="حالة كل صلاة في كل يوم: جماعة، في الوقت، متأخرة، فائتة"
+      {/* ——— خريطة الصلاة ——— */}
+      <Panel className="p-5 sm:p-6">
+        <SectionHead
+          title="جدول الصلوات"
+          hint="كل نقطة صلاة في آخر سبعة أيام — أخضر أديتها، رمادي لم تُسجّل."
         />
-
-        <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[34rem] text-right text-xs">
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[32rem] text-right">
+            <caption className="sr-only">حالة كل صلاة في آخر سبعة أيام مع نسبة الأداء</caption>
             <thead>
-              <tr className="border-b border-white/70 text-[10px] text-muted-foreground">
-                <th className="pb-2 pr-2 font-medium">الصلاة</th>
+              <tr className="border-b border-[var(--rule)] label-meta text-muted-foreground">
+                <th scope="col" className="pb-2 pe-2 font-medium">الصلاة</th>
                 {Array.from({ length: 7 }, (_, index) => {
                   const date = new Date();
                   date.setDate(date.getDate() - (6 - index));
                   return (
-                    <th key={index} className="pb-2 text-center font-medium">
+                    <th key={index} scope="col" className="pb-2 text-center font-medium">
                       {weekdayShort(date)}
                     </th>
                   );
                 })}
-                <th className="pb-2 text-center font-medium">النسبة</th>
+                <th scope="col" className="pb-2 text-center font-medium">النسبة</th>
               </tr>
             </thead>
             <tbody>
               {PRAYERS.map((prayer) => {
-                const perPrayer = stats.perPrayer.find(
-                  (item) => item.key === prayer.key,
-                );
+                const perPrayer = stats.perPrayer.find((item) => item.key === prayer.key);
                 const total = (perPrayer?.done ?? 0) + (perPrayer?.missed ?? 0);
-                const rate =
-                  total === 0
-                    ? 0
-                    : Math.round(((perPrayer?.done ?? 0) / total) * 100);
+                const rate = total === 0 ? 0 : Math.round(((perPrayer?.done ?? 0) / total) * 100);
                 return (
-                  <tr key={prayer.key} className="border-b border-white/40 last:border-0">
-                    <td className="py-2.5 pr-2 font-semibold">{prayer.name}</td>
+                  <tr key={prayer.key} className="border-b border-[var(--rule)] last:border-b-0">
+                    <th scope="row" className="py-2.5 pe-2 text-[12.5px] font-semibold">
+                      {prayer.name}
+                    </th>
                     {Array.from({ length: 7 }, (_, index) => {
                       const date = new Date();
                       date.setDate(date.getDate() - (6 - index));
-                      const key = dateKey(date);
-                      const status = history?.prayers[key]?.[prayer.key];
+                      const status = history?.prayers[dateKey(date)]?.[prayer.key];
                       return (
                         <td key={index} className="py-2.5 text-center">
                           <span
-                            className={`inline-block size-2.5 rounded-full ${
-                              status ? STATUS_TONE[status] : "bg-slate-300/70"
-                            }`}
-                            title={status ?? "غير مسجّلة"}
-                          />
+                            className="inline-flex items-center justify-center"
+                            title={`${prayer.name}: ${status ?? "غير مسجّلة"}`}
+                          >
+                            <StatusDot state={toneFor(status)} />
+                          </span>
+                          <span className="sr-only">
+                            {prayer.name} {status ?? "غير مسجّلة"}
+                          </span>
                         </td>
                       );
                     })}
-                    <td className="py-2.5 text-center font-semibold text-primary">
+                    <td className="py-2.5 text-center text-[12.5px] font-semibold text-primary">
                       {total === 0 ? "—" : `${arabicNumber(rate)}٪`}
                     </td>
                   </tr>
@@ -191,22 +196,7 @@ export function StatsTable({
             </tbody>
           </table>
         </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="glass-tile rounded-2xl p-4">
-            <p className="text-[11px] text-muted-foreground">أقوى صلاة لديك</p>
-            <p className="mt-1 text-sm font-bold text-emerald-600">
-              {prayerName(stats.best)}
-            </p>
-          </div>
-          <div className="glass-tile rounded-2xl p-4">
-            <p className="text-[11px] text-muted-foreground">التي تحتاج تركيزًا</p>
-            <p className="mt-1 text-sm font-bold text-amber-600">
-              {prayerName(stats.weakest)}
-            </p>
-          </div>
-        </div>
-      </GlassCard>
+      </Panel>
     </div>
   );
 }

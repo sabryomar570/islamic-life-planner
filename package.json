@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "test": "bun test",
     "typecheck": "tsc -b --noEmit",
+    "check:glyphs": "bun scripts/check-stray-glyphs.ts",
     "package:zip": "bash scripts/package-zip.sh"
   },
   "dependencies": {

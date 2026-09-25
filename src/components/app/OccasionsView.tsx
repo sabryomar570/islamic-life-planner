@@ -1,4 +1,4 @@
-import { GlassCard, GlassPill, SectionTitle } from "@/components/app/GlassCard";
+import { Panel, QuietButton, SectionHead, Sunken } from "@/components/app/Surfaces";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -20,14 +20,12 @@ import type { Timings } from "@/lib/prayers";
 import { arabicNumber, formatArabicTime, toMinutes } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import {
-  CalendarHeart,
   ChevronDown,
   Clock,
   Droplets,
   Hourglass,
   Info,
   Moon,
-  MoonStar,
   Sparkles,
   Sun,
   Utensils,
@@ -97,19 +95,19 @@ function OccasionCard({
   return (
     <div
       className={cn(
-        "tile-edge flex flex-col rounded-2xl p-3.5",
+        "surface-secondary flex flex-col rounded-2xl p-3.5",
         accent && "ring-1 ring-primary/30",
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="ruqaa text-[1.05rem] font-bold leading-relaxed">{occasion.title}</h3>
-        <Badge variant="secondary" className="shrink-0 rounded-full text-[9px]">
+        <Badge variant="secondary" className="shrink-0 rounded-full text-[11px]">
           {occasion.kind}
         </Badge>
       </div>
 
       {daysAway === undefined ? (
-        <p className="mt-1 text-[10px] text-muted-foreground">{occasion.when}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">{occasion.when}</p>
       ) : (
         <div className="mt-2 flex items-center gap-2">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
@@ -124,7 +122,7 @@ function OccasionCard({
             </p>
             {target && daysAway > 0 ? <LiveCountdown target={target} /> : null}
             {dateLabel ? (
-              <p className="text-[10px] text-muted-foreground">{dateLabel}</p>
+              <p className="text-[11px] text-muted-foreground">{dateLabel}</p>
             ) : null}
           </div>
         </div>
@@ -146,7 +144,7 @@ function OccasionCard({
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="mt-1.5 flex items-center gap-1 self-start text-[10px] font-medium text-primary"
+          className="mt-1.5 flex items-center gap-1 self-start text-[11px] font-medium text-primary"
         >
           <ChevronDown className={cn("size-3 transition-transform", open && "rotate-180")} />
           {open ? "أقل" : `${arabicNumber(occasion.deeds.length - 2)} أعمال أخرى`}
@@ -192,10 +190,10 @@ export function OccasionsView({ timings }: { timings: Timings }) {
   const lastTenProgress = isLastTenNights(now) ? ((parts.day - 20) / 10) * 100 : 0;
 
   return (
-    <div className="space-y-4">
-      <GlassCard strong className="p-5">
-        <SectionTitle
-          icon={<CalendarHeart className="size-5" />}
+    <div className="stack">
+      <Panel className="p-5">
+        <SectionHead
+          eyebrow="المعرفة"
           title="المناسبات والصيام"
           hint={hijriLabel(now)}
         />
@@ -204,24 +202,24 @@ export function OccasionsView({ timings }: { timings: Timings }) {
             <OccasionCard key={occasion.id} occasion={occasion} daysAway={0} accent />
           ))}
           {today.length === 0 ? (
-            <p className="col-span-2 rounded-2xl bg-white/60 p-3 text-[11px] leading-5 text-muted-foreground">
+            <p className="label-body col-span-2 rounded-2xl surface-sunken p-3 text-muted-foreground">
               لا مناسبة خاصة اليوم. أفضل عمل في الأيام العادية: صلاة في وقتها، ورد ثابت،
               وذكر لا ينقطع.
             </p>
           ) : null}
         </div>
-      </GlassCard>
+      </Panel>
 
       {ramadan ? (
-        <GlassCard strong className="p-5">
-          <SectionTitle
-            icon={<MoonStar className="size-5" />}
+        <Panel className="p-5">
+          <SectionHead
+            eyebrow="مناسبات"
             title={`رمضان — اليوم ${arabicNumber(ramadanToday ?? 0)}`}
             hint="السحور والإفطار بمواقيت مدينتك"
           />
           <div className="mt-4 grid grid-cols-2 gap-2.5">
             <div className="tile-edge rounded-2xl p-3.5">
-              <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Moon className="size-3.5 text-indigo-500" /> نهاية السحور
               </p>
               <p className="mt-1 text-base font-bold text-primary">{formatArabicTime(timings.fajr)}</p>
@@ -230,7 +228,7 @@ export function OccasionsView({ timings }: { timings: Timings }) {
               </p>
             </div>
             <div className="tile-edge rounded-2xl p-3.5">
-              <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Utensils className="size-3.5 text-orange-500" /> الإفطار
               </p>
               <p className="mt-1 text-base font-bold text-primary">
@@ -241,7 +239,7 @@ export function OccasionsView({ timings }: { timings: Timings }) {
               </p>
             </div>
             <div className="tile-edge col-span-2 rounded-2xl p-3.5">
-              <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Clock className="size-3.5 text-sky-500" /> التراويح
               </p>
               <p className="mt-1 text-[11.5px] font-semibold leading-5">
@@ -258,7 +256,7 @@ export function OccasionsView({ timings }: { timings: Timings }) {
             <p className="quran-text mt-1.5 text-[1rem] leading-8">
               ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ
             </p>
-            <p className="mt-1 text-[10px] text-muted-foreground">
+            <p className="mt-1 text-[11px] text-muted-foreground">
               رواه أبو داود، عن ابن عمر رضي الله عنهما.
             </p>
           </div>
@@ -276,17 +274,17 @@ export function OccasionsView({ timings }: { timings: Timings }) {
               </p>
             </div>
           ) : null}
-        </GlassCard>
+        </Panel>
       ) : (
-        <GlassCard className="p-5">
-          <SectionTitle
-            icon={<MoonStar className="size-5" />}
+        <Panel className="p-5">
+          <SectionHead
+            eyebrow="مناسبات"
             title="استعداد لرمضان"
             hint="الاستعداد يبدأ قبل الشهر"
           />
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             <div className="tile-edge rounded-2xl p-3.5">
-              <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Sun className="size-3.5 text-amber-500" /> صيام تطوّع
               </p>
               <p className="mt-1 text-[11px] font-semibold leading-5">
@@ -294,7 +292,7 @@ export function OccasionsView({ timings }: { timings: Timings }) {
               </p>
             </div>
             <div className="tile-edge rounded-2xl p-3.5">
-              <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Sparkles className="size-3.5 text-primary" /> زيادة الورد
               </p>
               <p className="mt-1 text-[11px] font-semibold leading-5">
@@ -302,7 +300,7 @@ export function OccasionsView({ timings }: { timings: Timings }) {
               </p>
             </div>
             <div className="tile-edge col-span-2 rounded-2xl p-3.5">
-              <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <Moon className="size-3.5 text-indigo-500" /> تعويد القيام
               </p>
               <p className="mt-1 text-[11px] font-semibold leading-5">
@@ -310,12 +308,12 @@ export function OccasionsView({ timings }: { timings: Timings }) {
               </p>
             </div>
           </div>
-        </GlassCard>
+        </Panel>
       )}
 
-      <GlassCard className="p-5">
-        <SectionTitle
-          icon={<CalendarHeart className="size-5" />}
+      <Panel className="p-5">
+        <SectionHead
+          eyebrow="مناسبات"
           title="القادم بعدّاد"
           hint="العدّ على تقويم أم القرى، والاعتماد النهائي لرؤية الهلال"
         />
@@ -329,11 +327,11 @@ export function OccasionsView({ timings }: { timings: Timings }) {
             />
           ))}
         </div>
-      </GlassCard>
+      </Panel>
 
-      <GlassCard className="p-5">
-        <SectionTitle
-          icon={<Sparkles className="size-5" />}
+      <Panel className="p-5">
+        <SectionHead
+          eyebrow="مناسبات"
           title="كل أسبوع"
           hint="الجمعة، والاثنين والخميس"
         />
@@ -342,14 +340,14 @@ export function OccasionsView({ timings }: { timings: Timings }) {
             <OccasionCard key={occasion.id} occasion={occasion} />
           ))}
         </div>
-      </GlassCard>
+      </Panel>
 
       <GlossaryNote />
 
       <div className="flex justify-center">
-        <GlassPill onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+        <QuietButton onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
           أعلى الصفحة
-        </GlassPill>
+        </QuietButton>
       </div>
     </div>
   );
@@ -357,14 +355,13 @@ export function OccasionsView({ timings }: { timings: Timings }) {
 
 function GlossaryNote() {
   return (
-    <GlassCard soft className="p-4">
-      <p className="flex items-start gap-2 text-[10.5px] leading-5 text-muted-foreground">
+    <Sunken className="p-4">
+      <p className="label-meta flex items-start gap-2 leading-5 text-muted-foreground">
         <Info className="mt-0.5 size-3.5 shrink-0" />
-        التواريخ الهجرية تُحسب آليًا بتقويم أم القرى، وقد تختلف يومًا عن التقويم المحلي في
-        بلدك؛ والاعتماد النهائي على إعلان الجهة الشرعية ورؤية الهلال. وما لم يثبت فيه عمل
-        مخصوص صُرّح به أسفل البطاقة.
+        التواريخ الهجرية تُحسب آليًا بتقويم أم القرى، وقد تختلف يومًا عن التقويم المحلي في بلدك؛
+        والاعتماد النهائي على إعلان الجهة الشرعية ورؤية الهلال.
       </p>
-    </GlassCard>
+    </Sunken>
   );
 }
 

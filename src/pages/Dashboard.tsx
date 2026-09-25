@@ -1,10 +1,14 @@
 import { AdhkarDialog } from "@/components/app/AdhkarDialog";
-import { AppHeader, type DashView } from "@/components/app/AppHeader";
+import { AdhkarIndex } from "@/components/app/AdhkarIndex";
+import { AppHeader } from "@/components/app/AppHeader";
 import type { DayReviewRecord } from "@/components/app/DailyReview";
-import { GlassCard } from "@/components/app/GlassCard";
+import { DailyReview } from "@/components/app/DailyReview";
 import { HomeView } from "@/components/app/HomeView";
+import { isDashView, VIEW_LABELS, type DashView } from "@/components/app/Navigation";
 import { NudgeCenter } from "@/components/app/NudgeCenter";
 import { OpeningGreeting } from "@/components/app/OpeningGreeting";
+import { EmptyState, OfflineNote, Panel, PrimaryButton, Skeleton } from "@/components/app/Surfaces";
+import { WeeklyView } from "@/components/app/WeeklyView";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -51,7 +55,7 @@ import { useInstallPrompt, useOnlineStatus } from "@/lib/pwa";
 import { cachedSurahNumbers, clearQuranCache, downloadFullQuran } from "@/lib/quran-store";
 import { addMinutes, dateKey, startOfWeekKey, toMinutes } from "@/lib/time";
 import { useMutation, useQuery } from "convex/react";
-import { Smartphone, WifiOff } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -90,56 +94,56 @@ const TasbihView = lazy(() =>
   import("@/components/app/TasbihView").then((module) => ({ default: module.TasbihView })),
 );
 
-const VIEW_LABELS: Record<DashView, string> = {
-  today: "الرئيسية",
-  prayers: "صلاتي",
-  quran: "المصحف",
-  hadith: "الأحاديث",
-  duas: "الأدعية",
-  tasbih: "المسبحة",
-  poetry: "الأبيات",
-  prophets: "قصص الأنبياء",
-  occasions: "المناسبات",
-  saved: "المحفوظات",
-  settings: "الإعدادات",
-};
-
 function SectionLoading({ label }: { label: string }) {
   return (
-    <div className="space-y-4" role="status" aria-live="polite" aria-busy="true">
-      <div className="flex items-center justify-between gap-3 px-1">
-        <span className="h-5 w-32 animate-pulse rounded-full bg-foreground/10 motion-reduce:animate-none" />
-        <span className="text-xs text-muted-foreground">نجهّز {label}</span>
+    <div
+      className="stack"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-5 w-48" />
       </div>
+      <Panel className="p-5 sm:p-6">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="mt-3 h-7 w-40" />
+        <Skeleton className="mt-4 h-1.5 w-full" />
+      </Panel>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="glass h-44 animate-pulse rounded-3xl motion-reduce:animate-none" />
-        <div className="glass h-44 animate-pulse rounded-3xl motion-reduce:animate-none" />
+        <Panel className="h-32 p-5">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="mt-3 h-4 w-32" />
+        </Panel>
+        <Panel className="h-32 p-5">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="mt-3 h-4 w-32" />
+        </Panel>
       </div>
-      <span className="sr-only">جارٍ فتح {label}</span>
+      <span className="sr-only">نجهّز {label}</span>
     </div>
   );
 }
-
-const VALID_VIEWS: DashView[] = [
-  "today",
-  "prayers",
-  "quran",
-  "hadith",
-  "duas",
-  "tasbih",
-  "poetry",
-  "prophets",
-  "occasions",
-  "saved",
-  "settings",
-];
 
 const PRAYER_KEYS: PrayerKey[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 const ADHKAR_KINDS = ["morning", "evening", "sleep", "after_prayer", "distress"] as const;
 const FAVORITE_KINDS = ["hadith", "poem", "dhikr", "ayah", "story"] as const;
 
-function isDashView(value: string | null): value is DashView {
-  return value !== null && (VALID_VIEWS as string[]).includes(value);
+type PlanProgressDoc = {
+  records: { date: string; completed: number; planned: number; reviewed: boolean }[];
+};
+
+/** ملخص يقرأه الواجهة لا الـUI: كم خطوة من أصل كم في الأسبوع. */
+function weekProgressSummary(doc: PlanProgressDoc, today: string) {
+  const records = doc.records;
+  return {
+    completed: records.reduce((sum, record) => sum + record.completed, 0),
+    total: records.reduce((sum, record) => sum + record.planned, 0),
+    reviewedDays: records.filter(
+      (record) => record.reviewed || record.date === today,
+    ).length,
+  };
 }
 
 export default function Dashboard() {
@@ -162,14 +166,29 @@ export default function Dashboard() {
   });
   const [quranCache, setQuranCache] = useState({ cachedCount: 0, downloading: false, progress: 0 });
   const [reviewSaving, setReviewSaving] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   const profileDoc = useQuery(api.planner.getProfile);
   const today = dateKey();
-  const weekStart = startOfWeekKey();
+  const baseWeekStart = startOfWeekKey();
+  const weekStart = useMemo(() => {
+    if (weekOffset === 0) return baseWeekStart;
+    const date = new Date(`${baseWeekStart}T00:00:00`);
+    date.setDate(date.getDate() + weekOffset * 7);
+    return dateKey(date);
+  }, [baseWeekStart, weekOffset]);
+  const activeWeekStart = useMemo(() => startOfWeekKey(), []);
+
   const dayState = useQuery(api.planner.getDayState, { date: today });
+  // خطة الأسبوع مطلوبة في الرئيسية وفي شاشة الخطة الأسبوعية نفسها.
+  const needsPlan = view === "today" || view === "weekly";
   const weeklyPlanDoc = useQuery(
     api.weeklyPlans.getWeeklyPlan,
-    view === "today" && profileDoc ? { weekStart } : "skip",
+    needsPlan && profileDoc ? { weekStart: activeWeekStart } : "skip",
+  );
+  const browseWeekPlan = useQuery(
+    api.weeklyPlans.getWeeklyPlan,
+    view === "weekly" && weekStart !== activeWeekStart ? { weekStart } : "skip",
   );
   const planItemLogs = useQuery(
     api.weeklyPlans.getPlanItemLogs,
@@ -177,15 +196,15 @@ export default function Dashboard() {
   );
   const planProgress = useQuery(
     api.weeklyPlans.getPlanProgress,
-    weeklyPlanDoc ? { weekStart } : "skip",
+    needsPlan && profileDoc ? { weekStart: activeWeekStart } : "skip",
   );
   const weeklyReviewDoc = useQuery(
     api.weeklyPlans.getWeeklyReview,
-    weeklyPlanDoc ? { weekStart } : "skip",
+    needsPlan && profileDoc ? { weekStart: activeWeekStart } : "skip",
   );
   const adaptiveSuggestions = useQuery(
     api.weeklyPlans.getAdaptiveSuggestions,
-    weeklyPlanDoc ? { weekStart } : "skip",
+    needsPlan && profileDoc ? { weekStart: activeWeekStart } : "skip",
   );
 
   const lastWeek = useMemo(
@@ -209,6 +228,7 @@ export default function Dashboard() {
   const resetPlanItemStatusMutation = useMutation(api.weeklyPlans.resetPlanItemStatus);
   const saveWeeklyReviewMutation = useMutation(api.weeklyPlans.saveWeeklyReview);
   const applyPlanSuggestionMutation = useMutation(api.weeklyPlans.applyPlanSuggestion);
+  const updatePlanItemMutation = useMutation(api.weeklyPlans.updateWeeklyPlanItem);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [applyingSuggestion, setApplyingSuggestion] = useState(false);
   const [reviewingWeek, setReviewingWeek] = useState(false);
@@ -623,6 +643,35 @@ export default function Dashboard() {
     toast.success("نُزّلت نسخة من إعداداتك.");
   }, [prefs, seenViews, today]);
 
+  const handlePatchPlanItem = useCallback(
+    (itemId: string, patch: { title?: string; enabled?: boolean }) => {
+      const doc = browseWeekPlan ?? weeklyPlanDoc;
+      if (!doc) return;
+      setSavingItemId(itemId);
+      void updatePlanItemMutation({
+        weekStart: browseWeekPlan ? weekStart : activeWeekStart,
+        itemId,
+        expectedVersion: doc.version,
+        patch,
+      })
+        .catch(() => toast.error("تعذّر تعديل الخطة. حدّثها ثم أعد المحاولة."))
+        .finally(() => setSavingItemId(null));
+    },
+    [activeWeekStart, browseWeekPlan, updatePlanItemMutation, weekStart, weeklyPlanDoc],
+  );
+
+  const handleWeekChange = useCallback((nextWeekStart: string) => {
+    const base = startOfWeekKey();
+    if (nextWeekStart === base) {
+      setWeekOffset(0);
+      return;
+    }
+    const baseDate = new Date(`${base}T00:00:00`);
+    const nextDate = new Date(`${nextWeekStart}T00:00:00`);
+    const diff = Math.round((nextDate.getTime() - baseDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    setWeekOffset(Number.isFinite(diff) ? diff : 0);
+  }, []);
+
   if (profileDoc === undefined && !useCachedData) {
     return (
       <div className="min-h-dvh pb-28" role="status" aria-live="polite" aria-busy="true">
@@ -637,18 +686,19 @@ export default function Dashboard() {
           moreOpen={moreOpen}
           onMoreOpenChange={setMoreOpen}
         />
-        <main className="mx-auto w-full max-w-5xl animate-pulse space-y-4 px-3.5 pt-5 motion-reduce:animate-none sm:px-6">
-          <div className="space-y-2 px-1">
-            <span className="block h-5 w-44 rounded-full bg-foreground/10" />
-            <span className="block h-3 w-64 max-w-full rounded-full bg-foreground/8" />
+        <main className="page max-w-5xl pt-4">
+          <div className="space-y-2">
+            <span className="skeleton block h-3 w-24" />
+            <span className="skeleton block h-5 w-48" />
           </div>
-          <div className="glass-strong h-40 rounded-3xl p-5">
-            <span className="block h-3 w-24 rounded-full bg-primary/15" />
-            <span className="mt-4 block h-7 w-48 rounded-xl bg-foreground/10" />
+          <div className="surface-primary mt-4 h-44 rounded-3xl p-5">
+            <span className="skeleton block h-3 w-24" />
+            <span className="skeleton mt-4 block h-7 w-48" />
+            <span className="skeleton mt-4 block h-1.5 w-full" />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <span className="glass h-36 rounded-3xl" />
-            <span className="glass h-36 rounded-3xl" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <span className="surface-primary h-32 rounded-3xl" />
+            <span className="surface-primary h-32 rounded-3xl" />
           </div>
           <span className="sr-only">نجهّز يومك</span>
         </main>
@@ -664,16 +714,12 @@ export default function Dashboard() {
     dayState ?? (useCachedData ? readOfflineDayState(today) : null) ?? EMPTY_DAY_STATE;
 
   const banner = !online ? (
-    <div className="tile-edge flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3.5 py-2 text-[11px]">
-      <span className="flex items-center gap-2">
-        <WifiOff className="size-3.5 text-amber-600" />
-        دون إنترنت: المصحف المحفوظ والأذكار والمواقيت المحفوظة تعمل، وتسجيلاتك تُرسل عند
-        عودة الاتصال.
-      </span>
-    </div>
+    <OfflineNote>
+      دون إنترنت: المصحف المحفوظ والأذكار والمواقيت تعمل، وتسجيلاتك تُرسل عند عودة الاتصال.
+    </OfflineNote>
   ) : install.canInstall ? (
-    <div className="tile-edge flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3.5 py-2 text-[11px]">
-      <span className="flex items-center gap-2">
+    <div className="surface-secondary flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2">
+      <span className="flex items-center gap-2 text-[11px] text-foreground/75">
         <Smartphone className="size-3.5 text-primary" />
         ثبّت عود على جهازك ليعمل كتطبيق مستقل ودون إنترنت.
       </span>
@@ -681,7 +727,7 @@ export default function Dashboard() {
         type="button"
         size="sm"
         variant="outline"
-        className="btn-edge h-7 rounded-full text-[11px]"
+        className="btn-edge h-8 rounded-full px-3 text-[11px]"
         onClick={() => void install.promptInstall()}
       >
         تثبيت
@@ -707,39 +753,42 @@ export default function Dashboard() {
         onMoreOpenChange={setMoreOpen}
       />
 
-      <main className="mx-auto w-full max-w-5xl px-3.5 pt-3.5 sm:px-6">
+      <main className="page max-w-5xl pt-4">
         <Suspense fallback={<SectionLoading label={VIEW_LABELS[view]} />}>
         {view === "today" && answers ? (
-          <HomeView
-            userName={user?.name ?? undefined}
-            profile={answers}
-            locationLabel={locationLabel}
-            timings={times.timings}
-            hijri={times.hijri}
-            dayState={state}
-            stats={stats}
-            onSaveReview={handleReviewSave}
-            reviewSaving={reviewSaving}
-            onOpenSection={changeView}
-            onOpenAdhkar={setAdhkarGroup}
-            dailyPlan={dailyPlan}
-            planOutcomes={planOutcomes}
-            dailyScore={dailyScore}
-            lifeProgress={lifeProgress}
-            weeklyReview={(weeklyReviewDoc?.summary as WeeklyReview | undefined) ?? null}
-            adaptiveSuggestions={adaptiveSuggestions ?? []}
-            savingItemId={savingItemId}
-            applyingSuggestion={applyingSuggestion}
-            reviewingWeek={reviewingWeek}
-            onSetPlanOutcome={handleSetPlanOutcome}
-            onResetPlanOutcome={handleResetPlanOutcome}
-            onSaveWeeklyReview={handleSaveWeeklyReview}
-            onApplySuggestion={handleApplySuggestion}
-          />
+          <div className="motion-swap">
+            <HomeView
+              userName={user?.name ?? undefined}
+              profile={answers}
+              locationLabel={locationLabel}
+              timings={times.timings}
+              hijri={times.hijri}
+              dayState={state}
+              stats={stats}
+              onSaveReview={handleReviewSave}
+              reviewSaving={reviewSaving}
+              onOpenSection={changeView}
+              onOpenAdhkar={setAdhkarGroup}
+              onLogPrayer={handlePrayerStatus}
+              dailyPlan={dailyPlan}
+              planOutcomes={planOutcomes}
+              dailyScore={dailyScore}
+              lifeProgress={lifeProgress}
+              weeklyReview={(weeklyReviewDoc?.summary as WeeklyReview | undefined) ?? null}
+              adaptiveSuggestions={adaptiveSuggestions ?? []}
+              savingItemId={savingItemId}
+              applyingSuggestion={applyingSuggestion}
+              reviewingWeek={reviewingWeek}
+              onSetPlanOutcome={handleSetPlanOutcome}
+              onResetPlanOutcome={handleResetPlanOutcome}
+              onSaveWeeklyReview={handleSaveWeeklyReview}
+              onApplySuggestion={handleApplySuggestion}
+            />
+          </div>
         ) : null}
 
         {view === "prayers" && answers ? (
-          <div className="space-y-4">
+          <div className="motion-swap">
             <PrayerView
               timings={times.timings}
               city={locationLabel}
@@ -753,7 +802,12 @@ export default function Dashboard() {
               history={history}
               stats={stats}
             />
-            {stats && stats.days > 0 ? <StatsTable stats={stats} history={history} /> : null}
+          </div>
+        ) : null}
+
+        {view === "adhkar" ? (
+          <div className="motion-swap">
+            <AdhkarIndex done={state.adhkar} onOpen={setAdhkarGroup} />
           </div>
         ) : null}
 
@@ -817,6 +871,63 @@ export default function Dashboard() {
 
         {view === "occasions" ? <OccasionsView timings={times.timings} /> : null}
 
+        {view === "stats" ? (
+          stats && stats.days > 0 ? (
+            <div className="motion-swap">
+              <StatsTable stats={stats} history={history} />
+            </div>
+          ) : (
+            <EmptyState
+              title="لا يوجد سجلّ بعد"
+              body="سجّل حالة صلواتك ومراجعاتك ليظهر أثرها هنا. لن نخمّن أرقامًا لم تسجّلها."
+            />
+          )
+        ) : null}
+
+        {view === "weekly" ? (
+          <div className="motion-swap">
+            <WeeklyView
+              plan={(browseWeekPlan ?? weeklyPlanDoc) as
+                | {
+                    weekStart: string;
+                    timezone: string;
+                    weeklyFocus: string;
+                    items: WeeklyPlanItem[];
+                    version: number;
+                  }
+                | null}
+              weekStart={weekStart}
+              today={today}
+              progress={planProgress ? weekProgressSummary(planProgress, today) : null}
+              weeklyReview={(weeklyReviewDoc?.summary as WeeklyReview | undefined) ?? null}
+              suggestions={adaptiveSuggestions ?? []}
+              applyingSuggestion={applyingSuggestion}
+              reviewing={reviewingWeek}
+              savingItemId={savingItemId}
+              onWeekChange={handleWeekChange}
+              onPatchItem={handlePatchPlanItem}
+              onApplySuggestion={handleApplySuggestion}
+              onSaveWeeklyReview={handleSaveWeeklyReview}
+            />
+          </div>
+        ) : null}
+
+        {view === "review" ? (
+          <div className="motion-swap">
+            <DailyReview
+              expanded
+              visible
+              review={state.review as DayReviewRecord | null}
+              prayedToday={PRAYERS.filter(
+                (prayer) =>
+                  state.prayers[prayer.key] === "jamaah" || state.prayers[prayer.key] === "ontime",
+              ).length}
+              saving={reviewSaving}
+              onSave={handleReviewSave}
+            />
+          </div>
+        ) : null}
+
         {view === "settings" && answers ? (
           <SettingsView
             prefs={prefs}
@@ -863,14 +974,15 @@ export default function Dashboard() {
         ) : null}
 
         {view === "today" && !answers ? (
-          <GlassCard soft className="p-6 text-center text-sm text-muted-foreground">
-            لا توجد إجابات محفوظة بعد — أكمل فهم يومك ليُبنى التطبيق عليها.
-            <div className="mt-4 flex justify-center">
-              <Button type="button" className="btn-edge min-h-11 rounded-full" onClick={() => navigate("/onboarding")}>
+          <EmptyState
+            title="لا توجد إجابات محفوظة بعد"
+            body="أكمل فهم يومك ليُبنى التطبيق عليه — دقيقة واحدة تكفي كبداية."
+            action={
+              <PrimaryButton onClick={() => navigate("/onboarding")} className="px-5">
                 ابدأ الفهم
-              </Button>
-            </div>
-          </GlassCard>
+              </PrimaryButton>
+            }
+          />
         ) : null}
         </Suspense>
       </main>

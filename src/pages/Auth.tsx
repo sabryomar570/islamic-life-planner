@@ -52,7 +52,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
 
-  // نبدأ تنزيل وجهتي ما بعد المصادقة أثناء 입력/انتظار الرمز، لا بعد
+  // نبدأ تنزيل وجهتي ما بعد المصادقة أثناء إدخال/انتظار الرمز، لا بعد
   // الضغط فقط. هذا يمنع cold route chunk من إظهار شاشة الانتقال.
   useEffect(() => {
     void import("./Dashboard.tsx");

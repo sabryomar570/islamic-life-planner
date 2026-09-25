@@ -1,4 +1,12 @@
-import { GlassCard, GlassPill, SectionTitle } from "@/components/app/GlassCard";
+import {
+  ChoiceChip,
+  Editorial,
+  EmptyState,
+  Panel,
+  QuietButton,
+  SectionHead,
+  Tag,
+} from "@/components/app/Surfaces";
 import {
   POEMS,
   POEM_THEMES,
@@ -16,11 +24,8 @@ import {
   BookmarkCheck,
   Copy,
   Dices,
-  Feather,
-  Quote,
   Share2,
   Shuffle,
-  Sparkles,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -92,161 +97,139 @@ export function PoetryView({
   };
 
   return (
-    <div className="space-y-5">
-      <GlassCard strong className="p-6">
-        <SectionTitle
-          icon={<Feather className="size-5" />}
-          title="أبيات من الشعر العربي"
-          hint={`${arabicNumber(POEMS.length)} بيتًا من المعلّقات والدواوين — بنسبة كل بيت إلى قائله`}
+    <div className="stack">
+      <Panel className="p-5 sm:p-6">
+        <SectionHead
+          eyebrow="المعرفة"
+          title="الأبيات"
+          hint={`${arabicNumber(POEMS.length)} بيتًا من المعلّقات والدواوين — كل بيت منسوب إلى قائله.`}
           action={
             <div className="flex items-center gap-2">
-              <GlassPill
+              <QuietButton
                 onClick={() => {
                   setShuffled((value) => !value);
                   toast.info(shuffled ? "أُعيد ترتيب الأبيات" : "خُلطت الأبيات عشوائيًا");
                 }}
+                className="px-4"
               >
-                <span className="flex items-center gap-1.5">
-                  <Shuffle className="size-3.5" /> {shuffled ? "ترتيب الديوان" : "خلط"}
-                </span>
-              </GlassPill>
-              <GlassPill onClick={surprise}>
-                <span className="flex items-center gap-1.5">
-                  <Dices className="size-3.5" /> بيت جديد
-                </span>
-              </GlassPill>
+                <Shuffle className="size-3.5" />
+                {shuffled ? "ترتيب" : "خلط"}
+              </QuietButton>
+              <QuietButton onClick={surprise} className="px-4">
+                <Dices className="size-3.5" />
+                بيت جديد
+              </QuietButton>
             </div>
           }
         />
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          <GlassPill active={filter === "all"} onClick={() => setFilter("all")}>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <ChoiceChip active={filter === "all"} onClick={() => setFilter("all")}>
             كل الأبواب
-          </GlassPill>
-          <GlassPill active={filter === "saved"} onClick={() => setFilter("saved")}>
+          </ChoiceChip>
+          <ChoiceChip active={filter === "saved"} onClick={() => setFilter("saved")}>
             محفوظاتي{favorites.length > 0 ? ` (${arabicNumber(favorites.length)})` : ""}
-          </GlassPill>
+          </ChoiceChip>
           {POEM_THEMES.map((theme) => (
-            <GlassPill key={theme} active={filter === theme} onClick={() => setFilter(theme)}>
+            <ChoiceChip key={theme} active={filter === theme} onClick={() => setFilter(theme)}>
               {theme}
-            </GlassPill>
+            </ChoiceChip>
           ))}
         </div>
-      </GlassCard>
+      </Panel>
 
-      {/* بيت اليوم — يتغيّر يوميًا ويمكن تدويره بلا نهاية */}
-      <GlassCard
-        strong
-        className="relative overflow-hidden p-6 text-center sm:p-8"
-        key={spotlightKey}
-      >
-        <div className="absolute -right-10 top-0 size-40 rounded-full bg-amber-200/40 blur-3xl" />
-        <div className="absolute -left-8 bottom-0 size-40 rounded-full bg-sky-200/40 blur-3xl" />
-        <span className="relative glass-tile inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-foreground/70">
-          <Sparkles className="size-3.5 text-primary" />
-          {spotlight.theme}
-        </span>
-        <div className="poetry-text relative mt-5 text-[1.25rem] leading-[2.5]">
+      {/* بيت اليوم — ورق تحريري دافئ، بلا توهج خلفي ولا زجاج */}
+      <Editorial key={spotlightKey} className="motion-swap p-6 text-center sm:p-8">
+        <p className="label-meta font-semibold text-[oklch(0.55_0.05_75)]">{spotlight.theme}</p>
+        <div className="poetry-text mt-5 text-[1.22rem] leading-[2.5] text-[var(--editorial-ink)]">
           {spotlight.lines.map((line) => (
             <p key={line}>{line}</p>
           ))}
         </div>
-        <p className="relative mt-4 text-xs font-semibold text-primary">{spotlight.poet}</p>
-        <p className="relative mt-1 text-[11px] text-muted-foreground">{spotlight.source}</p>
-        <p className="relative mx-auto mt-3 max-w-md text-[12px] leading-6 text-foreground/75">
-          {spotlight.focal}
-        </p>
-        <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2">
-          <GlassPill onClick={() => rotate(items)}>بيت آخر</GlassPill>
-          <GlassPill onClick={() => void copyPoem(spotlight)}>
-            <span className="flex items-center gap-1.5">
-              <Copy className="size-3.5" /> نسخ
-            </span>
-          </GlassPill>
-          <GlassPill onClick={() => void sharePoem(spotlight)}>
-            <span className="flex items-center gap-1.5">
-              <Share2 className="size-3.5" /> مشاركة
-            </span>
-          </GlassPill>
-          <button
-            type="button"
-            onClick={() => onToggleFavorite(spotlight.id, "poem", spotlight.lines[0])}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all active:scale-95",
-              check(spotlight.id)
-                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
-                : "btn-edge text-foreground/80",
-            )}
-          >
+        <p className="mt-4 text-[13px] font-bold text-[oklch(0.45_0.06_70)]">{spotlight.poet}</p>
+        <p className="label-meta mt-1 text-muted-foreground">{spotlight.source}</p>
+        <p className="label-body mx-auto mt-3 max-w-md text-foreground/80">{spotlight.focal}</p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <QuietButton onClick={() => rotate(items)}>بيت آخر</QuietButton>
+          <QuietButton onClick={() => void copyPoem(spotlight)}>
+            <Copy className="size-3.5" />
+            نسخ
+          </QuietButton>
+          <QuietButton onClick={() => void sharePoem(spotlight)}>
+            <Share2 className="size-3.5" />
+            مشاركة
+          </QuietButton>
+          <QuietButton onClick={() => onToggleFavorite(spotlight.id, "poem", spotlight.lines[0])}>
             {check(spotlight.id) ? (
               <BookmarkCheck className="size-3.5" />
             ) : (
               <Bookmark className="size-3.5" />
             )}
             {check(spotlight.id) ? "محفوظ" : "احفظ البيت"}
-          </button>
+          </QuietButton>
         </div>
-      </GlassCard>
+      </Editorial>
 
       {items.length === 0 ? (
-        <GlassCard soft className="p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            لا توجد أبيات محفوظة بعد — اضغط أيقونة الحفظ على أي بيت.
-          </p>
-        </GlassCard>
+        <EmptyState
+          title="لا توجد أبيات هنا بعد"
+          body={
+            filter === "saved"
+              ? "اضغط أيقونة الحفظ بجوار أي بيت، وسيظهر هنا مع قائله ومصدره."
+              : "لا توجد أبيات في هذا الباب."
+          }
+        />
       ) : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        /* قراءة تحريرية: البيت في الوسط، والبيانات سطران لا بطاقة فوقه. */
+        <ul className="stack">
           {items.map((poem) => {
             const saved = check(poem.id);
             return (
-              <GlassCard key={poem.id} hover className="flex flex-col p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="glass-tile inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-foreground/70">
-                    <Quote className="size-3.5 text-primary" />
-                    {poem.theme}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={saved ? "إزالة الحفظ" : "حفظ البيت"}
-                    onClick={() => onToggleFavorite(poem.id, "poem", poem.lines[0])}
-                    className={cn(
-                      "flex size-8 items-center justify-center rounded-full transition-all active:scale-90",
-                      saved
-                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
-                        : "glass-tile text-foreground/60 hover:text-foreground",
-                    )}
-                  >
-                    {saved ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
-                  </button>
-                </div>
-
-                <div className="poetry-text mt-5 text-center text-[1.15rem] leading-[2.4]">
-                  {poem.lines.map((line) => (
-                    <p key={line}>{line}</p>
-                  ))}
-                </div>
-
-                <div className="mt-auto pt-5 text-center">
-                  <p className="text-xs font-semibold text-primary">{poem.poet}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{poem.source}</p>
-                  <p className="mt-3 text-[12px] leading-6 text-foreground/75">{poem.focal}</p>
-                  <div className="mt-3 flex items-center justify-center gap-2">
-                    <GlassPill onClick={() => void copyPoem(poem)}>
-                      <span className="flex items-center gap-1.5">
-                        <Copy className="size-3.5" /> نسخ
-                      </span>
-                    </GlassPill>
-                    <GlassPill onClick={() => void sharePoem(poem)}>
-                      <span className="flex items-center gap-1.5">
-                        <Share2 className="size-3.5" /> مشاركة
-                      </span>
-                    </GlassPill>
+              <li key={poem.id}>
+                <article className="surface-primary rounded-3xl px-5 py-6 text-center sm:px-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <Tag>{poem.theme}</Tag>
+                    <button
+                      type="button"
+                      aria-label={saved ? "إزالة الحفظ" : "حفظ البيت"}
+                      aria-pressed={saved}
+                      onClick={() => onToggleFavorite(poem.id, "poem", poem.lines[0])}
+                      className={cn(
+                        "motion-press flex size-9 items-center justify-center rounded-xl",
+                        saved
+                          ? "bg-primary text-primary-foreground"
+                          : "surface-secondary text-foreground/60 hover:text-foreground",
+                      )}
+                    >
+                      {saved ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+                    </button>
                   </div>
-                </div>
-              </GlassCard>
+
+                  <div className="poetry-text mt-4 text-[1.15rem] leading-[2.4] text-foreground">
+                    {poem.lines.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </div>
+
+                  <p className="mt-4 text-[12.5px] font-bold text-primary">{poem.poet}</p>
+                  <p className="label-meta mt-0.5 text-muted-foreground">{poem.source}</p>
+                  <p className="label-body mt-3 text-foreground/80">{poem.focal}</p>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    <QuietButton onClick={() => void copyPoem(poem)} className="px-4">
+                      <Copy className="size-3.5" />
+                      نسخ
+                    </QuietButton>
+                    <QuietButton onClick={() => void sharePoem(poem)} className="px-4">
+                      <Share2 className="size-3.5" />
+                      مشاركة
+                    </QuietButton>
+                  </div>
+                </article>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

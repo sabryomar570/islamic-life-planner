@@ -162,13 +162,13 @@ export default function Landing() {
                 <span className="quran-text text-[1.05rem] leading-9">
                   ﴿أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ﴾
                 </span>
-                <span className="mt-1 block text-[10px] font-medium text-primary">الرعد: ٢٨</span>
+                <span className="mt-1 block text-[11px] font-medium text-primary">الرعد: ٢٨</span>
               </p>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {["الصباح", "المساء", "النوم"].map((label) => (
                   <span
                     key={label}
-                    className="tile-edge rounded-2xl px-2 py-2 text-center text-[10px] font-medium"
+                    className="tile-edge rounded-2xl px-2 py-2 text-center text-[11px] font-medium"
                   >
                     أذكار {label}
                   </span>

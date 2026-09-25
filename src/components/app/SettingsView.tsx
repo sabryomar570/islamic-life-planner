@@ -1,4 +1,9 @@
-import { GlassCard, GlassPill, SectionTitle } from "@/components/app/GlassCard";
+import {
+  Panel,
+  PrimaryButton,
+  QuietButton,
+  SectionHead,
+} from "@/components/app/Surfaces";
 import { RING_TONES, playRingTone, type RingTone } from "@/lib/notify";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,18 +24,13 @@ import {
   Bell,
   BellRing,
   CloudDownload,
-  Compass,
   HardDriveDownload,
   Info,
   MapPin,
-  Moon,
   RotateCcw,
-  ShieldCheck,
   Smartphone,
   Sparkles,
   Trash2,
-  Wifi,
-  WifiOff,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -52,6 +52,12 @@ type InstallProps = {
   promptInstall: () => Promise<"accepted" | "dismissed" | "unavailable">;
 };
 
+/**
+ * PHASE 2M — صف إعداد واحد.
+ *
+ * سطر مفصول بشعرة لا صندوق. كل إعداد في بطاقة منفصلة كان يجعل القائمة
+ * تبدو كشبكة من القطع بدل إعدادات قابلة للقراءة.
+ */
 function Row({
   title,
   hint,
@@ -62,13 +68,37 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="glass-tile flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--rule)] py-3.5 last:border-b-0">
       <div className="max-w-md">
         <p className="text-[13px] font-semibold">{title}</p>
-        {hint ? <p className="mt-0.5 text-[11px] leading-5 text-muted-foreground">{hint}</p> : null}
+        {hint ? <p className="label-meta mt-0.5 leading-5 text-muted-foreground">{hint}</p> : null}
       </div>
-      {children}
+      <div className="flex shrink-0 items-center gap-2">{children}</div>
     </div>
+  );
+}
+
+/** مجموعة إعدادات: عنوان واحد، ثم صفوفه بلا صناديق إضافية. */
+function Group({
+  eyebrow,
+  title,
+  hint,
+  action,
+  children,
+}: {
+  eyebrow?: string;
+  title: string;
+  hint?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Panel className="overflow-hidden">
+      <div className="p-5 sm:p-6">
+        <SectionHead eyebrow={eyebrow} title={title} hint={hint} action={action} />
+      </div>
+      <div className="rule-t px-5 pb-4 sm:px-6">{children}</div>
+    </Panel>
   );
 }
 
@@ -137,121 +167,100 @@ export function SettingsView({
           : "لم تُطلب بعد";
 
   return (
-    <div className="space-y-5">
-      <GlassCard strong className="p-5 sm:p-6">
-        <SectionTitle
-          icon={<Sparkles className="size-5" />}
+    <div className="stack">
+      <Panel className="p-5 sm:p-6">
+        <SectionHead
+          eyebrow="الحساب"
           title="فهم يومك"
-          hint="عدّل أوقاتك وهدفك، أو أضف التفاصيل الاختيارية التي تجعل فهم عود ليومك أدق"
+          hint="عدّل أوقاتك وهدفك، أو أضف التفاصيل الاختيارية التي تجعل فهم عود ليومك أدق."
           action={
-            <Button
-              type="button"
-              className="btn-edge min-h-11 rounded-full"
-              onClick={onEditProfile}
-            >
+            <QuietButton onClick={onEditProfile} className="px-4">
               تعديل الفهم
-            </Button>
+            </QuietButton>
           }
         />
-      </GlassCard>
+      </Panel>
 
-      <GlassCard strong className="p-6">
-        <SectionTitle
-          icon={<Bell className="size-5" />}
-          title="الإشعارات والتذكيرات"
-          hint="أذّن لك عند دخول وقت الصلاة، وأذكّرك بوردك وبأذكار الصباح والمساء والنوم"
-          action={
-            <Badge
-              variant={permission === "granted" ? "secondary" : "outline"}
-              className="rounded-full gap-1"
-            >
-              <BellRing className="size-3.5" />
-              {permissionLabel}
-            </Badge>
-          }
-        />
+      <Group
+        eyebrow="التطبيق"
+        title="الإشعارات والتذكيرات"
+        hint="أذّن لك عند دخول وقت الصلاة، وأذكّرك بوردك وبأذكار الصباح والمساء والنوم."
+        action={
+          <span className="label-meta shrink-0 text-muted-foreground">{permissionLabel}</span>
+        }
+      >
 
-        {/* الأذونان معًا: إشعارات + موقع — زر بارز يعمل عند النقر */}
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="tile-edge flex flex-col items-start gap-2 rounded-2xl p-4">
+        {/* الأذونان معًا: إشعارات + موقع */}
+        <div className="mb-3 grid gap-3 sm:grid-cols-2">
+          <div className="surface-secondary flex flex-col items-start gap-2 rounded-2xl p-4">
             <span className="flex items-center gap-2 text-[13px] font-semibold">
               <BellRing className="size-4 text-primary" />
               إذن الإشعارات
             </span>
-            <span className="text-[11px] leading-5 text-muted-foreground">{permissionLabel}</span>
+            <span className="label-meta leading-5 text-muted-foreground">{permissionLabel}</span>
             {permission !== "granted" ? (
-              <Button
-                type="button"
-                size="sm"
-                className="btn-primary-edge mt-1 rounded-full px-4 font-semibold"
-                disabled={!supported}
+              <PrimaryButton
                 onClick={onRequestPermission}
+                disabled={!supported}
+                className="mt-1 px-4 text-[12px]"
               >
                 <Bell className="size-3.5" />
                 اسمح بالإشعارات
-              </Button>
+              </PrimaryButton>
             ) : (
-              <span className="mt-1 rounded-full bg-emerald-500/90 px-3 py-1 text-[11px] font-medium text-white">
+              <span className="mt-1 text-[11px] font-medium text-[var(--status-success)]">
                 مفعّلة ✓
               </span>
             )}
           </div>
 
-          <div className="tile-edge flex flex-col items-start gap-2 rounded-2xl p-4">
+          <div className="surface-secondary flex flex-col items-start gap-2 rounded-2xl p-4">
             <span className="flex items-center gap-2 text-[13px] font-semibold">
               <MapPin className="size-4 text-primary" />
               إذن الموقع
             </span>
-            <span className="text-[11px] leading-5 text-muted-foreground">
+            <span className="label-meta leading-5 text-muted-foreground">
               {geo.coords ? "موقعك محفوظ — المواقيت على إحداثياتك" : "لم يُحدَّد بعد — يجعل المواقيت أدق"}
             </span>
             {geo.coords ? (
-              <GlassPill onClick={geo.clear}>
-                <span className="flex items-center gap-1.5">
-                  <Trash2 className="size-3.5" /> إلغاء الإذن
-                </span>
-              </GlassPill>
+              <QuietButton onClick={geo.clear} className="mt-1 px-4 text-[12px]">
+                <Trash2 className="size-3.5" />
+                إلغاء الإذن
+              </QuietButton>
             ) : (
-              <Button
-                type="button"
-                size="sm"
-                className="btn-primary-edge mt-1 rounded-full px-4 font-semibold"
-                disabled={geo.status === "loading" || geo.status === "unsupported"}
+              <PrimaryButton
                 onClick={() => void geo.request()}
+                disabled={geo.status === "loading" || geo.status === "unsupported"}
+                className="mt-1 px-4 text-[12px]"
               >
                 <MapPin className="size-3.5" />
                 {geo.status === "loading" ? "جارٍ التحديد..." : "سماح بالموقع"}
-              </Button>
+              </PrimaryButton>
             )}
             {geo.error ? (
-              <span className="text-[10.5px] leading-4 text-amber-700">{geo.error}</span>
+              <span className="label-meta leading-4 text-[var(--status-attention)]">{geo.error}</span>
             ) : null}
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="btn-edge mt-3 rounded-full"
-          onClick={onTestNotification}
-        >
-          <Sparkles className="size-4" />
-          إرسال تذكير تجريبي
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <QuietButton onClick={onTestNotification}>
+            <Sparkles className="size-3.5" />
+            إرسال تذكير تجريبي
+          </QuietButton>
+        </div>
 
         {!supported ? (
-          <p className="mt-3 text-[11px] leading-5 text-amber-700">
-            متصفحك لا يدعم إشعارات النظام؛ ستظهر التذكيرات داخل التطبيق فقط، وتبقى مفيدة
-            أثناء فتحه.
+          <p className="label-body mt-2 text-[var(--status-attention)]">
+            متصفحك لا يدعم إشعارات النظام؛ ستظهر التذكيرات داخل التطبيق فقط، وتبقى مفيدة أثناء فتحه.
           </p>
         ) : permission === "denied" ? (
-          <p className="mt-3 text-[11px] leading-5 text-amber-700">
-            رفضت الإشعارات سابقًا. لا يمكن للموقع أن يطلبها مرة أخرى؛ فعّلها من إعدادات
-            الموقع في المتصفح (أيقونة القفل ← الإشعارات ← السماح).
+          <p className="label-body mt-2 text-[var(--status-attention)]">
+            رفضت الإشعارات سابقًا. فعّلها من إعدادات الموقع في المتصفح (أيقونة القفل ← الإشعارات ← السماح).
           </p>
         ) : null}
 
-        <div className="mt-5 space-y-3">
+        <div className="mt-3">
           <Row title="تنبيه وقت الصلاة" hint="إشعار في الوقت نفسه، مع تنبيه قبله بدقائق.">
             <Switch
               checked={prefs.prayerAlerts}
@@ -409,22 +418,19 @@ export function SettingsView({
             />
           </Row>
         </div>
-      </GlassCard>
+      </Group>
 
-      <GlassCard className="p-6">
-        <SectionTitle
-          icon={<Compass className="size-5" />}
-          title="الموقع ومواقيت دقيقة"
-          hint="إذن الموقع يجعل الحساب على إحداثياتك مباشرة، وهو أدق من اسم المدينة"
-          action={
-            <Badge variant={geo.coords ? "secondary" : "outline"} className="rounded-full gap-1">
-              <MapPin className="size-3.5" />
-              {geo.coords ? "موقعك محفوظ" : "لم يُحدَّد"}
-            </Badge>
-          }
-        />
-
-        <div className="mt-5 space-y-3">
+      <Group
+        eyebrow="الصلاة"
+        title="الموقع ومواقيت دقيقة"
+        hint="إذن الموقع يجعل الحساب على إحداثياتك مباشرة، وهو أدق من اسم المدينة."
+        action={
+          <span className="label-meta shrink-0 text-muted-foreground">
+            {geo.coords ? "موقعك محفوظ" : "لم يُحدَّد"}
+          </span>
+        }
+      >
+        <div>
           <Row
             title="مدينتك الحالية"
             hint="استنتجناها من منطقتك الزمنية، أو حدّدناها من إذن الموقع. عدّلها إن أردت."
@@ -473,22 +479,19 @@ export function SettingsView({
             </p>
           ) : null}
         </div>
-      </GlassCard>
+      </Group>
 
-      <GlassCard className="p-6">
-        <SectionTitle
-          icon={<Smartphone className="size-5" />}
-          title="التطبيق والعمل دون إنترنت"
-          hint="ثبّت عود على شاشتك، ونزّل المصحف كاملًا ليُقرأ دون شبكة"
-          action={
-            <Badge variant="secondary" className="rounded-full gap-1">
-              {online ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
-              {online ? "متصل" : "دون إنترنت"}
-            </Badge>
-          }
-        />
-
-        <div className="mt-5 space-y-3">
+      <Group
+        eyebrow="التطبيق"
+        title="التطبيق والعمل دون إنترنت"
+        hint="ثبّت عود على شاشتك، ونزّل المصحف كاملًا ليُقرأ دون شبكة."
+        action={
+          <span className="label-meta shrink-0 text-muted-foreground">
+            {online ? "متصل" : "دون إنترنت"}
+          </span>
+        }
+      >
+        <div>
           <Row
             title="تثبيت التطبيق"
             hint={
@@ -540,11 +543,9 @@ export function SettingsView({
                     نزّل المصحف
                   </Button>
                 )}
-                <GlassPill onClick={onClearQuran}>
-                  <span className="flex items-center gap-1.5">
-                    <HardDriveDownload className="size-3.5" /> تفريغ
-                  </span>
-                </GlassPill>
+                <QuietButton onClick={onClearQuran} className="px-3 text-[12px]">
+                  <HardDriveDownload className="size-3.5" /> تفريغ
+                </QuietButton>
               </div>
             </div>
             {downloading ? (
@@ -556,21 +557,19 @@ export function SettingsView({
             title="عدم إنترنت أول مرة"
             hint="افتح التطبيق مرة واحدة مع اتصال ليُحفظ هيكله وخطوطه، ثم يعمل بعده دون شبكة."
           >
-            <Badge variant="outline" className="rounded-full text-[10px]">
+            <Badge variant="outline" className="rounded-full text-[11px]">
               تخزين تدريجي
             </Badge>
           </Row>
         </div>
-      </GlassCard>
+      </Group>
 
-      <GlassCard className="p-6">
-        <SectionTitle
-          icon={<Moon className="size-5" />}
-          title="النوافذ المنبثقة والقراءة"
-          hint="نافذة واحدة كل مرة، تظهر إذا لم تدخل القسم المعني أو فات وقت عبادة — وبإمكانك إيقافها"
-        />
-
-        <div className="mt-5 space-y-3">
+      <Group
+        eyebrow="التطبيق"
+        title="النوافذ المنبثقة والقراءة"
+        hint="نافذة واحدة كل مرة، تظهر إذا لم تدخل القسم المعني أو فات وقت عبادة — وبإمكانك إيقافها."
+      >
+        <div>
           <Row title="تفعيل التنبيهات المنبثقة الذكية" hint="أطفئها إن أردت أن يبقى التطبيق هادئًا تمامًا.">
             <Switch
               checked={prefs.nudgesEnabled}
@@ -599,28 +598,38 @@ export function SettingsView({
 
           <Row title="حجم خط المصحف" hint="يُحفظ ويُطبَّق على كل السور، والعرض آيةٌ آية.">
             <div className="flex items-center gap-2">
-              <GlassPill onClick={() => setPref("fontScale", Math.max(0.8, Number((prefs.fontScale - 0.1).toFixed(2))))}>
+              <QuietButton
+                onClick={() =>
+                  setPref("fontScale", Math.max(0.8, Number((prefs.fontScale - 0.1).toFixed(2))))
+                }
+                className="px-3"
+                aria-label="تصغير خط المصحف"
+              >
                 أصغر
-              </GlassPill>
+              </QuietButton>
               <span className="text-xs text-muted-foreground">
                 {arabicNumber(Math.round(prefs.fontScale * 100))}٪
               </span>
-              <GlassPill onClick={() => setPref("fontScale", Math.min(2, Number((prefs.fontScale + 0.1).toFixed(2))))}>
+              <QuietButton
+                onClick={() =>
+                  setPref("fontScale", Math.min(2, Number((prefs.fontScale + 0.1).toFixed(2))))
+                }
+                className="px-3"
+                aria-label="تكبير خط المصحف"
+              >
                 أكبر
-              </GlassPill>
+              </QuietButton>
             </div>
           </Row>
         </div>
-      </GlassCard>
+      </Group>
 
-      <GlassCard className="p-6">
-        <SectionTitle
-          icon={<ShieldCheck className="size-5" />}
-          title="بياناتك وخصوصيتك"
-          hint="بياناتك محفوظة في حسابك على قاعدة بيانات التطبيق، وما يُخزَّن في جهازك يخصّك وحدك"
-        />
-
-        <div className="mt-5 space-y-3">
+      <Group
+        eyebrow="البيانات"
+        title="بياناتك وخصوصيتك"
+        hint="بياناتك محفوظة في حسابك، وما يُخزَّن في جهازك يخصّك وحدك."
+      >
+        <div>
           <Row
             title="تصدير نسخة من إعداداتك"
             hint="ملف واحد فيه تفضيلاتك وعلامات القراءة وما تجاهلته من تنبيهات."
@@ -652,17 +661,14 @@ export function SettingsView({
             </Button>
           </Row>
         </div>
-      </GlassCard>
+      </Group>
 
-      <GlassCard soft className="p-5">
-        <p className="flex items-start gap-2 text-[11px] leading-6 text-muted-foreground">
-          <Info className="mt-0.5 size-3.5 shrink-0" />
-          المصادر: نصوص المصحف بالرسم العثماني من واجهات متعددة مع نسخة محفوظة داخل
-          التطبيق، ومواقيت الصلاة من خدمة Aladhan حسب الطريقة التي اخترتها، والأحاديث
-          والأذكار مذكور مصدرها على كل بطاقة. لا يرسل التطبيق موقعك لأي طرف آخر غير خدمة
-          المواقيت لحساب الوقت.
-        </p>
-      </GlassCard>
+      <p className="label-meta flex items-start gap-2 px-1 leading-6 text-muted-foreground">
+        <Info className="mt-0.5 size-3.5 shrink-0" />
+        المصادر: نصوص المصحف بالرسم العثماني من واجهات متعددة مع نسخة محفوظة داخل التطبيق،
+        ومواقيت الصلاة من خدمة Aladhan حسب الطريقة التي اخترتها، والأحاديث والأذكار مذكور
+        مصدرها على كل عنصر. لا يرسل التطبيق موقعك لأي طرف آخر غير خدمة المواقيت لحساب الوقت.
+      </p>
     </div>
   );
 }

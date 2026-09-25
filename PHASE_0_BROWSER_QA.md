@@ -54,7 +54,7 @@
 - استخدم Preview/Convex test deployment، وليس بيانات production.
 - استخدم Browser حقيقيًا على جهاز حقيقي أو محاكي جهاز موثوق، مع DevTools.
 - لا تستخدم نتيجة `bun test` أو TypeScript أو Build كبديل عن Browser QA.
-- سجّل وقت كل ظاهرة，尤其是 White Screen أو تأخر تحميل chunk.
+- سجّل وقت كل ظاهرةوخاصةً White Screen أو تأخر تحميل chunk.
 - لا تغيّر كود التطبيق أثناء تنفيذ هذا الدليل. إذا ظهر Bug، سجّله وأوقفه عند حدود Bug policy.
 - كل بند في هذا الدليل يبدأ بحالة `NOT RUN`. لا تحوّل الحالة إلى PASS إلا بعد تنفيذ Action وكتابة Actual.
 
@@ -136,7 +136,7 @@ bun run preview -- --host 0.0.0.0
 ```
 
 - Vite preview غالبًا يستمع على المنفذ `4173` ما لم يُحدَّد غير ذلك.
-- لا意味着 نجاح `build` أن Browser QA اجتاز.
+- لا يعني نجاح `build` أن Browser QA اجتاز.
 - لا توقف أو تعِد تشغيل Managed Freebuff servers.
 
 ### 1.6 PWA وService Worker

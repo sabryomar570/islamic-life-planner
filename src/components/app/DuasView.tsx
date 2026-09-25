@@ -1,4 +1,12 @@
-import { GlassCard, GlassPill, SectionTitle } from "@/components/app/GlassCard";
+import {
+  ChoiceChip,
+  Editorial,
+  EmptyState,
+  Panel,
+  QuietButton,
+  SectionHead,
+  Tag,
+} from "@/components/app/Surfaces";
 import { Input } from "@/components/ui/input";
 import {
   DUA_SECTIONS,
@@ -15,8 +23,6 @@ import {
   BookmarkCheck,
   Copy,
   Dices,
-  HeartHandshake,
-  Quote,
   Search,
   Share2,
 } from "lucide-react";
@@ -90,43 +96,41 @@ export function DuasView({
     const result = await shareText("دعاء مأثور", formatDuaMessage(dua));
     if (result === "copied") toast.info("نُسخ الدعاء إلى الحافظة؛ ألصقه في أي رسالة.");
     if (result === "failed") toast.error("تعذّرت المشاركة من المتصفح.");
-  };
-
-  return (
-    <div className="space-y-5">
-      <GlassCard strong className="p-6">
-        <SectionTitle
-          icon={<HeartHandshake className="size-5" />}
-          title="أدعية مأثورة على حاجتك"
-          hint={`${arabicNumber(DUAS.length)} دعاءً من القرآن والسنة، في ${arabicNumber(DUA_SECTIONS.length)} بابًا — بمصدر كل دعاء`}
+  };  return (
+    <div className="stack">
+      <Panel className="p-5 sm:p-6">
+        <SectionHead
+          eyebrow="المعرفة"
+          title="الأدعية"
+          hint={`${arabicNumber(DUAS.length)} دعاءً من القرآن والسنة، في ${arabicNumber(
+            DUA_SECTIONS.length,
+          )} بابًا — بمصدر كل دعاء.`}
           action={
-            <GlassPill
-              onClick={() => {
-                setSpotlight(randomDua(spotlight.id));
-              }}
+            <QuietButton
+              onClick={() => setSpotlight(randomDua(spotlight.id))}
+              className="px-4"
             >
-              <span className="flex items-center gap-1.5">
-                <Dices className="size-3.5" /> دعاء جديد
-              </span>
-            </GlassPill>
+              <Dices className="size-3.5" />
+              دعاء جديد
+            </QuietButton>
           }
         />
 
-        <div className="relative mt-5">
-          <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative mt-4">
+          <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="ابحث في نص الدعاء أو المصدر..."
-            className="h-11 rounded-full border-white/70 bg-white/70 pr-10 text-sm"
+            className="h-11 rounded-2xl border-[var(--rule)] bg-white/80 pr-10 text-[13px]"
           />
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <GlassPill active={filter === "all" && !query} onClick={() => { setFilter("all"); setQuery(""); }}>
+          <ChoiceChip active={filter === "all" && !query} onClick={() => { setFilter("all"); setQuery(""); }}>
             كل الأبواب
-          </GlassPill>
-          <GlassPill
+          </ChoiceChip>
+          <ChoiceChip
             active={filter === "saved"}
             onClick={() => {
               setFilter("saved");
@@ -134,9 +138,9 @@ export function DuasView({
             }}
           >
             محفوظاتي{favorites.length > 0 ? ` (${arabicNumber(favorites.length)})` : ""}
-          </GlassPill>
+          </ChoiceChip>
           {DUA_SECTIONS.map((section) => (
-            <GlassPill
+            <ChoiceChip
               key={section.id}
               active={filter === section.id && !query}
               onClick={() => {
@@ -145,104 +149,96 @@ export function DuasView({
               }}
             >
               {section.title}
-            </GlassPill>
+            </ChoiceChip>
           ))}
         </div>
-      </GlassCard>
+      </Panel>
 
-      {/* دعاء اليوم */}
-      <GlassCard strong className="relative overflow-hidden p-6 text-center sm:p-8">
-        <div className="absolute -right-10 top-0 size-40 rounded-full bg-emerald-200/40 blur-3xl" />
-        <div className="absolute -left-8 bottom-0 size-40 rounded-full bg-sky-200/40 blur-3xl" />
-        <span className="relative glass-tile inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-foreground/70">
-          <Quote className="size-3.5 text-primary" />
-          دعاء اليوم • {spotlight.source}
+      {/* دعاء اليوم: ورق تحريري دافئ — لا زجاج ولا توهج خلفي. */}
+      <Editorial className="p-6 text-center sm:p-8">
+        <span className="label-meta font-semibold text-[oklch(0.55_0.05_75)]">
+          دعاء اليوم · {spotlight.source}
         </span>
-        <p className="quran-text relative mt-5 text-[1.25rem] leading-[2.4]">
+        <p className="quran-text mt-5 text-[1.2rem] leading-[2.4] text-[var(--editorial-ink)]">
           {spotlight.source === "قرآن كريم" ? `﴿${spotlight.text}﴾` : `«${spotlight.text}»`}
         </p>
-        <p className="relative mt-3 text-[11px] font-medium text-primary">{spotlight.reference}</p>
-        <div className="relative mt-4 flex flex-wrap items-center justify-center gap-2">
-          <GlassPill onClick={() => void copyDua(spotlight)}>
-            <span className="flex items-center gap-1.5">
-              <Copy className="size-3.5" /> نسخ
-            </span>
-          </GlassPill>
-          <GlassPill onClick={() => void shareDua(spotlight)}>
-            <span className="flex items-center gap-1.5">
-              <Share2 className="size-3.5" /> مشاركة في رسالة
-            </span>
-          </GlassPill>
-          <GlassPill onClick={() => onToggleFavorite(spotlight.id, "dhikr", spotlight.text.slice(0, 40))}>
-            <span className="flex items-center gap-1.5">
-              {check(spotlight.id) ? (
-                <BookmarkCheck className="size-3.5" />
-              ) : (
-                <Bookmark className="size-3.5" />
-              )}
-              {check(spotlight.id) ? "محفوظ" : "احفظ الدعاء"}
-            </span>
-          </GlassPill>
+        <p className="label-meta mt-3 font-medium text-[oklch(0.5_0.06_72)]">{spotlight.reference}</p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <QuietButton onClick={() => void copyDua(spotlight)} className="px-4">
+            <Copy className="size-3.5" />
+            نسخ
+          </QuietButton>
+          <QuietButton onClick={() => void shareDua(spotlight)} className="px-4">
+            <Share2 className="size-3.5" />
+            مشاركة في رسالة
+          </QuietButton>
+          <QuietButton
+            onClick={() => onToggleFavorite(spotlight.id, "dhikr", spotlight.text.slice(0, 40))}
+            className="px-4"
+          >
+            {check(spotlight.id) ? <BookmarkCheck className="size-3.5" /> : <Bookmark className="size-3.5" />}
+            {check(spotlight.id) ? "محفوظ" : "احفظ الدعاء"}
+          </QuietButton>
         </div>
-      </GlassCard>
+      </Editorial>
 
       {items.length === 0 ? (
-        <GlassCard soft className="p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            {filter === "saved"
-              ? "لم تحفظ دعاءً بعد — اضغط أيقونة الحفظ على أي كارت."
-              : "لا يوجد دعاء بهذا البحث، جرّب كلمة أخرى."}
-          </p>
-        </GlassCard>
+        <EmptyState
+          title={filter === "saved" ? "لم تحفظ دعاءً بعد" : "لا نتائج لهذا البحث"}
+          body={
+            filter === "saved"
+              ? "اضغط أيقونة الحفظ بجوار أي دعاء، وسيظهر هنا مع مصدره."
+              : "جرّب كلمة أخرى أو اختر بابًا مختلفًا."
+          }
+        />
       ) : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        /* قراءة تحريرية: نص الدعاء هو الموضوع، والمصدر سطر لا بطاقة. */
+        <ul className="stack">
           {items.map((dua) => {
             const saved = check(dua.id);
-            const sectionTitle = DUA_SECTIONS.find((section) => section.id === dua.section)?.title;
+            const section = DUA_SECTIONS.find((entry) => entry.id === dua.section);
             return (
-              <GlassCard key={dua.id} hover className="flex flex-col p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="glass-tile inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-foreground/70">
-                    {dua.source === "قرآن كريم" ? "﴿ قرآن ﴾" : "☀ سنة"} • {sectionTitle}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="حفظ الدعاء"
-                    onClick={() => onToggleFavorite(dua.id, "dhikr", dua.text.slice(0, 40))}
-                    className={cn(
-                      "flex size-8 items-center justify-center rounded-full transition-all",
-                      saved
-                        ? "bg-primary text-primary-foreground"
-                        : "glass-tile text-foreground/60 hover:text-foreground",
-                    )}
-                  >
-                    {saved ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
-                  </button>
-                </div>
-
-                <p className="quran-text mt-5 flex-1 text-[1.08rem] leading-[2.3]">
-                  {dua.source === "قرآن كريم" ? `﴿${dua.text}﴾` : `«${dua.text}»`}
-                </p>
-
-                <div className="mt-auto pt-5">
-                  <p className="text-[11px] text-muted-foreground">{dua.reference}</p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <GlassPill onClick={() => void copyDua(dua)}>
-                      <span className="flex items-center gap-1.5">
-                        <Copy className="size-3.5" /> نسخ
-                      </span>
-                    </GlassPill>
-                    <GlassPill onClick={() => void shareDua(dua)}>
-                      <span className="flex items-center gap-1.5">
-                        <Share2 className="size-3.5" /> مشاركة
-                      </span>
-                    </GlassPill>
+              <li key={dua.id}>
+                <article className="surface-primary rounded-3xl p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    <Tag>{section?.title ??dua.source}</Tag>
+                    <button
+                      type="button"
+                      aria-label={saved ? "إزالة من المحفوظات" : "حفظ الدعاء"}
+                      aria-pressed={saved}
+                      onClick={() => onToggleFavorite(dua.id, "dhikr", dua.text.slice(0, 40))}
+                      className={cn(
+                        "motion-press flex size-9 items-center justify-center rounded-xl",
+                        saved
+                          ? "bg-primary text-primary-foreground"
+                          : "surface-secondary text-foreground/60 hover:text-foreground",
+                      )}
+                    >
+                      {saved ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+                    </button>
                   </div>
-                </div>
-              </GlassCard>
+
+                  <p className="quran-text mt-4 text-[1.12rem] leading-[2.3]">
+                    {dua.source === "قرآن كريم" ? `﴿${dua.text}﴾` : `«${dua.text}»`}
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <QuietButton onClick={() => void copyDua(dua)} className="px-4">
+                      <Copy className="size-3.5" />
+                      نسخ
+                    </QuietButton>
+                    <QuietButton onClick={() => void shareDua(dua)} className="px-4">
+                      <Share2 className="size-3.5" />
+                      مشاركة
+                    </QuietButton>
+                  </div>
+
+                  <p className="label-meta mt-3 text-muted-foreground">{dua.reference}</p>
+                </article>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

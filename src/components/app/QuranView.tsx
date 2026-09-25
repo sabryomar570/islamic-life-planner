@@ -1,4 +1,3 @@
-import { GlassCard } from "@/components/app/GlassCard";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -363,11 +362,11 @@ export function QuranView({
   return (
     <div className="space-y-3">
       {/* شريط أعلى مختصر: الفهرس واسم السورة وحجم الخط */}
-      <div className="tile-edge flex items-center gap-2 rounded-2xl p-2">
+      <div className="surface-primary flex items-center gap-2 rounded-2xl p-2">
         <button
           type="button"
           onClick={() => setIndexOpen(true)}
-          className="btn-edge flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-semibold"
+          className="btn-edge touch-target flex items-center gap-1.5 rounded-xl px-3 text-[11px] font-semibold"
         >
           <List className="size-3.5" />
           الفهرس
@@ -375,7 +374,7 @@ export function QuranView({
 
         <div className="min-w-0 flex-1 text-center">
           <p className="truncate text-sm font-bold">سورة {surah.name}</p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="label-meta text-muted-foreground">
             {surah.type} • {arabicNumber(surah.ayahs)} آية
           </p>
         </div>
@@ -389,7 +388,7 @@ export function QuranView({
               const index = sizes.findIndex((size) => size >= fontScale);
               onFontScaleChange(sizes[Math.max(index - 1, 0)]);
             }}
-            className="btn-edge flex size-8 items-center justify-center rounded-xl"
+            className="btn-edge flex size-9 items-center justify-center rounded-xl"
           >
             <Minus className="size-3.5" />
           </button>
@@ -401,7 +400,7 @@ export function QuranView({
               const index = sizes.findIndex((size) => size > fontScale);
               onFontScaleChange(sizes[index === -1 ? sizes.length - 1 : index]);
             }}
-            className="btn-edge flex size-8 items-center justify-center rounded-xl"
+            className="btn-edge flex size-9 items-center justify-center rounded-xl"
           >
             <Plus className="size-3.5" />
           </button>
@@ -414,53 +413,74 @@ export function QuranView({
         className="mushaf-scroll h-[58dvh] min-h-[20rem] overflow-y-auto overscroll-contain rounded-3xl pb-2"
       >
         {loading ? (
-          <GlassCard className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            جارٍ تحميل السورة...
-          </GlassCard>
+          <div className="mushaf-inner flex h-full flex-col justify-center gap-3 p-6">
+            <p className="flex items-center justify-center gap-2 text-[12px] text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              نجهّز السورة
+            </p>
+            <div className="mx-auto w-full max-w-lg space-y-3" aria-hidden>
+              {[100, 96, 92, 98].map((width, index) => (
+                <span
+                  key={index}
+                  className="skeleton block h-3"
+                  style={{ width: `${width}%` }}
+                />
+              ))}
+            </div>
+          </div>
         ) : error ? (
-          <GlassCard className="flex h-full flex-col items-center justify-center gap-3 text-center">
-            <p className="text-sm text-rose-600">{error}</p>
+          <div className="mushaf-inner flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+            <p className="text-[12px] text-[var(--status-missed)]">{error}</p>
             <Button
               type="button"
               variant="outline"
-              className="btn-edge rounded-full"
+              className="btn-edge touch-target rounded-full"
               onClick={() => setAttempt((value) => value + 1)}
             >
               <RotateCcw className="size-4" />
               حاول مرة أخرى
             </Button>
-          </GlassCard>
+          </div>
         ) : (
-          <GlassCard className="space-y-2 p-3.5">
+          /* النص متصل على الورق: كل آية فقرة لا بطاقة، والورق هو الإطار. */
+          <div className="mushaf-inner">
             {surah.number !== 1 && surah.number !== 9 && split.basmalaShown ? (
-              <p className="quran-text pb-1 text-center text-base text-primary">{BASMALA}</p>
+              <p className="quran-text px-4 pt-4 text-center text-base text-[oklch(0.5_0.07_70)]">
+                {BASMALA}
+              </p>
             ) : null}
-            {split.ayahs.map((ayah) => (
-              <button
-                key={ayah.number}
-                type="button"
-                data-ayah={ayah.number}
-                onClick={() => setSelectedAyah(ayah)}
-                className="block w-full rounded-2xl bg-white/60 p-3 text-right transition-colors hover:bg-white/85"
-              >
-                <p className="quran-text leading-[2.2]" style={{ fontSize: `${fontScale}rem` }}>
-                  {ayah.text}
-                  <span className="mr-2 align-middle text-[0.7em] text-primary/70">
-                    ﴿{toArabicDigits(ayah.number)}﴾
-                  </span>
-                </p>
-              </button>
-            ))}
-          </GlassCard>
+            <div className="px-4 py-4 sm:px-6">
+              {split.ayahs.map((ayah) => (
+                <button
+                  key={ayah.number}
+                  type="button"
+                  data-ayah={ayah.number}
+                  onClick={() => setSelectedAyah(ayah)}
+                  className="block w-full rounded-lg px-1 py-1.5 text-right transition-colors hover:bg-white/55"
+                >
+                  <p
+                    className="mushaf-text"
+                    style={{ fontSize: `${fontScale}rem` }}
+                  >
+                    {ayah.text}
+                    <span className="ayah-medallion">{toArabicDigits(ayah.number)}</span>
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
       {/* رسائل حالة مختصرة — سطر واحد بلا حشو */}
-      <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-        {!online ? <span className="rounded-full bg-amber-400/15 px-2 py-0.5">دون إنترنت</span> : null}
+      <div className="flex flex-wrap items-center gap-2 label-meta text-muted-foreground">
+        {!online ? (
+          <span className="rounded-full bg-[var(--status-attention)]/12 px-2 py-0.5">
+            دون إنترنت
+          </span>
+        ) : null}
         {savedLocally ? (
-          <span className="flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-emerald-700">
+          <span className="flex items-center gap-1 rounded-full bg-[var(--status-success)]/12 px-2 py-0.5 text-[var(--status-success)]">
             <Check className="size-3" /> محفوظة على جهازك
           </span>
         ) : null}
@@ -475,13 +495,13 @@ export function QuranView({
         <div className="tile-edge flex items-center gap-3 rounded-2xl p-3">
           <CloudDownload className="size-4 text-primary" />
           <Progress value={downloadProgress} className="h-1.5 flex-1 bg-white/70" />
-          <span className="text-[10px] tabular-nums text-muted-foreground">
+          <span className="text-[11px] tabular-nums text-muted-foreground">
             {toArabicDigits(downloadProgress)}٪
           </span>
           <button
             type="button"
             onClick={offline.onCancelDownload}
-            className="text-[10px] font-medium text-rose-600"
+            className="text-[11px] font-medium text-rose-600"
           >
             إيقاف
           </button>
@@ -504,7 +524,7 @@ export function QuranView({
       <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.9rem)] z-30 px-3">
         {autoScroll ? (
           <div className="glass-strong mx-auto mb-1.5 flex w-full max-w-md items-center justify-center gap-1.5 rounded-2xl border border-white/80 px-2 py-1.5">
-            <span className="text-[10px] font-medium text-muted-foreground">السرعة</span>
+            <span className="text-[11px] font-medium text-muted-foreground">السرعة</span>
             {[1, 2, 3, 4, 5].map((value) => (
               <button
                 key={value}
@@ -616,7 +636,7 @@ export function QuranView({
                   </span>
                   <span className="text-sm font-medium">{item.name}</span>
                 </span>
-                <span className="text-[10px] opacity-70">
+                <span className="text-[11px] opacity-70">
                   {isBundled(item.number) ? "محفوظة" : `${arabicNumber(item.ayahs)} آية`}
                 </span>
               </button>
@@ -628,7 +648,7 @@ export function QuranView({
 
           <div className="mt-3 flex items-center gap-2">
             <GlassPillButton onClick={() => setIndexOpen(false)}>إغلاق</GlassPillButton>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               اختر سورة ليظهر نصّها مباشرة.
             </span>
           </div>

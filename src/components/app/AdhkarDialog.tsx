@@ -5,13 +5,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
+import { Meter, PrimaryButton, QuietButton } from "@/components/app/Surfaces";
 import { cn } from "@/lib/utils";
-import { Check, CheckCheck, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AdhkarGroup } from "@/data/adhkar";
 import { arabicNumber } from "@/lib/time";
+
+/**
+ * PHASE 2D — طقس الأذكار.
+ *
+ * النص هو الموضوع: كل ذكر فقرة هادئة، ووالتكرار واضح،
+ * والمصدر سطر ثانوي. لا شبكة بطاقات ولا قاعدة بيانات.
+ */
 
 export function AdhkarDialog({
   group,
@@ -37,13 +43,10 @@ export function AdhkarDialog({
 
   const toggleItem = (id: string) => {
     setChecked((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     );
   };
 
-  // عند إتمام كل الأذكار نعلّم المجموعة كمنجزة تلقائيًا.
   useEffect(() => {
     if (open && total > 0 && checked.length === total && !isDone) {
       onToggleDone(true);
@@ -53,99 +56,100 @@ export function AdhkarDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="glass-strong max-h-[88vh] w-[calc(100vw-1.5rem)] max-w-3xl overflow-hidden rounded-3xl border-white/70 bg-white/85 p-0"
+        className="surface-quiet max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-3xl overflow-hidden rounded-3xl p-0"
         dir="rtl"
       >
-        <div className="flex flex-col gap-1 border-b border-white/60 px-6 pb-4 pt-6">
+        {/* ——— الترويسة: ما هذا الورد، وكم بقي ——— */}
+        <div className="rule-b px-5 pb-4 pt-5 sm:px-6">
           <DialogHeader className="text-right">
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Sparkles className="size-5 text-primary" />
-              {group.title}
-            </DialogTitle>
-            <DialogDescription className="text-right text-xs leading-5">
-              {group.subtitle} • {group.when}
+            <DialogTitle className="label-display">{group.title}</DialogTitle>
+            <DialogDescription className="label-body text-right text-muted-foreground">
+              {group.when} · {group.subtitle}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-3 flex items-center gap-3">
-            <Progress value={percent} className="h-2 flex-1 bg-white/60" />
-            <span className="text-xs font-medium text-muted-foreground">
+          <div className="mt-4 flex items-center gap-3">
+            <Meter
+              value={percent}
+              tone={percent === 100 ? "success" : undefined}
+              className="flex-1"
+              label="تقدّم الأذكار"
+            />
+            <span className="label-meta shrink-0 text-muted-foreground tabular-nums">
               {arabicNumber(checked.length)} / {arabicNumber(total)}
             </span>
           </div>
         </div>
 
-        <div className="max-h-[58vh] space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
+        {/* ——— الأذكار: فقرات متتابعة لا بطاقات متجاورة ——— */}
+        <ol className="max-h-[56dvh] overflow-y-auto px-5 py-2 sm:px-6">
           {group.items.map((dhikr, index) => {
             const isChecked = checked.includes(dhikr.id);
             return (
-              <button
-                key={dhikr.id}
-                type="button"
-                onClick={() => toggleItem(dhikr.id)}
-                className={cn(
-                  "w-full rounded-2xl p-4 text-right transition-all",
-                  isChecked
-                    ? "glass-tile ring-1 ring-primary/40"
-                    : "glass-soft hover:bg-white/80",
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex size-7 items-center justify-center rounded-full bg-white/70 text-[11px] font-semibold text-primary">
-                      {arabicNumber(index + 1)}
-                    </span>
-                    <span className="text-sm font-semibold">
-                      {dhikr.title ?? group.title}
-                    </span>
-                    <span className="rounded-full bg-primary/12 px-2 py-0.5 text-[11px] font-medium text-primary">
-                      {dhikr.repeat === 1
-                        ? "مرة واحدة"
-                        : `${arabicNumber(dhikr.repeat)} مرات`}
+              <li key={dhikr.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleItem(dhikr.id)}
+                  aria-pressed={isChecked}
+                  className={cn(
+                    "motion-press w-full border-b border-[var(--rule)] py-4 text-right last:border-b-0",
+                    isChecked && "opacity-55",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="label-meta text-muted-foreground tabular-nums">
+                        {arabicNumber(index + 1)}
+                      </span>
+                      {dhikr.title ? (
+                        <span className="text-[13px] font-semibold">{dhikr.title}</span>
+                      ) : null}
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                        {dhikr.repeat === 1 ? "مرة واحدة" : `${arabicNumber(dhikr.repeat)} مرات`}
+                      </span>
+                    </div>
+                    <span
+                      className={cn(
+                        "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border transition-colors",
+                        isChecked
+                          ? "border-transparent bg-[var(--status-success)] text-white"
+                          : "border-[var(--rule)] bg-white/70 text-transparent",
+                      )}
+                    >
+                      <Check className="size-4" />
                     </span>
                   </div>
-                  <span
-                    className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-full border transition-all",
-                      isChecked
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-white/80 bg-white/70 text-transparent",
-                    )}
-                  >
-                    <Check className="size-4" />
-                  </span>
-                </div>
 
-                <p className="quran-text mt-3 text-[1.05rem] leading-9 text-foreground/90">
-                  {dhikr.text}
-                </p>
+                  <p className="quran-text mt-3 text-[1.12rem] leading-9 text-foreground/90">
+                    {dhikr.text}
+                  </p>
 
-                <div className="mt-3 space-y-1 border-t border-white/60 pt-2 text-[11px] leading-5 text-muted-foreground">
-                  <p>{dhikr.source}</p>
-                  {dhikr.virtue ? (
-                    <p className="text-primary/80">✦ {dhikr.virtue}</p>
-                  ) : null}
-                </div>
-              </button>
+                  <div className="mt-2.5 space-y-0.5">
+                    <p className="label-meta text-muted-foreground">{dhikr.source}</p>
+                    {dhikr.virtue ? (
+                      <p className="label-meta text-primary/80">✦ {dhikr.virtue}</p>
+                    ) : null}
+                  </div>
+                </button>
+              </li>
             );
           })}
-        </div>
+        </ol>
 
-        <div className="flex items-center justify-between gap-3 border-t border-white/60 px-6 py-4">
-          <span className="text-xs text-muted-foreground">
+        <div className="rule-t flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-6">
+          <p className="label-meta min-w-0 flex-1 text-muted-foreground">
             {percent === 100
               ? "أتممت الأذكار، تقبّل الله منك."
               : "اضغط على كل ذكر بعد قراءته."}
-          </span>
-          <Button
-            type="button"
-            variant={isDone ? "outline" : "default"}
-            className="rounded-full"
-            onClick={() => onToggleDone(!isDone)}
-          >
-            <CheckCheck className="size-4" />
-            {isDone ? "إلغاء التعليم" : "تمّت الأذكار"}
-          </Button>
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            {isDone ? (
+              <QuietButton onClick={() => onToggleDone(false)}>إلغاء التعليم</QuietButton>
+            ) : null}
+            <PrimaryButton onClick={() => onToggleDone(!isDone)} className="px-4 text-[12px]">
+              {isDone ? "تمّت الأذكار" : "علمتني أتممته"}
+            </PrimaryButton>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
