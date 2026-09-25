@@ -4,6 +4,51 @@
 
 **IMPLEMENTATION COMPLETE — VERIFICATION PENDING**
 
+## Current execution record — 25 September 2026
+
+### Browser availability
+
+- **Browser حقيقي:** غير متاح في البيئة. `chromium` و`chromium-browser` و`google-chrome` و`google-chrome-stable` و`firefox` و`playwright` غير موجودة، ولا توجد أداة Browser/DevTools آلية متاحة في هذه الجلسة.
+- **Preview process:** كان Vite يعمل فعليًا على المنفذ `5173`، وكانت عملية Convex dev تعمل. هذا يثبت توفر processes فقط، ولا يثبت أي Browser execution.
+- **DevTools observation:** لم تُفتح DevTools Console/Network/Application لأن Browser غير متاح.
+- **Static blocker:** **No static blocker identified.**
+- **Browser QA status:** **BLOCKED / NOT VERIFIED**. لم يتم ادعاء PASS لأي Browser أو Device test.
+
+### Actual Browser QA results for this run
+
+| Test group | Status | Actual evidence |
+|---|---|---|
+| First Launch | BLOCKED | لا Browser متاح لفتح `/` أو قياس أول useful UI. |
+| White Screen / Runtime Errors | BLOCKED / NOT VERIFIED | لا Browser أو Console/Network session. |
+| Onboarding | BLOCKED / NOT VERIFIED | لم تُنفذ أي نقرات Onboarding. |
+| Auth | BLOCKED / NOT VERIFIED | لم يُختبر دخول أو خروج أو Auth loop. |
+| Email OTP | BLOCKED / NOT VERIFIED | لم يُختبر OTP؛ لا Browser/OTP session. |
+| Convex connection from the app | NOT VERIFIED | Convex process was present, but no in-app request could be observed. |
+| Dashboard | BLOCKED / NOT VERIFIED | لم تُفتح Dashboard في Browser. |
+| Daily Plan | BLOCKED / NOT VERIFIED | لم يتم فحص Daily Plan بصريًا أو تفاعليًا. |
+| Daily Review | BLOCKED / NOT VERIFIED | لم تُفتح أو تُحفظ أي مراجعة. |
+| Navigation | BLOCKED / NOT VERIFIED | لم يُختبر التنقل المتكرر. |
+| RTL | BLOCKED / NOT VERIFIED | لم تُختبر العربية/RTL في Browser. |
+| Responsive 360px | BLOCKED / NOT VERIFIED | لا Browser/device viewport. |
+| Responsive 390px | BLOCKED / NOT VERIFIED | لا Browser/device viewport. |
+| Responsive 412px | BLOCKED / NOT VERIFIED | لا Browser/device viewport. |
+| Keyboard / input | BLOCKED / NOT VERIFIED | لم تُختبر Keyboard أو input behavior. |
+| Safe Areas | BLOCKED / NOT VERIFIED | لا جهاز/محاكي ذو safe areas حقيقي. |
+| Refresh / persistence | BLOCKED / NOT VERIFIED | لم يُنفذ reload أو persistence check. |
+| Console errors | BLOCKED / NOT VERIFIED | لا Console session. |
+| Network failures | BLOCKED / NOT VERIFIED | لا Network session. |
+| Loading / empty / error states | BLOCKED / NOT VERIFIED | لم تُفحص cases في Browser. |
+| PWA behavior | BLOCKED / NOT VERIFIED | لم يُفحص Service Worker أو install/offline behavior. |
+| Performance / chunk loading | BLOCKED / NOT VERIFIED | لا Browser performance/network measurements. |
+
+**Bugs fixed in this run:** None. No product code, UX, schema, or database logic was changed.
+
+**Automated checks recorded separately:** `bun test` PASS؛ `bun tsc -b --noEmit` PASS؛ `bun run lint` PASS مع 24 warnings؛ `bun run build` PASS مع ملاحظة `convex-vendor` chunk فارغ. هذه النتائج لا تحوّل Browser QA من BLOCKED إلى PASS.
+
+**Official report:** `PHASE_0_FINAL_REPORT.md` لم يتغير، ولا تزال حالته `NOT VERIFIED`/`BLOCKED` كما هي.
+
+---
+
 ## 0. قاعدة الاستخدام
 
 - استخدم Preview/Convex test deployment، وليس بيانات production.
@@ -40,7 +85,7 @@
 | `FREEBUFF_OTP_KEY` | `src/convex/auth/emailOtp.ts` / Convex environment | مطلوب فقط لاختبار Email OTP؛ Anonymous login لا يكفي لإثبات OTP. |
 | `VLY_APP_NAME` | `src/convex/auth/emailOtp.ts` | اختياري؛ يؤثر في نص البريد فقط. |
 | `VLY_CONVEX_AUTH_ISSUER` | `src/convex/auth.config.ts` | اختياري؛ القيمة الافتراضية في المصدر هي `https://freebuff.com`. |
-| `VLY_INTEGRATION_KEY` | Convex actions التي تستخدم VLY integrations | مطلوب فقط إذا exercising an integration؛ ليس شرطًا لعرض التطبيق الأساسي. |
+| `VLY_INTEGRATION_KEY` | Convex actions التي تستخدم VLY integrations | مطلوب فقط إذا تم استخدام تكامل VLY؛ ليس شرطًا لعرض التطبيق الأساسي. |
 | `VLY_INTEGRATION_BASE_URL` | VLY integration helpers | اختياري، إلا إذا استخدمت البيئة gateway مخصصًا. |
 
 > لا يوجد Blocker ثابت في الكود يثبت أن Preview مستحيل. لكن غياب `VITE_CONVEX_URL` أو deployment Access أو `FREEBUFF_OTP_KEY` يجعل اختبار الواجهة/OTP BLOCKED، ولا يُعامل كـ PASS.
