@@ -1,10 +1,4 @@
 import { DailyReview, type DayReviewRecord } from "@/components/app/DailyReview";
-
-// PHASE 3: كسول عمدا. تحميل الإحصاء يجرّ قاعدة الأحاديث كاملة،
-// فلا يدخل المسار الحرج إلا عند ظهوره.
-const InsightSlot = lazy(() =>
-  import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
-);
 import { DayTimeline } from "@/components/app/DayTimeline";
 import { NextPrayerHero } from "@/components/app/NextPrayerHero";
 import {
@@ -30,6 +24,14 @@ import { arabicNumber, formatGregorian, greeting } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { BookOpen, Check, ChevronLeft, Moon, Sun, Target } from "lucide-react";
 import { useMemo, useState, lazy, Suspense } from "react";
+
+// PHASE 3: كسول عمدا. تحميل الإحصاء يجرّ قاعدة الأحاديث كاملة،
+// فلا يدخل المسار الحرج إلا عند ظهوره.
+// **بعد كل الاستيراد لا قبله:** تسمية ثابتة بين الاستيرادات تعمل في
+// البناء، وتترنّح في خادم التطوير حين لا يُرفع ترتيب التنفيذ كما هو.
+const InsightSlot = lazy(() =>
+  import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
+);
 
 /**
  * PHASE 2A — الشاشة الأولى.

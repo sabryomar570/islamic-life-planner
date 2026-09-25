@@ -1,9 +1,4 @@
 import { Panel, PrimaryButton, QuietButton, SectionHead, StatusDot, Sunken } from "@/components/app/Surfaces";
-
-// PHASE 3: كسول عمدا حتى لا تدخل قاعدة الأحاديث المسار الحرج.
-const InsightSlot = lazy(() =>
-  import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
-);
 import {
   BLOCKER_LABELS,
   MOOD_LABELS,
@@ -15,6 +10,13 @@ import {
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Check, CheckCircle2, Loader2 } from "lucide-react";
 import { useState, lazy, Suspense } from "react";
+
+// PHASE 3: كسول عمدا حتى لا تدخل قاعدة الأحاديث المسار الحرج.
+// **بعد كل الاستيراد لا قبله:** تسمية ثابتة بين الاستيرادات تعمل في
+// البناء، وتترنّح في خادم التطوير حين لا يُرفع ترتيب التنفيذ كما هو.
+const InsightSlot = lazy(() =>
+  import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
+);
 
 /**
  * PHASE 2K — مراجعة اليوم.

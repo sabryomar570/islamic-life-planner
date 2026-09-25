@@ -1,9 +1,4 @@
 import { prayerState } from "@/components/app/NextPrayerHero";
-
-// PHASE 3: كسول عمدا حتى لا تدخل قاعدة الأحاديث المسار الحرج.
-const InsightSlot = lazy(() =>
-  import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
-);
 import {
   EmptyState,
   Meter,
@@ -22,6 +17,13 @@ import { arabicNumber, dateKey, formatArabicTime, weekdayShort } from "@/lib/tim
 import { cn } from "@/lib/utils";
 import { Bell, Check, MapPin, RefreshCw } from "lucide-react";
 import { lazy, Suspense } from "react";
+
+// PHASE 3: كسول عمدا حتى لا تدخل قاعدة الأحاديث المسار الحرج.
+// **بعد كل الاستيراد لا قبله:** تسمية ثابتة بين الاستيرادات تعمل في
+// البناء، وتترنّح في خادم التطوير حين لا يُرفع ترتيب التنفيذ كما هو.
+const InsightSlot = lazy(() =>
+  import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
+);
 
 /**
  * PHASE 2B — الصلاة كإيقاع اليوم.
