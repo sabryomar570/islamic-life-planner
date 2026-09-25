@@ -2,124 +2,73 @@
 
 **الحالة: PHASE 0 NOT CLOSED**
 
-هذا التقرير يوثّقchanges الفعلية في هذه الجلسة. لا يعتمد على تقارير الوكلاء السابقة، ولا يدّعي التحقق البصري أو الـcommit أو الـpush حيث لم تتوفر أدوات اللازمة.
+هذا التقرير وثيقة تحقق منفصلة عن ادعاءات تجربة المستخدم. يفصل بين وجود التغييرات في الكود ونتيجة الأوامر الفعلية وبين ما لم يُختبر في متصفح.
 
-## 1. Before — المشاكل التي كانت موجودة
+## 1. التغييرات الموجودة في Candidate Final
 
-- كان انتقال route إلى Dashboard/onboarding يعتمد على `lazy` مع fallback صغير شفاف، في كان يظهر كأنه white screen أثناء تحميل chunk أو query.
-- `useAuth` كان ينتظر `currentUser` additional query داخل auth gate رغم أن المصادقة كانت كافية لحماية المسار.
-- Dashboard كان يستورد كل الأقسام وبياناتها داخل route chunk كبير، ويعرض loading spinner فقط أثناء انتظار profile.
-- Onboarding كان يعرض 15 question screens متتابعة، مع buttons متشابهة تقريبًا، ويطلب understanding كاملًا قبل CMA.
-- HomeView كان يجمع rail كبير، quote marquee، prayer، stats، review، adhkar، بطاقات المحتوى و مناسبات، دون hierarchy واضح.
-- bottom navigation كان ثابت العرض تقريبًا (`w-[4.1rem]`) لكل item، وهو عرض زائد عن 360px.
-- لم يكن هناك test يغطي contract الخاص بـprogressive profile أو ربط daily coaching بالـprofile.
-- `bun run build` كشف أخطاء TypeScript في `HomeView`: `reviewSaving` و`onSaveReview` غير معرّفين. كما كان lint يحتوي 18 errors.
+هذه نقاط تنفيذ قابلة للتدقيق في الملفات الحالية، وليست ادعاءات بأن التجربة تعمل بصريًا:
 
-## 2. Root Causes
+- `src/main.tsx`: مسارات الصفحات محمّلة ديناميكيًا مع fallback مرئي يستخدم `min-h-dvh` و`bg-background` و`aria-busy`، إضافة إلى شاشة خطأ نهائية. لا يوجد مؤقت يضيف تأخيرًا.
+- `src/hooks/use-auth.ts`: حالة التحميل تعتمد على `isAuthLoading` من Convex Auth فقط؛ `currentUser` ما زال يُقرأ لبيانات العرض ولا يعطل بوابة المسار.
+- `src/pages/Dashboard.tsx`: توجد شاشة تحميل للملف الشخصي مرئية، وعدة أقسام محمّلة بـ `lazy` داخل `Suspense` مع حالة تحميل لكل قسم. يمرّر `onSaveReview` و`reviewSaving` إلى `HomeView`.
+- `src/pages/Auth.tsx` و`src/pages/Onboarding.tsx`: يوجد dynamic import وprefetch للمسار Dashboard. وجود prefetch لا يثبت عدم وجود تأخير.
+- `src/data/questions.ts`: عقد الإجابة التقدمية يحدد سبعة إجابات أساسية وثمانية إجابات اختيارية، و`pickAnswers` يطبق قيمًا افتراضية دون استبدال قيمة محفوظة.
+- `src/pages/Onboarding.tsx`: التنفيذ الحالي قابل للتدقيق ويشمل 4 مشاهد أساسية (الإيقاع، الصلاة، الهدف، العادات) و3 مشاهد اختيارية، إضافة إلى حالات التحميل والتحقق من المدخلات وخطأ الحفظ والنجاح والإذن.
+- `src/components/app/HomeView.tsx`: يعرض الصلاة القادمة، والذكر، والمراجعة اليومية، ومؤشرًا أسبوعيًا اختياريًا. لا يوجد `QuoteMarquee` أو rail أو قسم مناسبات في هذا الملف.
+- `src/components/app/AppHeader.tsx` و`src/index.css`: توجد قواعد استجابة لمقاسات الشاشة ومناطق الأمان ومنع التجاوز الأفقي وانتقال مرحلة مع `prefers-reduced-motion`. هذه القواعد البرمجية لا تثبت السلوك على مقاسات الشاشة.
+- `src/hooks/use-nudges.ts`: تُستخدم `distraction` و`disciplineLevel` في صياغة التذكير وفي أزمنة نافذة التنبيه.
+- `eslint.config.js`: قاعدتا `react-hooks/set-state-in-effect` و`react-hooks/purity` غير مفعّلتين. لذلك نتيجة lint ليست دليلًا على انعدام التحذيرات.
 
-### White Screen / تأخر التنقل
+لم يبدأ أي عمل من Phase 1 ضمن هذا التحقق، ولم تُضف أي ميزة جديدة.
 
-1. كان fallback في `src/main.tsx` عنصرًا صغيرًا بلا `bg-background` أو app shell، لذلك كان Suspense الفعل يظهرCasi أبيض.
-2. `Dashboard` كان bundle كبيرًا بسبب eager imports لكل الأقسام، كما كان profile loading state spinner فقط.
-3. `useAuth` كان يدخل loading state ريثما يصل query ثانوي (`currentUser`)، فيتحول التنقل إلى auth gate أبطأ من اللازم على الشبكة البطيئة.
-4. لم يكن هناك prefetch لوجهتي Dashboard/Onboarding أثناء وجود المستخدم في Auth/Onboarding، لذلك كان أول navigation ينتظر route chunk.
+## 2. نتائج التحقق النهائية
 
-### Onboarding
+جميع الأوامر التالية نُفذت من `/home/daytona/codebase` في 25 سبتمبر 2026:
 
--UX كان sequence من 15 question primitives، منفصلة عن context وحNeeds المستخدم، بدل progressive profile.
+| الأمر | النتيجة الحقيقية | الدليل المختصر |
+|---|---|---|
+| `bun test` | PASS | 5 ملفات؛ 56 ناجح، 0 فاشل، 119 استدعاء `expect()`. |
+| `bun tsc -b --noEmit` | PASS | خرج بالرمز 0 من دون رسائل فحص. |
+| `bun run lint` | PASS مع تحذيرات | 0 أخطاء، 24 تحذيرًا؛ رمز الخروج 0. |
+| `bun run build` | PASS مع ملاحظة | بناء Vite، 2469 وحدة، وchunk فارغ باسم `convex-vendor`. |
 
-### Home / Daily Loop
+**التفسير:** اجتازت اختبارات Bun وفحص TypeScript وأمر lint من ناحية رمز الخروج، كما نجح بناء الإنتاج. هذا يثبت ما فحصته هذه الأدوات فقط، ولا يثبت رحلة المستخدم أو سرعة الشبكة أو زمن أول رسم فعلي.
 
-- HomeView كان يعرض 거의 كل الأقسام في أول viewport، بينما `weeklyFocus` و`disciplineLevel` و`distraction` لم تكن manifestations كاملة في loop.
-- `focusMetric` كان له اختبار stale يتعارض مع سلوك آخر-7-أيام الموثق.
+## 3. حدود التحقق
 
-## 3. Fixes
+لم يُنفذ أي فحص متصفح أو تدفق تفاعلي. لذلك لا توجد أدلة على:
 
-- استبدلت route fallback بهيكل app-shell مرئي: header skeleton، محتوى skeleton، `aria-busy`، و`bg-background`. لم أضف setTimeout.
-- أزلت انتظار `currentUser` من auth loading gate؛ اسم/بريد المستخدم يظهران لاحقًا دون تعطيل route.
-- أضفت dynamic prefetch لـDashboard وOnboarding من Auth/Onboarding.
-- أضفت profile loading shell في Dashboard مع AppHeader وskeleton، بدل spinner وحده.
-- جعلت أقسام Dashboard secondary lazy-loaded مع `Suspense` وsection-level loading UI.
-- أزلت QuoteMarquee من Dashboard لتقليل initial work والبيانات غير الضرورية في Home.
-- أصلحت compile errors في HomeView.
-- وحّدت bottom navigation、CNav responsive، وsafe-area handling، وsizecropless icon targets إلى 44px-equivalent.
-- أضفت `overflow-x: clip` وroot height وstage transition مع `prefers-reduced-motion`.
+- تشغيل التطبيق في متصفح فعلي أو نجاح تسجيل الدخول والخروج.
+- التنقل المتكرر بين الصفحات أو الأقسام.
+- التدفق بالنقر في التسجيل الأولي، بما في ذلك الرجوع والتعديل.
+- فتح المراجعة اليومية وحفظها من الواجهة.
+- إعادة تحميل الصفحة أو مسار العودة بعد المصادقة.
+- مقاسات 360px و390px و412px، أو اتجاه RTL، أو المحتوى الديناميكي.
+- مناطق الأمان، أو لوحة المفاتيح، أو التنقل بالتركيز بلوحة المفاتيح.
+- عدم ظهور white screen، أو زمن الوصول، أو إزالة التأخير المقارب للـ5 ثوانٍ.
+- معرفة سبب الشاشة البيضاء أو التأخير، لأن الأمر لم يكن معادًا ولا موثقًا في تتبّع متصفح.
 
-## 4. Onboarding
+لم تتوفر في هذه المحادثة أداة متصفح أو Playwright أو Chromium قابلة للاستخدام. لذلك **غياب فحص المتصفح ليس نجاحًا**، ولا وجود الكود لا يعني اجتياز البوابة.
 
-- أول تشغيل أصبح 4 مشاهد basis بدل 15 شاشة:
-  1. rhythm: native time picker + quick time choices.
-  2. prayer: commitment cards + contextual missed-prayer picker.
-  3. goal: human goal cards.
-  4. habits: realistic Quran amount + starting ritual.
-- أضفت 3 مشاهد optional progressive details: day shape، wind-down، tone/focus. لا تُفرض في first run، ويمكن فتحها من النجاح أو Settings.
-- الحفاظ على البيانات: `ESSENTIAL_ANSWER_KEYS` و`OPTIONAL_ANSWER_KEYS` موجودان في data contract، و`pickAnswers` يملأ defaults آمنة دون الكتابة فوق القيم المحفوظة.
-- الحالات perpetual: loading shell، validation hint، inline save error، success state، permission state.
+## 4. Version control / Vly
 
-## 5. UI / Hierarchy
+تم فحص `git status --short` مرة واحدة. رفضته البيئة بالنص التالي:
 
-- Home أصبح: next prayer (Primary)، goal/focus card (Primary)، two short essentials (Secondary)، adhkar row، Daily Review عند الاستحقاق، optional weekly focus card.
-- أزلت rail وQuoteMarquee والمناسبات من Home حتى لا تكون كل features بنفس الأهمية.
-- Bottom navigation أصبح flex responsive وsafe-area-aware، وSheet bottom أصبح max-height قابلًا للتمرير.
-- اختيار onboarding states_surface وselected states وbutton sizes أصبحت موحدة ومركّزة، مع RTL-safe flex alignment.
+> Git and GitHub commands are blocked; Vly manages version control.
 
-## 6. Performance
+لا توجد أداة Vly مخصصة لـcommit أوpush في المحادثة. لذلك لا توجد عملية commit أوpush موثقة، ولم تُستخدم أي محاولة تجاوز للحظر.
 
-- Production build قبل التعديل: Dashboard chunk كان `197.71 kB` وQuran chunk `129.29 kB` وOnboarding `9.74 kB`.
-- Production build بعد التعديل: Dashboard `83.45 kB` وQuran `53.24 kB` وOnboarding `25.81 kB`.
-- تم فصل Dashboard sections إلى chunks مستقلة: `PrayerView`, `QuranView`, `SettingsView`, `DuasView`, `HadithView`, `PoetryView`, `ProphetsView`, `OccasionsView`, `SavedView`, `TasbihView`, `StatsTable`.
-- أزلت quote datasets من eager Dashboard path.
-- لم أضف تحسينات عشوائية أو timers جديدة للتنقل.
+## 5. حالة بوابات الإغلاق
 
-## 7. Daily Loop / Offline
+| Gate | الحالة | الدليل |
+|---|---|---|
+| Bun tests | PASS | 56 ناجح، 0 فاشل، 119 استدعاء تحقق، في 5 ملفات. |
+| TypeScript | PASS | `bun tsc -b --noEmit` خرج بالرمز 0. |
+| Lint | PASS مع تحذيرات | 0 أخطاء، 24 تحذيرًا. |
+| Production build | PASS مع ملاحظة | 2469 وحدة؛ `convex-vendor` فارغ. |
+| Browser white-screen / navigation | NOT VERIFIED | لا توجد أداة متصفح؛ لا إعادة إنتاج أو قياس. |
+| Onboarding / DailyReview / auth interactive flow | NOT VERIFIED | الأدلة البرمجية والاختبارات ليست اختبار نقر أو حفظًا فعليًا. |
+| Responsive / RTL / keyboard / safe areas | NOT VERIFIED | لم يوجد فحص متصفح أو جهاز فعلي. |
+| Commit / push | BLOCKED | أوامر Git/GitHub محجوبة بواسطة Vly؛ لا أداة Vly بديلة. |
 
-- أضفت `weeklyFocus` إلى optional Home metric بدل عرض مؤشرات متكررة بلا أولوية.
-- أضفت `disciplineLevel` لتأجيل نافذة nudge حسب أسلوب المستخدم.
-- أضفت `distraction` لتغيير صياغة تذكير الورد فقط، من دون نظام جديد أو تتبع إدمان.
--DailyReview、offline profile、day state، reminder hooks، وConvex mutations لم تُحذف.
-- نتيجة eslint النهائية: 0 errors، 24 warnings غير مانعة.
-
-## 8. Tests — نتائج فعلية
-
-- `bun test`: **PASS** — 56 tests، 119 expect، 0 failures.
-- `bun tsc -b --noEmit`: **PASS**.
-- `bun run lint`: **PASS** — 0 errors، 24 warnings.
-- `bun run build`: **PASS** — production Vite build، 2469 modules transformed.
-- أضيفت تغطية اختبار لـprogressive profile وdaily loop في `tests/phase0.test.ts`.
-- تم تصحيح expectation stale في `tests/coach.test.ts` ليطابق سلوك آخر-7-أيام الموثق.
-
-## 9. Browser Verification
-
-لم يتم التحقق منها فعليًا في هذه البيئة:
-
-- فتح التطبيق.
-- onboarding بالنقر والرجوع.
-- auth flow.
-- التنقل المتكرر بين الأقسام.
-- Daily Review من الواجهة.
-- refresh.
-- 360px / 390px / 412px.
-- safe areas وkeyboard.
-
-السبب: لم يتوفر Chromium/Playwright browser binary أو browser automation tool، ولم أستخدم starting server من terminal. لذلك لا أزعم أن browser tests اجتازت.
-
-## 10. Remaining Issues
-
-- Browser interaction verification ما زالت مطلوبة قبل إعلان إغلاق Phase 0.
-- يلزم التحقق على جهاز حقيقي أو browser harness لاختبار 360/390/412 وRTL dynamic content.
-- Git metadata/diff/commit/push غير متاحة في البيئة الحالية؛ Vly يمنع Git commands. لذلك لم أنفذ commit أو push.
-- توجد lint warnings قديمة في shadcn/generated files و`react-refresh`، لكنها لا تمنع lint exit code.
-
-## 11. Deferred to Phase 1
-
-- AI recommendation engine.
-- addiction/productivity systems.
-- camera verification.
-- social system.
-- premium.
-- advanced fitness.
-- global i18n.
-- large planner expansion.
-- أي features جديدة غير مطلوبة.
-
-Phase 0 تبقى **NOT CLOSED** حتى يتم browser verification و commit/push gate المتاحين.
+تبقى Phase 0 **NOT CLOSED** لأن التحقق التفاعلي في المتصفح لم يتحقق، كما أن بوابة إدارة الإصدارات محجوبة. لا يمكن اعتماد نجاح الأوامر وحدها كإغلاق كامل، ولا يمكن اعتبار عدم الاختبار نجاحًا.
