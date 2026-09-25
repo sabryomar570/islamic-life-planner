@@ -1,11 +1,14 @@
 /**
- * أسئلة البداية — سبعة أسئلة فقط، وكل إجابة منها تُغيّر شيئًا فعليًا في التطبيق:
- *  - وقت الاستيقاظ والنوم → وقت تذكير أذكار الصباح والمساء والنوم.
+ * أسئلة البداية — سبعة أسئلة أساسية + أربعة أسئلة «حياتك»، وكل إجابة منها تُغيّر شيئًا فعليًا:
+ *  - وقت الاستيقاظ والنوم → وقت تذكير أذكار الصباح والمساء والنوم + نافذة الرئيسية.
  *  - الالتزام بالصلاة → كثافة تنبيهات الصلاة ولهجتها.
  *  - أكثر صلاة تفوتك → تنبيه خاص بها.
  *  - مقدار الورد → وردك المعروض في المصحف والرئيسية.
  *  - أهم ما تتابعه → ترتيب بطاقات الشاشة الرئيسية.
  *  - أول عمل صباحي → أول بطاقة في الرئيسية ومحتوى تذكير الصباح.
+ *  - شكل يومك ونهاية التزامك → تسمية يومك ووقت فتح مراجعة اليوم.
+ *  - مستوى المتابعة → نبرة المراجعة والتذكير.
+ *  - تركيز الأسبوع → المؤشر الأسبوعي الوحيد المعروض.
  * المكان لا يُسأل عنه: يُستنتج من المنطقة الزمنية للجهاز.
  */
 
@@ -18,7 +21,12 @@ export type AnswerKey =
   | "mostMissedPrayer"
   | "quranAmount"
   | "mainGoal"
-  | "startingRitual";
+  | "startingRitual"
+  // ——— أسئلة «حياتك»: كل إجابة تُغيّر ترتيب الرئيسية أو وقت المراجعة أو نبرة المحاسبة ———
+  | "dayRhythm"
+  | "dayEnd"
+  | "disciplineLevel"
+  | "weeklyFocus";
 
 export type ProfileAnswers = Record<AnswerKey, string>;
 
@@ -28,7 +36,7 @@ export type QuestionOption = {
   hint?: string;
 };
 
-export type QuestionSection = "يومك ونومك" | "صلاتك" | "القرآن" | "هدفك";
+export type QuestionSection = "يومك ونومك" | "صلاتك" | "القرآن" | "هدفك" | "حياتك";
 
 export type Question = {
   key: AnswerKey;
@@ -126,6 +134,51 @@ export const QUESTIONS: Question[] = [
       { value: "tasbih", label: "تسبيح وذكر" },
     ],
   },
+  // ——— «حياتك»: أربعة أسئلة تُدير ترتيب يومك ومراجعته — كل إجابة مستخدمة فعلًا ———
+  {
+    key: "dayRhythm",
+    title: "كيف يبدو يومك غالبًا؟",
+    hint: "حتى يُسمّى يومك باسمه، وتُرتّب خطواته المناسبة له.",
+    section: "حياتك",
+    kind: "choice",
+    options: [
+      { value: "study", label: "دراسة" },
+      { value: "work", label: "عمل" },
+      { value: "both", label: "دراسة وعمل" },
+      { value: "open", label: "وقتي مرن" },
+    ],
+  },
+  {
+    key: "dayEnd",
+    title: "متى ينتهي التزامك اليومي عادة؟",
+    hint: "بعد هذا الوقت نفتح معك مراجعة يومك — دقيقة واحدة.",
+    section: "حياتك",
+    kind: "time",
+  },
+  {
+    key: "disciplineLevel",
+    title: "كيف تحب أن أتابعك؟",
+    hint: "توازن بين الرفق والجدّ؛ تختاره أنت ويمكن تغييره من الإعدادات.",
+    section: "حياتك",
+    kind: "choice",
+    options: [
+      { value: "gentle", label: "برفق", hint: "تذكير هادئ فقط، بلا أسئلة إضافية" },
+      { value: "balanced", label: "متوازن", hint: "تذكير + مراجعة يوم واحدة" },
+      { value: "firm", label: "حازم", hint: "أذكرك بصراحة وأسأل عن العائق" },
+    ],
+  },
+  {
+    key: "weeklyFocus",
+    title: "ما الذي نركّز عليه هذا الأسبوع؟",
+    hint: "هدف واحد فقط، ونقيسه بأدلة من سجلك لا بالشعور.",
+    section: "حياتك",
+    kind: "choice",
+    options: [
+      { value: "prayer", label: "الصلاة في وقتها" },
+      { value: "adhkar", label: "أذكار الصباح والمساء" },
+      { value: "consistency", label: "ألا يمر يوم بلا ذكر وصلاة" },
+    ],
+  },
 ];
 
 export const QUESTIONS_COUNT = QUESTIONS.length;
@@ -138,6 +191,10 @@ export const DEFAULT_ANSWERS: ProfileAnswers = {
   quranAmount: "page",
   mainGoal: "prayer",
   startingRitual: "wird",
+  dayRhythm: "open",
+  dayEnd: "17:00",
+  disciplineLevel: "balanced",
+  weeklyFocus: "prayer",
 };
 
 /** يدمج الإجابات المحفوظة مع القيم الافتراضية حتى لا تنقص إجابة أبدًا. */
@@ -160,7 +217,9 @@ export function optionsFor(key: AnswerKey): QuestionOption[] {
 export function labelFor(key: AnswerKey, value: string): string {
   const option = optionsFor(key).find((item) => item.value === value);
   if (option) return option.label;
-  if (key === "wakeTime" || key === "sleepTime") return `الساعة ${value}`;
+  if (key === "wakeTime" || key === "sleepTime" || key === "dayEnd") {
+    return `الساعة ${value}`;
+  }
   return value;
 }
 

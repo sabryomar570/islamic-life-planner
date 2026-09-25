@@ -2,6 +2,11 @@ import { Email } from "@convex-dev/auth/providers/Email";
 import axios from "axios";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 
+/**
+ * إرسال رمز التحقق عبر مرحّل البريد الخاص بالمنصة.
+ * مفتاح البروتوكول يُقرأ من متغير البيئة FREEBUFF_OTP_KEY (يُدار عبر `convex env set`)
+ * ولا يُكتب في الشيفرة أبدًا — لا أسرار في المستودع، ولا حاجة لتعديل الكود عند تدوير المفتاح.
+ */
 export const emailOtp = Email({
   id: "email-otp",
   maxAge: 60 * 15, // 15 minutes
@@ -16,6 +21,12 @@ export const emailOtp = Email({
     return generateRandomString(random, alphabet, 6);
   },
   async sendVerificationRequest({ identifier: email, token }) {
+    const apiKey = process.env.FREEBUFF_OTP_KEY;
+    if (!apiKey) {
+      throw new Error(
+        "إرسال البريد غير مهيأ: متغير البيئة FREEBUFF_OTP_KEY مفقود على نشر Convex.",
+      );
+    }
     try {
       await axios.post(
         "https://auth.freebuff.app/send_otp",
@@ -26,7 +37,7 @@ export const emailOtp = Email({
         },
         {
           headers: {
-            "x-api-key": "fb_email_2crN1hqIArZP2bEfvjp5Qik4",
+            "x-api-key": apiKey,
           },
         },
       );

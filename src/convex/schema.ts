@@ -32,7 +32,7 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // إجابات أسئلة البداية (٧ أسئلة) — كل إجابة منها تُغيّر سلوكًا فعليًا.
+    // إجابات أسئلة البداية (٧ أسئلة أساسية + ٤ أسئلة «حياتك») — كل إجابة تُغيّر سلوكًا فعليًا.
     profiles: defineTable({
       userId: v.id("users"),
       wakeTime: v.string(),
@@ -42,6 +42,15 @@ const schema = defineSchema(
       quranAmount: v.string(),
       mainGoal: v.string(),
       startingRitual: v.string(),
+      // ——— أسئلة «حياتك» (اختيارية: ملفات قديمة تعمل بلا كسر) ———
+      // شكل اليوم: study | work | both | open
+      dayRhythm: v.optional(v.string()),
+      // نهاية الالتزام اليومي (HH:MM) — يفتح مراجعة اليوم بعدها.
+      dayEnd: v.optional(v.string()),
+      // مستوى المتابعة المطلوب: gentle | balanced | firm
+      disciplineLevel: v.optional(v.string()),
+      // تركيز الأسبوع: prayer | adhkar | consistency
+      weeklyFocus: v.optional(v.string()),
       // المدينة المستنتجة من المنطقة الزمنية أو المُعدّل عليها من الإعدادات.
       city: v.optional(v.string()),
       // إحداثيات اختيارية عند السماح بالموقع — لحساب مواقيت أدق من اسم المدينة.
@@ -82,6 +91,22 @@ const schema = defineSchema(
     })
       .index("by_user", ["userId"])
       .index("by_user_and_item", ["userId", "itemId"]),
+
+    // المراجعة اليومية: كيف كان يومك + أكبر عائق + ملاحظة — أساس المحاسبة والتكيّف.
+    dayReviews: defineTable({
+      userId: v.id("users"),
+      date: v.string(),
+      // bad | ok | good | great
+      mood: v.string(),
+      // none | busy | tired | forgot | mood
+      blocker: v.string(),
+      // ملاحظة حرة قصيرة (قد تكون فارغة).
+      note: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_and_date", ["userId", "date"]),
   },
   {
     schemaValidation: false,

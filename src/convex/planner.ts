@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { dateKey } from "../lib/time";
 
-/** الحقول السبعة المستخرجة من أسئلة البداية — كلٌّ منها يؤثر فعليًا في التطبيق. */
+/** الحقول الأساسية المستخرجة من أسئلة البداية — كلٌّ منها يؤثر فعليًا في التطبيق. */
 export const answersValidator = v.object({
   wakeTime: v.string(),
   sleepTime: v.string(),
@@ -12,6 +12,11 @@ export const answersValidator = v.object({
   quranAmount: v.string(),
   mainGoal: v.string(),
   startingRitual: v.string(),
+  /** حقول «حياتك» — اختيارية ليبقى التوافق مع الملفات القديمة. */
+  dayRhythm: v.optional(v.string()),
+  dayEnd: v.optional(v.string()),
+  disciplineLevel: v.optional(v.string()),
+  weeklyFocus: v.optional(v.string()),
 });
 
 /* ——— قوائم مغلقة: أي قيمة خارجها تُرفض في طبقة الخادم قبل وصولها لقاعدة البيانات. ——— */
@@ -19,11 +24,27 @@ const PRAYER_KEYS = ["fajr", "dhuhr", "asr", "maghrib", "isha"] as const;
 const PRAYER_STATUSES = ["jamaah", "ontime", "late", "missed"] as const;
 const ADHKAR_KINDS = ["morning", "evening", "sleep", "after_prayer", "distress"] as const;
 const FAVORITE_KINDS = ["hadith", "poem", "dhikr", "ayah", "story"] as const;
+const DAY_RHYTHMS = ["study", "work", "both", "open"] as const;
+const DISCIPLINE_LEVELS = ["gentle", "balanced", "firm"] as const;
+const WEEKLY_FOCUS = ["prayer", "adhkar", "consistency"] as const;
+const REVIEW_MOODS = ["bad", "ok", "good", "great"] as const;
+const REVIEW_BLOCKERS = ["none", "busy", "tired", "forgot", "mood"] as const;
 
 export const prayerValidator = v.union(...PRAYER_KEYS.map((key) => v.literal(key)));
 export const prayerStatusValidator = v.union(...PRAYER_STATUSES.map((value) => v.literal(value)));
 export const adhkarKindValidator = v.union(...ADHKAR_KINDS.map((value) => v.literal(value)));
 export const favoriteKindValidator = v.union(...FAVORITE_KINDS.map((value) => v.literal(value)));
+export const reviewMoodValidator = v.union(...REVIEW_MOODS.map((value) => v.literal(value)));
+export const reviewBlockerValidator = v.union(...REVIEW_BLOCKERS.map((value) => v.literal(value)));
+
+/** يختار قيمة من قائمة مغلقة أو يعيد الافتراضي — أي قيمة غريبة تُرفض بصمت إلى الافتراضي. */
+function pickFromList<T extends string>(
+  value: string | undefined,
+  list: readonly T[],
+  fallback: T,
+): T {
+  return value !== undefined && (list as readonly string[]).includes(value) ? (value as T) : fallback;
+}
 
 const MAX_TEXT = 160;
 const MAX_FAVORITES = 500;
@@ -100,6 +121,11 @@ export const saveProfile = mutation({
       quranAmount: cleanText(answers.quranAmount, 40),
       mainGoal: cleanText(answers.mainGoal, 40),
       startingRitual: cleanText(answers.startingRitual, 40),
+      // حقول «حياتك»: قيم افتراضية آمنة لمن لم يجب عليها بعد.
+      dayRhythm: pickFromList(answers.dayRhythm, DAY_RHYTHMS, "open"),
+      dayEnd: answers.dayEnd ? assertTime(answers.dayEnd, "نهاية يومك") : "17:00",
+      disciplineLevel: pickFromList(answers.disciplineLevel, DISCIPLINE_LEVELS, "balanced"),
+      weeklyFocus: pickFromList(answers.weeklyFocus, WEEKLY_FOCUS, "prayer"),
     };
 
     const locationPatch: { city?: string; locationLabel?: string } = {};
@@ -184,7 +210,12 @@ export const getDayState = query({
     const safeDate = assertDate(date);
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
-      return { prayers: {} as Record<string, string>, adhkar: [] as string[], favorites: [] as string[] };
+      return {
+        prayers: {} as Record<string, string>,
+        adhkar: [] as string[],
+        favorites: [] as string[],
+        review: null as null | { mood: string; blocker: string; note: string },
+      };
     }
 
     const prayerLogs = await ctx.db
@@ -202,6 +233,11 @@ export const getDayState = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
+    const reviewDoc = await ctx.db
+      .query("dayReviews")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", safeDate))
+      .unique();
+
     const prayers: Record<string, string> = {};
     for (const log of prayerLogs) prayers[log.prayer] = log.status;
 
@@ -209,6 +245,9 @@ export const getDayState = query({
       prayers,
       adhkar: adhkarLogs.map((log) => log.kind),
       favorites: favorites.map((item) => item.itemId),
+      review: reviewDoc
+        ? { mood: reviewDoc.mood, blocker: reviewDoc.blocker, note: reviewDoc.note }
+        : null,
     };
   },
 });
@@ -350,7 +389,8 @@ export const getStats = query({
       best: null as string | null,
       weakest: null as string | null,
       perPrayer: [] as { key: string; done: number; missed: number }[],
-      daily: [] as { date: string; done: number; logged: number; adhkar: number }[],
+      daily: [] as { date: string; done: number; logged: number; adhkar: number; reviewed: boolean }[],
+      reviewDays: 0,
       bestWeekStart: null as string | null,
       longestRun: 0,
     };
@@ -373,6 +413,12 @@ export const getStats = query({
       .query("adhkarLogs")
       .withIndex("by_user_and_date", (q) => q.eq("userId", userId).gte("date", from))
       .take(1000);
+    // المراجعات اليومية — تُدمج في السجل ليصبح مؤشر «الاستمرار» صادقًا.
+    const reviewLogs = await ctx.db
+      .query("dayReviews")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", userId).gte("date", from))
+      .take(120);
+    const reviewedDates = new Set(reviewLogs.map((log) => log.date));
 
     const perPrayerMap = new Map<string, { done: number; missed: number }>();
     for (const key of PRAYER_KEYS) perPrayerMap.set(key, { done: 0, missed: 0 });
@@ -427,7 +473,7 @@ export const getStats = query({
       ).length;
       const logged = PRAYER_KEYS.filter((key) => day[key]).length;
       const dayAdhkar = adhkarLogs.filter((log) => log.date === date).length;
-      return { date, done, logged, adhkar: dayAdhkar };
+      return { date, done, logged, adhkar: dayAdhkar, reviewed: reviewedDates.has(date) };
     });
 
     // أفضل أسبوع: الأسبوع السباعي الأعلى إنجازًا خلال الثلاثين يومًا.
@@ -468,9 +514,124 @@ export const getStats = query({
       weakest: ranked[ranked.length - 1]?.key ?? null,
       perPrayer,
       daily,
+      reviewDays: reviewedDates.size,
       bestWeekStart,
       longestRun,
     };
+  },
+});
+
+/** حفظ مراجعة اليوم (٣ لمسات) — تُحدَّث إن وُجدت لليوم نفسه. */
+export const saveDayReview = mutation({
+  args: {
+    date: v.string(),
+    mood: reviewMoodValidator,
+    blocker: reviewBlockerValidator,
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    const date = assertDate(args.date);
+    const note =
+      args.note && args.note.trim().length > 0 ? cleanText(args.note, 160) : "";
+
+    const existing = await ctx.db
+      .query("dayReviews")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", date))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        mood: args.mood,
+        blocker: args.blocker,
+        note,
+        updatedAt: Date.now(),
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("dayReviews", {
+      userId,
+      date,
+      mood: args.mood,
+      blocker: args.blocker,
+      note,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/** حذف كل بيانات المستخدم من الخادم (يبقى الحساب) — وعد الخصوصية فعليًا لا شعارًا. */
+export const deleteMyData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    let removed = 0;
+
+    // حذف على دفعات محدودة لكل جدول (لا حلقات مفتوحة).
+    for (let pass = 0; pass < 10; pass += 1) {
+      const rows = await ctx.db
+        .query("prayerLogs")
+        .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
+        .take(200);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+      if (rows.length < 200) break;
+    }
+
+    for (let pass = 0; pass < 10; pass += 1) {
+      const rows = await ctx.db
+        .query("adhkarLogs")
+        .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
+        .take(200);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+      if (rows.length < 200) break;
+    }
+
+    for (let pass = 0; pass < 10; pass += 1) {
+      const rows = await ctx.db
+        .query("dayReviews")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(200);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+      if (rows.length < 200) break;
+    }
+
+    for (let pass = 0; pass < 10; pass += 1) {
+      const rows = await ctx.db
+        .query("favorites")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(200);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+      if (rows.length < 200) break;
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+    if (profile) {
+      await ctx.db.delete(profile._id);
+      removed += 1;
+    }
+
+    return removed;
   },
 });
 
