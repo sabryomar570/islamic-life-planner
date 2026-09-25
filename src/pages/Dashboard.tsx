@@ -165,7 +165,7 @@ export default function Dashboard() {
 
   const profileDoc = useQuery(api.planner.getProfile);
   const today = dateKey();
-  const weekStart = useMemo(() => startOfWeekKey(), []);
+  const weekStart = startOfWeekKey();
   const dayState = useQuery(api.planner.getDayState, { date: today });
   const weeklyPlanDoc = useQuery(
     api.weeklyPlans.getWeeklyPlan,
@@ -265,15 +265,16 @@ export default function Dashboard() {
   const times = usePrayerTimes({ city, coords, method: prefs.method });
 
   useEffect(() => {
-    if (view !== "today" || !profileDoc || weeklyPlanDoc !== undefined) return;
+    if (view !== "today" || !online || !profileDoc || weeklyPlanDoc !== undefined) return;
     const initKey = `${weekStart}:${profileDoc._id}`;
     if (planInitAttemptedRef.current === initKey) return;
     planInitAttemptedRef.current = initKey;
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
     void ensureWeeklyPlanMutation({ weekStart, timezone }).catch(() => {
+      planInitAttemptedRef.current = null;
       toast.error("تعذّر تجهيز خطة الأسبوع. حاول تحديث الصفحة مرة أخرى.");
     });
-  }, [ensureWeeklyPlanMutation, profileDoc, view, weekStart, weeklyPlanDoc]);
+  }, [ensureWeeklyPlanMutation, online, profileDoc, view, weekStart, weeklyPlanDoc]);
 
   const dailyPlan = useMemo<DailyPlan | null>(() => {
     if (!answers || !weeklyPlanDoc) return null;

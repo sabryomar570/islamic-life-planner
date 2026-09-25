@@ -92,7 +92,9 @@ async function adaptiveContext(ctx: AnyCtx, userId: GenericId<"users">, weekStar
   const [plans, logs] = await Promise.all([
     ctx.db
       .query("weeklyPlans")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user_and_week", (q) =>
+        q.eq("userId", userId).gte("weekStart", from).lte("weekStart", weekStart),
+      )
       .take(8),
     ctx.db
       .query("planItemLogs")
@@ -465,7 +467,7 @@ export const getPlanProgress = query({
         }
         return {
           date,
-          planned: plan.items.filter((item) => item.date === date).length,
+          planned: plan.items.filter((item) => item.date === date && item.enabled).length,
           ...counts,
           reviewed: reviewed.has(date),
         };

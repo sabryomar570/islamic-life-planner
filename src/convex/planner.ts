@@ -99,6 +99,13 @@ function assertDate(date: string) {
   return date;
 }
 
+function weekStartForDate(date: string) {
+  const value = new Date(`${date}T00:00:00Z`);
+  const offset = (value.getUTCDay() + 6) % 7;
+  value.setUTCDate(value.getUTCDate() - offset);
+  return value.toISOString().slice(0, 10);
+}
+
 function assertTime(value: string, field: string) {
   if (!TIME_PATTERN.test(value)) throw new Error(`قيمة ${field} يجب أن تكون وقتًا مثل 06:30`);
   return value;
@@ -615,9 +622,11 @@ export const saveDayReview = mutation({
 
     const plan = await ctx.db
       .query("weeklyPlans")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .take(8);
-    const plannedCount = plan.reduce(
+      .withIndex("by_user_and_week", (q) =>
+        q.eq("userId", userId).eq("weekStart", weekStartForDate(date)),
+      )
+      .unique();
+    const plannedCount = (plan?.items ?? []).reduce(
       (total, item) => total + item.items.filter((entry) => entry.date === date && entry.enabled).length,
       0,
     );
