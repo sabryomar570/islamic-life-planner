@@ -265,7 +265,14 @@ export default function Dashboard() {
   const times = usePrayerTimes({ city, coords, method: prefs.method });
 
   useEffect(() => {
-    if (view !== "today" || !online || !profileDoc || weeklyPlanDoc !== undefined) return;
+    // useQuery uses `undefined` while loading and `null` when the plan is absent.
+    // Only the latter means we need to create the first plan for this week.
+    if (
+      view !== "today" ||
+      !online ||
+      !profileDoc ||
+      (weeklyPlanDoc !== undefined && weeklyPlanDoc !== null)
+    ) return;
     const initKey = `${weekStart}:${profileDoc._id}`;
     if (planInitAttemptedRef.current === initKey) return;
     planInitAttemptedRef.current = initKey;

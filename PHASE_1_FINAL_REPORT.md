@@ -60,7 +60,12 @@
     - تفاصيل اليوم قابلة للطي، والأولوية تبقى واضحة.
     - البيانات الكثيفة لا تُقرأ إلا عند فتح Today view.
 
-## Verified
+## Follow-up Verification
+
+أثناء التحقق بعد تنفيذ Phase 1 ظهر خطآن تكامل حقيقيان تم إصلاحهما قبل اعتماد النتيجة:
+
+- `src/convex/planner.ts`: كان `plannedCount` يحاول قراءة `item.items` بينما `weeklyPlans.items` مصفوفة عناصر مسطحة؛ أصبح Count يرشّح عناصر اليوم المفعّلة مباشرة.
+- `src/pages/Dashboard.tsx`: `useQuery` يعيد `undefined` أثناء التحميل و`null` عند عدم وجود خطة، لكن شرط التهيئة كان يتوقف عند الحالتين؛ أصبح التهيئة تحدث فقط عند `null`، فتُنشأ أول خطة أسبوعية بعد onboarding وليست بطاقة تحميل دائمة.
 
 ### Automated tests
 
@@ -71,7 +76,7 @@
 
 ### TypeScript
 
-- `bun tsc -b --noEmit` — PASS
+- `bun tsc -b --noEmit` — PASS (بعد إصلاح خطأ عدّاد plannedCount في Convex)
 
 ### Convex
 

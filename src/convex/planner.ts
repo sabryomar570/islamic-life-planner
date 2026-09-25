@@ -626,10 +626,9 @@ export const saveDayReview = mutation({
         q.eq("userId", userId).eq("weekStart", weekStartForDate(date)),
       )
       .unique();
-    const plannedCount = (plan?.items ?? []).reduce(
-      (total, item) => total + item.items.filter((entry) => entry.date === date && entry.enabled).length,
-      0,
-    );
+    const plannedCount = (plan?.items ?? []).filter(
+      (item) => item.date === date && item.enabled,
+    ).length;
     const learning = {
       plannedCount,
       completedCount: outcomeCounts.completed,
