@@ -9,6 +9,8 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
+    /* PHASE 3.x: الإصدار يُقرأ من package.json وقت البناء، فلا يُكتب يدويًا. */
+    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "moduleDetection": "force",

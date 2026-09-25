@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Clock,
   Feather,
+  Fingerprint,
   HeartHandshake,
   Landmark,
   ScrollText,
@@ -38,7 +39,8 @@ export type DashView =
   | "stats"
   | "weekly"
   | "review"
-  | "settings";
+  | "settings"
+  | "developer";
 
 export const DASH_VIEWS: DashView[] = [
   "today",
@@ -56,6 +58,7 @@ export const DASH_VIEWS: DashView[] = [
   "weekly",
   "review",
   "settings",
+  "developer",
 ];
 
 export function isDashView(value: string | null): value is DashView {
@@ -78,6 +81,7 @@ export const VIEW_LABELS: Record<DashView, string> = {
   weekly: "الخطة الأسبوعية",
   review: "مراجعة اليوم",
   settings: "الإعدادات",
+  developer: "المطوّر",
 };
 
 export type NavEntry = {
@@ -150,6 +154,9 @@ export const LIBRARY_GROUPS: NavGroup[] = [
     hint: "إعدادات وطريقة الاستخدام",
     entries: [
       { key: "settings", label: "الإعدادات", hint: "الإشعارات والمكان والبيانات", icon: Settings },
+      // «المطوّر» هنا لا في الشريط السفلي: هو صفحة عن التطبيق،
+      // والشريط السفلي للأقسام التي يستخدمها المستخدم كل يوم.
+      { key: "developer", label: "المطوّر", hint: "من هو OUD ولماذا", icon: Fingerprint },
     ],
   },
 ];

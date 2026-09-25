@@ -74,6 +74,9 @@ import { toast } from "sonner";
 const DuasView = lazy(() =>
   import("@/components/app/DuasView").then((module) => ({ default: module.DuasView })),
 );
+const DeveloperView = lazy(() =>
+  import("@/components/app/DeveloperView").then((module) => ({ default: module.DeveloperView })),
+);
 const HadithView = lazy(() =>
   import("@/components/app/HadithView").then((module) => ({ default: module.HadithView })),
 );
@@ -1143,6 +1146,8 @@ export default function Dashboard() {
             city={locationLabel}
           />
         ) : null}
+
+        {view === "developer" ? <DeveloperView /> : null}
 
         {view === "today" && !answers ? (
           <EmptyState
