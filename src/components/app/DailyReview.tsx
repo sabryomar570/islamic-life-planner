@@ -17,14 +17,23 @@ export type DayReviewRecord = {
   mood: ReviewMood;
   blocker: ReviewBlocker;
   note: string;
+  plannedCount: number;
+  completedCount: number;
+  partialCount: number;
+  postponedCount: number;
+  skippedCount: number;
+  succeeded: string;
+  failed: string;
+  why: string;
+  tomorrowAdjustment: string;
 };
 
 const MOODS: ReviewMood[] = ["bad", "ok", "good", "great"];
 const BLOCKERS: ReviewBlocker[] = ["none", "busy", "tired", "forgot", "mood"];
 
 /**
- * مراجعة اليوم: ثلاث لمسات فقط (كيف كان؟ / ما العائق؟ / ملاحظة اختيارية).
- * بعد الحفظ تُعرض الخلاصة واقتراح صغير للغد — بلا درجات مخترعة وبلا لوم.
+ * مراجعة اليوم: مزاج اليوم وخلاصته، ثم ما نجح وتعثر وسببه وتعديل الغد.
+ * تُغلق المراجعة اليوم نفسه، وتُشتق عدادات الخطة من سجلاتها لا من أرقام يدوية.
  */
 export function DailyReview({
   visible,
@@ -42,6 +51,10 @@ export function DailyReview({
   const [mood, setMood] = useState<ReviewMood | null>(null);
   const [blocker, setBlocker] = useState<ReviewBlocker | null>(null);
   const [note, setNote] = useState("");
+  const [succeeded, setSucceeded] = useState("");
+  const [failed, setFailed] = useState("");
+  const [why, setWhy] = useState("");
+  const [tomorrowAdjustment, setTomorrowAdjustment] = useState("");
   const [postponed, setPostponed] = useState(false);
 
   if (!visible) return null;
@@ -64,8 +77,31 @@ export function DailyReview({
           {" — "}
           {reviewSummaryLine(prayedToday)}
         </p>
+        <div className="mt-3 grid grid-cols-5 gap-1.5 text-center text-[10px] text-muted-foreground">
+          {[
+            ["مخطط", review.plannedCount],
+            ["تم", review.completedCount],
+            ["جزئي", review.partialCount],
+            ["مؤجل", review.postponedCount],
+            ["لم يتم", review.skippedCount],
+          ].map(([label, value]) => (
+            <span key={label} className="rounded-xl bg-white/65 px-1 py-2">
+              <strong className="block text-sm text-foreground">{value}</strong>
+              {label}
+            </span>
+          ))}
+        </div>
+        {review.succeeded ? (
+          <p className="mt-2 text-[11px] leading-5"><strong>ما نجح:</strong> {review.succeeded}</p>
+        ) : null}
+        {review.failed ? (
+          <p className="mt-1 text-[11px] leading-5"><strong>ما تعثر:</strong> {review.failed}</p>
+        ) : null}
+        {review.why ? (
+          <p className="mt-1 text-[11px] leading-5"><strong>السبب:</strong> {review.why}</p>
+        ) : null}
         <p className="mt-2 rounded-xl bg-primary/8 px-3 py-2 text-[11px] leading-5 text-foreground/85">
-          غدًا: {REVIEW_TIPS[review.blocker]}
+          غدًا: {review.tomorrowAdjustment || REVIEW_TIPS[review.blocker]}
         </p>
         {review.note ? (
           <p className="mt-2 rounded-xl bg-white/70 px-3 py-2 text-[11px] text-muted-foreground">
@@ -128,11 +164,39 @@ export function DailyReview({
         </div>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 grid gap-2">
+        <Input
+          value={succeeded}
+          onChange={(event) => setSucceeded(event.target.value.slice(0, 240))}
+          placeholder="ما الذي نجح اليوم؟ (اختياري)"
+          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
+          maxLength={240}
+        />
+        <Input
+          value={failed}
+          onChange={(event) => setFailed(event.target.value.slice(0, 240))}
+          placeholder="ما الذي تعثر؟ (اختياري)"
+          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
+          maxLength={240}
+        />
+        <Input
+          value={why}
+          onChange={(event) => setWhy(event.target.value.slice(0, 240))}
+          placeholder="لماذا؟ (اختياري)"
+          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
+          maxLength={240}
+        />
+        <Input
+          value={tomorrowAdjustment}
+          onChange={(event) => setTomorrowAdjustment(event.target.value.slice(0, 240))}
+          placeholder="تعديل واحد واضح للغد (اختياري)"
+          className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
+          maxLength={240}
+        />
         <Input
           value={note}
           onChange={(event) => setNote(event.target.value.slice(0, 160))}
-          placeholder="سطر واحد لنفسك (اختياري)"
+          placeholder="ملاحظة لنفسك (اختياري)"
           className="glass-tile h-10 rounded-2xl border-white/70 text-[12px]"
           maxLength={160}
         />
@@ -152,7 +216,20 @@ export function DailyReview({
           disabled={!canSave}
           onClick={() => {
             if (!mood || !blocker) return;
-            onSave({ mood, blocker, note: note.trim() });
+            onSave({
+              mood,
+              blocker,
+              note: note.trim(),
+              plannedCount: 0,
+              completedCount: 0,
+              partialCount: 0,
+              postponedCount: 0,
+              skippedCount: 0,
+              succeeded: succeeded.trim(),
+              failed: failed.trim(),
+              why: why.trim(),
+              tomorrowAdjustment: tomorrowAdjustment.trim(),
+            });
           }}
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}

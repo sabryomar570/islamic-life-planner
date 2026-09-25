@@ -35,7 +35,6 @@ export function formatArabicTime(hhmm: string, withPeriod = true): string {
   const mins = minutes % 60;
   const isPm = hours24 >= 12;
   const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
-  // الدقائق أيضًا بأرقام هندية — كشفها اختبارات bun: كانت تظهر ٥:16 بأرقام مختلطة.
   const time = `${arabicNumber(hours12)}:${toArabicDigits(String(mins).padStart(2, "0"))}`;
   if (!withPeriod) return time;
   return `${time} ${isPm ? "مساءً" : "صباحًا"}`;
@@ -55,6 +54,14 @@ export function dateKey(date: Date = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/** بداية الأسبوع المحلي، يوم الاثنين، وبصيغة YYYY-MM-DD. */
+export function startOfWeekKey(date: Date = new Date()): string {
+  const value = new Date(date);
+  const offset = (value.getDay() + 6) % 7;
+  value.setDate(value.getDate() - offset);
+  return dateKey(value);
 }
 
 export function formatGregorian(date: Date = new Date()): string {

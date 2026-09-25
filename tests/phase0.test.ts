@@ -9,9 +9,11 @@ import {
 import { dayPeriod, focusMetric, planLine, reviewDue } from "../src/lib/coach";
 
 describe("progressive profile", () => {
-  test("keeps seven essential answers and defers eight useful refinements", () => {
+  test("keeps seven essential answers and defers progressive refinements", () => {
     expect(ESSENTIAL_ANSWER_KEYS).toHaveLength(7);
-    expect(OPTIONAL_ANSWER_KEYS).toHaveLength(8);
+    expect(OPTIONAL_ANSWER_KEYS.length).toBeGreaterThanOrEqual(8);
+    expect(OPTIONAL_ANSWER_KEYS).toContain("workStart");
+    expect(OPTIONAL_ANSWER_KEYS).toContain("commitment");
     expect(ESSENTIAL_ANSWER_KEYS.every((key) => questionFor(key))).toBe(true);
   });
 

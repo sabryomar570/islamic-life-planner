@@ -16,6 +16,7 @@ import {
 } from "@/lib/notify";
 import { isOddNightOfLastTen, isRamadan } from "@/lib/hijri";
 import { PRAYERS, currentPrayer, nextPrayer, type Timings } from "@/lib/prayers";
+import { prioritizeNotifications } from "@/lib/notification-intelligence";
 import { dateKey, formatDuration, toMinutes } from "@/lib/time";
 import { needsGentlePrayerReminders } from "@/data/questions";
 import type { Preferences } from "@/hooks/use-preferences";
@@ -266,16 +267,19 @@ export function useReminderCenter(options: {
 
   const schedule = useMemo(
     () =>
-      buildReminderSchedule({
-        now,
-        timings,
-        prefs,
-        sleepTime,
-        mostMissedPrayer,
-        prayerCommitment,
-        prayers,
-        adhkarDone,
-      }),
+      prioritizeNotifications(
+        buildReminderSchedule({
+          now,
+          timings,
+          prefs,
+          sleepTime,
+          mostMissedPrayer,
+          prayerCommitment,
+          prayers,
+          adhkarDone,
+        }),
+        { now },
+      ),
     [now, timings, prefs, sleepTime, mostMissedPrayer, prayerCommitment, prayers, adhkarDone],
   );
 

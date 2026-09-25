@@ -7,6 +7,7 @@ import {
   addMinutes,
   arabicNumber,
   dateKey,
+  startOfWeekKey,
   diffMinutes,
   formatArabicTime,
   toHHMM,
@@ -76,6 +77,16 @@ describe("dateKey — مفتاح التاريخ المحلي بصيغة YYYY-MM-
     const now = new Date();
     const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     expect(dateKey()).toBe(expected);
+  });
+});
+
+describe("startOfWeekKey — الأسبوع المحلي يبدأ الاثنين", () => {
+  test("السبت يعود إلى يوم الاثنين في الأسبوع نفسه", () => {
+    expect(startOfWeekKey(new Date(2026, 8, 26))).toBe("2026-09-21");
+  });
+
+  test("الاثنين يبقى نفسه", () => {
+    expect(startOfWeekKey(new Date(2026, 8, 21, 23, 59))).toBe("2026-09-21");
   });
 });
 

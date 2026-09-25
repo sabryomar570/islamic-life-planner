@@ -1,5 +1,5 @@
 /**
- * أسئلة البداية — خمسة عشر سؤالًا أساسيًا، وكل إجابة منها تُغيّر شيئًا فعليًا:
+ * أسئلة البداية — سبعة أسئلة أساسية ثم refining تدريجي، وكل إجابة منها تُغيّر شيئًا فعليًا:
  *  - وقت الاستيقاظ والنوم → وقت تذكير أذكار الصباح والمساء والنوم + نافذة الرئيسية.
  *  - الالتزام بالصلاة → كثافة تنبيهات الصلاة ولهجتها.
  *  - أكثر صلاة تفوتك → تنبيه خاص بها.
@@ -12,7 +12,7 @@
  * المكان لا يُسأل عنه: يُستنتج من المنطقة الزمنية للجهاز.
  */
 
-export type QuestionKind = "time" | "choice";
+export type QuestionKind = "time" | "choice" | "text";
 
 export type AnswerKey =
   | "wakeTime"
@@ -30,7 +30,11 @@ export type AnswerKey =
   | "distraction"
   | "eveningReset"
   | "disciplineLevel"
-  | "weeklyFocus";
+  | "weeklyFocus"
+  | "workStart"
+  | "workEnd"
+  | "restTime"
+  | "commitment";
 
 export type ProfileAnswers = Record<AnswerKey, string>;
 
@@ -55,6 +59,10 @@ export const OPTIONAL_ANSWER_KEYS = [
   "eveningReset",
   "disciplineLevel",
   "weeklyFocus",
+  "workStart",
+  "workEnd",
+  "restTime",
+  "commitment",
 ] as const satisfies readonly AnswerKey[];
 
 export type QuestionOption = {
@@ -190,6 +198,27 @@ export const QUESTIONS: Question[] = [
     kind: "time",
   },
   {
+    key: "workStart",
+    title: "متى تبدأ الدراسة أو العمل عادةً؟",
+    hint: "أحيانًا لا تكون نافذة واحدة مناسبة؛ اتركها فارغة وسنكمل إعداد الخطة بالمعلومات المتاحة.",
+    section: "حياتك",
+    kind: "time",
+  },
+  {
+    key: "workEnd",
+    title: "متى ينتهي عادةً؟",
+    hint: "هذه نافذة تقريبية يختارها المستخدم، وليست التزامًا مفروضًا.",
+    section: "حياتك",
+    kind: "time",
+  },
+  {
+    key: "restTime",
+    title: "متى تكون الراحة القصيرة أنسب لك؟",
+    hint: "ستضعها الخطة كفرصة قصيرة؛ يمكنك تخطيها أو تأجيلها.",
+    section: "حياتك",
+    kind: "time",
+  },
+  {
     key: "movement",
     title: "ما الحركة التي تستطيع إبقاءها على يومك؟",
     hint: "نذكّرك بها كخطوة واقعية، لا كهدف تفشل فيه.",
@@ -252,6 +281,13 @@ export const QUESTIONS: Question[] = [
       { value: "consistency", label: "ألا يمر يوم بلا ذكر وصلاة" },
     ],
   },
+  {
+    key: "commitment",
+    title: "ما الالتزام الذي يجب أن تحميه في أسبوعك؟",
+    hint: "اكتبه بجملة قصيرة، وسنضعه في الخطة الأسبوعية دون أن نفرضه عليك.",
+    section: "حياتك",
+    kind: "text",
+  },
 ];
 
 export const QUESTIONS_COUNT = QUESTIONS.length;
@@ -272,6 +308,10 @@ export const DEFAULT_ANSWERS: ProfileAnswers = {
   eveningReset: "adhkar",
   disciplineLevel: "balanced",
   weeklyFocus: "prayer",
+  workStart: "",
+  workEnd: "",
+  restTime: "",
+  commitment: "",
 };
 
 /** يدمج الإجابات المحفوظة مع القيم الافتراضية حتى لا تنقص إجابة أبدًا. */
@@ -300,7 +340,15 @@ export function optionsFor(key: AnswerKey): QuestionOption[] {
 export function labelFor(key: AnswerKey, value: string): string {
   const option = optionsFor(key).find((item) => item.value === value);
   if (option) return option.label;
-  if (key === "wakeTime" || key === "sleepTime" || key === "dayEnd" || key === "focusTime") {
+  if (
+    key === "wakeTime" ||
+    key === "sleepTime" ||
+    key === "dayEnd" ||
+    key === "focusTime" ||
+    key === "workStart" ||
+    key === "workEnd" ||
+    key === "restTime"
+  ) {
     return `الساعة ${value}`;
   }
   return value;

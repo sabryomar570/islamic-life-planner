@@ -1,11 +1,22 @@
 import { DailyReview, type DayReviewRecord } from "@/components/app/DailyReview";
+import { LifeSystemPanel } from "@/components/app/LifeSystemPanel";
 import { GlassCard } from "@/components/app/GlassCard";
 import { ADHKAR_GROUPS, type AdhkarGroupId } from "@/data/adhkar";
 import { duaOfTheDay } from "@/data/duas";
 import type { ProfileAnswers } from "@/data/questions";
 import { getSurah } from "@/data/quran";
 import { useNow } from "@/hooks/use-clock";
-import { planLine, reviewDue, focusMetric, type WeeklyFocus } from "@/lib/coach";
+import type { PlanItemOutcome, PlanItemStatus, DailyScore } from "@/lib/accountability";
+import type { AdaptiveSuggestion } from "@/lib/adaptive-planning";
+import type { DailyPlan } from "@/lib/daily-plan";
+import type { ProgressSummary } from "@/lib/progress";
+import type { WeeklyReview } from "@/lib/weekly-review";
+import {
+  planLine,
+  reviewDue,
+  focusMetric,
+  type WeeklyFocus,
+} from "@/lib/coach";
 import { toArabicDigits } from "@/lib/hijri";
 import { PRAYERS, nextPrayer, type Timings } from "@/lib/prayers";
 import { arabicNumber, formatArabicTime, formatGregorian, greeting } from "@/lib/time";
@@ -138,6 +149,19 @@ export function HomeView({
   reviewSaving,
   onOpenSection,
   onOpenAdhkar,
+  dailyPlan,
+  planOutcomes,
+  dailyScore,
+  lifeProgress,
+  weeklyReview,
+  adaptiveSuggestions,
+  savingItemId,
+  applyingSuggestion,
+  reviewingWeek,
+  onSetPlanOutcome,
+  onResetPlanOutcome,
+  onSaveWeeklyReview,
+  onApplySuggestion,
 }: {
   userName?: string;
   profile: ProfileAnswers;
@@ -148,13 +172,29 @@ export function HomeView({
     prayers: Record<string, string>;
     adhkar: string[];
     favorites: string[];
-    review: { mood: string; blocker: string; note: string } | null;
+    review: Omit<DayReviewRecord, "mood" | "blocker"> & {
+      mood: string;
+      blocker: string;
+    } | null;
   };
   stats?: WeekStats | null;
   onSaveReview: (review: DayReviewRecord) => void;
   reviewSaving: boolean;
   onOpenSection: (section: HomeSection) => void;
   onOpenAdhkar: (group: AdhkarGroupId) => void;
+  dailyPlan: DailyPlan | null;
+  planOutcomes: readonly PlanItemOutcome[];
+  dailyScore: DailyScore | null;
+  lifeProgress: ProgressSummary | null;
+  weeklyReview: WeeklyReview | null;
+  adaptiveSuggestions: readonly AdaptiveSuggestion[];
+  savingItemId: string | null;
+  applyingSuggestion: boolean;
+  reviewingWeek: boolean;
+  onSetPlanOutcome: (itemId: string, status: PlanItemStatus) => void;
+  onResetPlanOutcome: (itemId: string) => void;
+  onSaveWeeklyReview: () => void;
+  onApplySuggestion: (suggestion: AdaptiveSuggestion) => void;
 }) {
   const now = useNow(30_000);
   const [lastSurah] = useState<number | null>(() => readSurahNumber());
@@ -217,6 +257,22 @@ export function HomeView({
           {locationLabel}
         </span>
       </header>
+
+      <LifeSystemPanel
+        plan={dailyPlan}
+        outcomes={planOutcomes}
+        score={dailyScore}
+        progress={lifeProgress}
+        weeklyReview={weeklyReview}
+        suggestions={adaptiveSuggestions}
+        savingItemId={savingItemId}
+        applyingSuggestion={applyingSuggestion}
+        reviewing={reviewingWeek}
+        onSetOutcome={onSetPlanOutcome}
+        onResetOutcome={onResetPlanOutcome}
+        onSaveWeeklyReview={onSaveWeeklyReview}
+        onApplySuggestion={onApplySuggestion}
+      />
 
       <section aria-labelledby="next-prayer-title">
         <GlassCard strong className="overflow-hidden p-0">

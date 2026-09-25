@@ -21,6 +21,11 @@ export const answersValidator = v.object({
   eveningReset: v.optional(v.string()),
   disciplineLevel: v.optional(v.string()),
   weeklyFocus: v.optional(v.string()),
+  /** Progressive Life Model: no fabricated schedule when the user leaves these blank. */
+  workStart: v.optional(v.string()),
+  workEnd: v.optional(v.string()),
+  restTime: v.optional(v.string()),
+  commitment: v.optional(v.string()),
 });
 
 /* ——— قوائم مغلقة: أي قيمة خارجها تُرفض في طبقة الخادم قبل وصولها لقاعدة البيانات. ——— */
@@ -80,6 +85,10 @@ function cleanText(value: string, maxLength = MAX_TEXT) {
   return trimmed;
 }
 
+function cleanOptionalText(value: string | undefined, maxLength = MAX_TEXT) {
+  return value && value.trim().length > 0 ? cleanText(value, maxLength) : "";
+}
+
 /** يتحقق أن التاريخ بصيغة YYYY-MM-DD وضمن نطاق معقول. */
 function assertDate(date: string) {
   if (!DAY_PATTERN.test(date)) throw new Error("صيغة التاريخ غير صحيحة");
@@ -108,7 +117,7 @@ export const getProfile = query({
   },
 });
 
-/** حفظ أو تحديث إجابات الأسئلة الخمسة عشر بعد التحقق من كل قيمة. */
+/** حفظ أو تحديث نموذج الحياة تدريجيًا بعد التحقق من كل قيمة. */
 export const saveProfile = mutation({
   args: {
     answers: answersValidator,
@@ -119,6 +128,19 @@ export const saveProfile = mutation({
   },
   handler: async (ctx, { answers, location }) => {
     const userId = await requireUserId(ctx);
+
+    const workStart = answers.workStart
+      ? assertTime(answers.workStart, "بداية نافذة العمل أو الدراسة")
+      : undefined;
+    const workEnd = answers.workEnd
+      ? assertTime(answers.workEnd, "نهاية نافذة العمل أو الدراسة")
+      : undefined;
+    if ((workStart === undefined) !== (workEnd === undefined)) {
+      throw new Error("حدد بداية نافذة العمل أو الدراسة ونهايتها معًا، أو اتركهما فارغين");
+    }
+    if (workStart !== undefined && workStart === workEnd) {
+      throw new Error("بداية نافذة العمل أو الدراسة ونهايتها يجب أنختلفا");
+    }
 
     const safe = {
       wakeTime: assertTime(answers.wakeTime, "وقت الاستيقاظ"),
@@ -137,6 +159,10 @@ export const saveProfile = mutation({
       eveningReset: pickFromList(answers.eveningReset, EVENING_RESETS, "adhkar"),
       disciplineLevel: pickFromList(answers.disciplineLevel, DISCIPLINE_LEVELS, "balanced"),
       weeklyFocus: pickFromList(answers.weeklyFocus, WEEKLY_FOCUS, "prayer"),
+      workStart: workStart ?? "",
+      workEnd: workEnd ?? "",
+      restTime: answers.restTime ? assertTime(answers.restTime, "وقت الراحة") : "",
+      commitment: cleanOptionalText(answers.commitment, 120),
     };
 
     const locationPatch: { city?: string; locationLabel?: string } = {};
@@ -225,7 +251,20 @@ export const getDayState = query({
         prayers: {} as Record<string, string>,
         adhkar: [] as string[],
         favorites: [] as string[],
-        review: null as null | { mood: string; blocker: string; note: string },
+        review: null as null | {
+          mood: string;
+          blocker: string;
+          note: string;
+          plannedCount: number;
+          completedCount: number;
+          partialCount: number;
+          postponedCount: number;
+          skippedCount: number;
+          succeeded: string;
+          failed: string;
+          why: string;
+          tomorrowAdjustment: string;
+        },
       };
     }
 
@@ -257,7 +296,20 @@ export const getDayState = query({
       adhkar: adhkarLogs.map((log) => log.kind),
       favorites: favorites.map((item) => item.itemId),
       review: reviewDoc
-        ? { mood: reviewDoc.mood, blocker: reviewDoc.blocker, note: reviewDoc.note }
+        ? {
+            mood: reviewDoc.mood,
+            blocker: reviewDoc.blocker,
+            note: reviewDoc.note,
+            plannedCount: reviewDoc.plannedCount ?? 0,
+            completedCount: reviewDoc.completedCount ?? 0,
+            partialCount: reviewDoc.partialCount ?? 0,
+            postponedCount: reviewDoc.postponedCount ?? 0,
+            skippedCount: reviewDoc.skippedCount ?? 0,
+            succeeded: reviewDoc.succeeded ?? "",
+            failed: reviewDoc.failed ?? "",
+            why: reviewDoc.why ?? "",
+            tomorrowAdjustment: reviewDoc.tomorrowAdjustment ?? "",
+          }
         : null,
     };
   },
@@ -532,19 +584,61 @@ export const getStats = query({
   },
 });
 
-/** حفظ مراجعة اليوم (٣ لمسات) — تُحدَّث إن وُجدت لليوم نفسه. */
+/** حفظ مراجعة اليوم وتعلّمها؛ idempotent لكل user/date مع عدادات مشتقة من سجل الخطة. */
 export const saveDayReview = mutation({
   args: {
     date: v.string(),
     mood: reviewMoodValidator,
     blocker: reviewBlockerValidator,
     note: v.optional(v.string()),
+    succeeded: v.optional(v.string()),
+    failed: v.optional(v.string()),
+    why: v.optional(v.string()),
+    tomorrowAdjustment: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
     const date = assertDate(args.date);
-    const note =
-      args.note && args.note.trim().length > 0 ? cleanText(args.note, 160) : "";
+    const cleanOptional = (value: string | undefined, max = 240) =>
+      value && value.trim().length > 0 ? cleanText(value, max) : "";
+
+    const outcomeLogs = await ctx.db
+      .query("planItemLogs")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", date))
+      .collect();
+    const outcomeCounts = { completed: 0, partial: 0, postponed: 0, skipped: 0 };
+    for (const log of outcomeLogs) {
+      if (log.status in outcomeCounts) {
+        outcomeCounts[log.status as keyof typeof outcomeCounts] += 1;
+      }
+    }
+
+    const plan = await ctx.db
+      .query("weeklyPlans")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(8);
+    const plannedCount = plan.reduce(
+      (total, item) => total + item.items.filter((entry) => entry.date === date && entry.enabled).length,
+      0,
+    );
+    const learning = {
+      plannedCount,
+      completedCount: outcomeCounts.completed,
+      partialCount: outcomeCounts.partial,
+      postponedCount: outcomeCounts.postponed,
+      skippedCount: outcomeCounts.skipped,
+      succeeded: cleanOptional(args.succeeded),
+      failed: cleanOptional(args.failed),
+      why: cleanOptional(args.why),
+      tomorrowAdjustment: cleanOptional(args.tomorrowAdjustment),
+    };
+    const payload = {
+      mood: args.mood,
+      blocker: args.blocker,
+      note: cleanOptional(args.note, 160),
+      ...learning,
+      updatedAt: Date.now(),
+    };
 
     const existing = await ctx.db
       .query("dayReviews")
@@ -552,24 +646,17 @@ export const saveDayReview = mutation({
       .unique();
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        mood: args.mood,
-        blocker: args.blocker,
-        note,
-        updatedAt: Date.now(),
-      });
-      return existing._id;
+      await ctx.db.patch(existing._id, payload);
+      return { id: existing._id, changed: true };
     }
 
-    return await ctx.db.insert("dayReviews", {
+    const id = await ctx.db.insert("dayReviews", {
       userId,
       date,
-      mood: args.mood,
-      blocker: args.blocker,
-      note,
+      ...payload,
       createdAt: Date.now(),
-      updatedAt: Date.now(),
     });
+    return { id, changed: true };
   },
 });
 
@@ -631,6 +718,58 @@ export const deleteMyData = mutation({
         removed += 1;
       }
       if (rows.length < 200) break;
+    }
+
+    for (let pass = 0; pass < 10; pass += 1) {
+      const rows = await ctx.db
+        .query("planItemLogs")
+        .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
+        .take(200);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+      if (rows.length < 200) break;
+    }
+
+    for (let pass = 0; pass < 10; pass += 1) {
+      const rows = await ctx.db
+        .query("weeklyPlans")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(50);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+      if (rows.length < 50) break;
+    }
+
+    for (let pass = 0; pass < 10; pass += 1) {
+      const rows = await ctx.db
+        .query("weeklyReviews")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(50);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+      if (rows.length < 50) break;
+    }
+
+    for (let pass = 0; pass < 10; pass += 1) {
+      const rows = await ctx.db
+        .query("adaptiveApprovals")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(50);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+      if (rows.length < 50) break;
     }
 
     const profile = await ctx.db

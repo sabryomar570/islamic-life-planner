@@ -59,6 +59,12 @@ const schema = defineSchema(
       disciplineLevel: v.optional(v.string()),
       // تركيز الأسبوع: prayer | adhkar | consistency
       weeklyFocus: v.optional(v.string()),
+      // نافذة الدراسة/العمل وراحة قصيرة — اختيارية لأن اليوم قد يكون مرنًا.
+      workStart: v.optional(v.string()),
+      workEnd: v.optional(v.string()),
+      restTime: v.optional(v.string()),
+      // التزام.المستخدم يحميه هذا الأسبوع؛ نص قصير اختياري لا قاعدة ثابتة.
+      commitment: v.optional(v.string()),
       // المدينة المستنتجة من المنطقة الزمنية أو المُعدّل عليها من الإعدادات.
       city: v.optional(v.string()),
       // إحداثيات اختيارية عند السماح بالموقع — لحساب مواقيت أدق من اسم المدينة.
@@ -67,6 +73,54 @@ const schema = defineSchema(
       locationLabel: v.optional(v.string()),
       updatedAt: v.number(),
     }).index("by_user", ["userId"]),
+
+    // نتيجة يومية idempotent لكل عنصر؛ mutations تعتمد user/date/item composite indexes.
+    planItemLogs: defineTable({
+      userId: v.id("users"),
+      date: v.string(),
+      weekStart: v.string(),
+      itemId: v.string(),
+      // completed | partial | postponed | skipped
+      status: v.string(),
+      postponedTo: v.optional(v.string()),
+      reason: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_and_date", ["userId", "date"])
+      .index("by_user_and_date_and_item", ["userId", "date", "itemId"]),
+
+    // خطة أسبوعية مولّدة من Life Model؛ قابلة للتعديل مع version لمنع الكتابة المتعارضة.
+    weeklyPlans: defineTable({
+      userId: v.id("users"),
+      weekStart: v.string(),
+      timezone: v.string(),
+      weeklyFocus: v.string(),
+      items: v.array(
+        v.object({
+          id: v.string(),
+          date: v.string(),
+          day: v.number(),
+          kind: v.string(),
+          title: v.string(),
+          importance: v.string(),
+          recurrence: v.string(),
+          origin: v.string(),
+          enabled: v.boolean(),
+          startTime: v.optional(v.string()),
+          endTime: v.optional(v.string()),
+          durationMinutes: v.optional(v.number()),
+          prayerAnchor: v.optional(v.string()),
+        }),
+      ),
+      version: v.number(),
+      sourceProfileUpdatedAt: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_and_week", ["userId", "weekStart"]),
 
     // سجل الصلوات اليومية (في جماعة/في الوقت/متأخرة/فائتة).
     prayerLogs: defineTable({
@@ -110,11 +164,82 @@ const schema = defineSchema(
       blocker: v.string(),
       // ملاحظة حرة قصيرة (قد تكون فارغة).
       note: v.string(),
+      // Learning fields are optional for backward compatibility with existing reviews.
+      plannedCount: v.optional(v.number()),
+      completedCount: v.optional(v.number()),
+      partialCount: v.optional(v.number()),
+      postponedCount: v.optional(v.number()),
+      skippedCount: v.optional(v.number()),
+      succeeded: v.optional(v.string()),
+      failed: v.optional(v.string()),
+      why: v.optional(v.string()),
+      tomorrowAdjustment: v.optional(v.string()),
       createdAt: v.number(),
       updatedAt: v.number(),
     })
       .index("by_user", ["userId"])
       .index("by_user_and_date", ["userId", "date"]),
+    // مراجعة أسبوعية مشتقة من السجلات؛ التعديلات المقترحة لا تُطبّق تلقائيًا.
+    // موافقات المستخدم على تعديلات الخطة؛ سجل تدقيق لا خطة تلقائية.
+    adaptiveApprovals: defineTable({
+      userId: v.id("users"),
+      weekStart: v.string(),
+      suggestionId: v.string(),
+      kind: v.string(),
+      payload: v.string(),
+      appliedAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_and_week", ["userId", "weekStart"]),
+
+    weeklyReviews: defineTable({
+      userId: v.id("users"),
+      weekStart: v.string(),
+      summary: v.object({
+        weekStart: v.string(),
+        planned: v.number(),
+        completed: v.number(),
+        partial: v.number(),
+        postponed: v.number(),
+        skipped: v.number(),
+        adherence: v.number(),
+        reviewedDays: v.number(),
+        mostConsistentHabit: v.union(
+          v.null(),
+          v.object({ kind: v.string(), count: v.number() }),
+        ),
+        mostPostponed: v.union(
+          v.null(),
+          v.object({ kind: v.string(), count: v.number() }),
+        ),
+        successfulPeriods: v.array(v.string()),
+        difficultPeriods: v.array(v.string()),
+        prayerContext: v.object({
+          loggedDays: v.number(),
+          onTime: v.number(),
+          late: v.number(),
+          missed: v.number(),
+          note: v.string(),
+        }),
+        weeklyFocus: v.string(),
+        suggestedAdjustments: v.array(
+          v.object({
+            id: v.string(),
+            kind: v.string(),
+            target: v.string(),
+            reason: v.string(),
+            requiresApproval: v.boolean(),
+          }),
+        ),
+      }),
+      note: v.string(),
+      version: v.number(),
+      approvedAt: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_and_week", ["userId", "weekStart"]),
   },
   {
     schemaValidation: false,

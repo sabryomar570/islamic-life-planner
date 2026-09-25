@@ -51,7 +51,15 @@ const TOUR_KEY = "oud:tour:done";
 type ProfileAnswersPatch = Partial<ProfileAnswers>;
 
 type Stage = {
-  id: "rhythm" | "prayer" | "goal" | "habits" | "day-shape" | "wind-down" | "tone";
+  id:
+    | "rhythm"
+    | "prayer"
+    | "goal"
+    | "habits"
+    | "day-shape"
+    | "work-window"
+    | "wind-down"
+    | "tone";
   eyebrow: string;
   title: string;
   description: string;
@@ -98,6 +106,13 @@ const OPTIONAL_STAGES: Stage[] = [
     keys: ["dayRhythm", "dayEnd", "focusTime"],
   },
   {
+    id: "work-window",
+    eyebrow: "تفصيل اختياري",
+    title: "متى تكون الأساسية، ومتى تستريح؟",
+    description: "دقيقة واحدة تكفي. اترك أي وقت فارغًا إذا كان يومك مرنًا.",
+    keys: ["workStart", "workEnd", "restTime"],
+  },
+  {
     id: "wind-down",
     eyebrow: "تفصيل اختياري",
     title: "ما الذي يستنزفك، وكيف تحب أن تهدأ؟",
@@ -120,6 +135,9 @@ const TIME_SUGGESTIONS: Partial<Record<AnswerKey, readonly string[]>> = {
   sleepTime: ["22:00", "23:00", "00:00"],
   dayEnd: ["16:00", "18:00", "20:00"],
   focusTime: ["07:00", "09:00", "12:00"],
+  workStart: ["08:00", "09:00", "16:00"],
+  workEnd: ["14:00", "17:00", "20:00"],
+  restTime: ["13:00", "17:00", "21:00"],
 };
 
 const PRAYER_COMMITMENT_ICONS: Record<string, typeof Check> = {
@@ -195,6 +213,8 @@ function isStageComplete(stage: Stage, answers: ProfileAnswersPatch): boolean {
       (answers.prayerCommitment === "always" || hasValue(answers, "mostMissedPrayer"))
     );
   }
+  // نافذة العمل والراحة progressive: يمكن تركها فارغة ثم العودة إليها لاحقًا.
+  if (stage.id === "work-window") return true;
   return stage.keys.every((key) => hasValue(answers, key));
 }
 
@@ -310,6 +330,40 @@ function TimeField({
           ))}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function TextField({
+  answerKey,
+  value,
+  onChange,
+}: {
+  answerKey: AnswerKey;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const question = questionFor(answerKey);
+  const id = `onboarding-${answerKey}`;
+  return (
+    <div className="glass-tile rounded-3xl p-4 sm:p-5">
+      <label htmlFor={id} className="block">
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <Notebook className="size-4 text-primary" />
+          {question.title}
+        </span>
+        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{question.hint}</span>
+      </label>
+      <Input
+        id={id}
+        type="text"
+        value={value}
+        maxLength={120}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="مثال: مراجعة مشروع قبل نهاية الأسبوع"
+        className="mt-4 h-12 rounded-2xl border-white/80 bg-white/75"
+      />
+      <span className="mt-2 block text-[11px] text-muted-foreground">اختياري — سطر واحد كافٍ.</span>
     </div>
   );
 }
@@ -578,6 +632,33 @@ function StageContent({
     );
   }
 
+  if (stage.id === "work-window") {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <TimeField
+          compact
+          answerKey="workStart"
+          value={answers.workStart ?? ""}
+          onChange={(value) => setAnswer("workStart", value)}
+        />
+        <TimeField
+          compact
+          answerKey="workEnd"
+          value={answers.workEnd ?? ""}
+          onChange={(value) => setAnswer("workEnd", value)}
+        />
+        <div className="sm:col-span-2">
+          <TimeField
+            compact
+            answerKey="restTime"
+            value={answers.restTime ?? ""}
+            onChange={(value) => setAnswer("restTime", value)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (stage.id === "wind-down") {
     return (
       <div className="space-y-6">
@@ -622,6 +703,13 @@ function StageContent({
           value={answers.weeklyFocus ?? ""}
           onChange={(value) => setAnswer("weeklyFocus", value)}
           iconFor={(option) => LIFE_ICONS[option.value] ?? Target}
+        />
+      </div>
+      <div className="border-t border-border/55 pt-5">
+        <TextField
+          answerKey="commitment"
+          value={answers.commitment ?? ""}
+          onChange={(value) => setAnswer("commitment", value)}
         />
       </div>
     </div>

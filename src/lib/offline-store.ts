@@ -6,7 +6,20 @@ export type OfflineDayState = {
   prayers: Record<string, string>;
   adhkar: string[];
   favorites: string[];
-  review: { mood: string; blocker: string; note: string } | null;
+  review: {
+    mood: string;
+    blocker: string;
+    note: string;
+    plannedCount: number;
+    completedCount: number;
+    partialCount: number;
+    postponedCount: number;
+    skippedCount: number;
+    succeeded: string;
+    failed: string;
+    why: string;
+    tomorrowAdjustment: string;
+  } | null;
 };
 
 export const EMPTY_DAY_STATE: OfflineDayState = {
@@ -66,7 +79,20 @@ export function readOfflineDayState(date: string): OfflineDayState | null {
     prayers: stored.prayers ?? {},
     adhkar: stored.adhkar ?? [],
     favorites: stored.favorites ?? [],
-    review: stored.review ?? null,
+    review: stored.review
+      ? {
+          ...stored.review,
+          plannedCount: stored.review.plannedCount ?? 0,
+          completedCount: stored.review.completedCount ?? 0,
+          partialCount: stored.review.partialCount ?? 0,
+          postponedCount: stored.review.postponedCount ?? 0,
+          skippedCount: stored.review.skippedCount ?? 0,
+          succeeded: stored.review.succeeded ?? "",
+          failed: stored.review.failed ?? "",
+          why: stored.review.why ?? "",
+          tomorrowAdjustment: stored.review.tomorrowAdjustment ?? "",
+        }
+      : null,
   };
 }
 
