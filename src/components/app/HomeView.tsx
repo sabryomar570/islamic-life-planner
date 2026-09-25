@@ -434,7 +434,13 @@ export function HomeView({
           {lifeProgress ? (
             <p className="label-meta mt-1 text-muted-foreground">
               من خطة الأسبوع: {arabicNumber(lifeProgress.weekly.completed)} خطوة منفَّذة ·{" "}
-              {arabicNumber(lifeProgress.weekly.reviewedDays)} يوم مراجَع.
+              {arabicNumber(lifeProgress.weekly.reviewedDays)} يوم مراجَع
+              {lifeProgress.weekly.changeFromPrevious !== null
+                ? ` · ${lifeProgress.weekly.changeFromPrevious >= 0 ? "أعلى" : "أقل"} من الأسبوع الذي قبله بـ${arabicNumber(
+                    Math.abs(lifeProgress.weekly.changeFromPrevious),
+                  )} نقطة`
+                : ""}
+              .
             </p>
           ) : null}
         </Panel>

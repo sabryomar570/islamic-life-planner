@@ -114,7 +114,7 @@ function reduceSuggestion(
     id: `reduce:${candidate.kind}:${candidate.importance}`,
     kind: "reduce",
     target: candidate.id,
-    reason: "الحمل المتكرر أكبر من الطاقة المسجلة؛ اقتراح مبني على ذلكهو تخفيف عنصر اختياري أولًا.",
+    reason: "الحمل المتكرر أكبر من الطاقة المسجلة؛ اقتراح مبني على ذلك هو تخفيف عنصر اختياري أولًا.",
     evidence: [
       `${days.size} أيام ملحوظة`,
       `التزام أقل من 55٪ (${Math.round(successRate * 100)}٪)`,

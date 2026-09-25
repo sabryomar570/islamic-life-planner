@@ -3,7 +3,9 @@
  * يولّد خطة قابلة للتعديل، ويحوّل مواقيت الصلاة إلى anchors بدل تثبيت مواعيد صلوات وهمية.
  */
 import { buildLifeModel, type PersonalLifeModel } from "./life-model";
-import { addMinutes, diffMinutes, toMinutes } from "./time";
+import { addMinutes, diffMinutes, toMinutes, weekStartOfDateKey } from "./time";
+
+const DAY_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const WEEK_LENGTH = 7;
 export const MAX_PLAN_ITEMS = 140;
@@ -355,4 +357,15 @@ export function updateWeeklyPlanItems(
 
 export function modelForAnswers(answers: Parameters<typeof buildLifeModel>[0]) {
   return buildLifeModel(answers);
+}
+
+/**
+ * الأسبوع الذي ينتمي إليه عنصر الخطة، مشتقًا من مُعرّف العنصر نفسه.
+ *
+ * العناوين في العناصر تحمل تاريخ اليوم داخلها، فارسال أسبوعٍ آخر (أسبوع تصفّح مثلًا)
+ * مع العنصر يجعل الخادم يرفض العملية. الاشتقاق من العنصر يجعل ذلك مستحيلًا بنيويًا.
+ */
+export function planItemWeekStart(itemId: string): string | undefined {
+  const date = itemId.slice(0, 10);
+  return DAY_KEY_PATTERN.test(date) ? weekStartOfDateKey(date) : undefined;
 }

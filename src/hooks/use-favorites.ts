@@ -4,7 +4,7 @@
  * بهذا يتغيّر لون علامة الحفظ فورًا، وتبقى المحفوظات بعد إغلاق التطبيق.
  */
 import { api } from "@/convex/_generated/api";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 
 export type FavoriteRecord = {
@@ -54,12 +54,17 @@ function toRecords(serverItems: readonly { itemId: string; kind: string; title: 
 
 export function useFavorites() {
   const serverFavorites = useQuery(api.planner.getFavorites);
-  const toggleFavorite = useMutation(api.planner.toggleFavorite);
+  const setFavoriteMutation = useMutation(api.planner.setFavorite);
   const removeFavorite = useMutation(api.planner.removeFavorite);
 
   // النسخة المحلية تُعرض فورًا حتى قبل أول ردّ من الخادم.
   const [local, setLocal] = useState<FavoriteRecord[]>(() => readLocalFavorites());
   const [pending, setPending] = useState<Set<string>>(new Set());
+  // مرآة للـpending تُقرأ داخل callback بلا اعتماديات زائدة.
+  const pendingRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
 
   // عند وصول بيانات الخادم ندمجها مع المحلية (اتحاد) ونكتب النتيجة محليًا.
   useEffect(() => {
@@ -81,19 +86,18 @@ export function useFavorites() {
 
   const toggle = useCallback(
     (itemId: string, kind: FavoriteKind, title: string) => {
-      const exists = ids.has(itemId);
-      let nextLocal: FavoriteRecord[];
-      if (exists) {
-        nextLocal = local.filter((item) => item.itemId !== itemId);
-      } else {
-        nextLocal = [{ itemId, kind, title, savedAt: Date.now() }, ...local];
-      }
+      // نقرتان سريعتان لا تُقرآن كعكسين: الثاني يُتجاهل حتى وصول الأول.
+      if (pendingRef.current.has(itemId)) return;
+      const saved = !ids.has(itemId);
+      const nextLocal: FavoriteRecord[] = saved
+        ? [{ itemId, kind, title, savedAt: Date.now() }, ...local]
+        : local.filter((item) => item.itemId !== itemId);
       setLocal(nextLocal);
       writeLocalFavorites(nextLocal);
 
       // مزامنة الخادم مع مؤشّر «جارٍ» حتى لا يومض الزر بين حالتين.
       setPending((current) => new Set(current).add(itemId));
-      toggleFavorite({ itemId, kind, title })
+      setFavoriteMutation({ itemId, kind, title, saved })
         .catch(() => {
           // فشل الاتصال: نُبقي الحالة المحلية وتُتزامن لاحقًا عند تحديث الاستعلام.
         })
@@ -105,7 +109,7 @@ export function useFavorites() {
           });
         });
     },
-    [ids, local, toggleFavorite],
+    [ids, local, setFavoriteMutation],
   );
 
   const remove = useCallback(

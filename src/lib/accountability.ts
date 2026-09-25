@@ -3,7 +3,8 @@
  * يقيس تقدم اليوم مقابل الخطة فقط، ولا يحوّل النتيجة إلى حكم على قيمة المستخدم.
  */
 import type { DailyBand, DailyPlanItem } from "./daily-plan";
-import type { PlanImportance } from "./weekly-plan";
+import { weekStartOfDateKey } from "./time";
+import type { PlanImportance, WeeklyPlanItem } from "./weekly-plan";
 
 export type PlanItemStatus = "completed" | "partial" | "postponed" | "skipped";
 
@@ -119,36 +120,84 @@ export function upsertPlanOutcome(
   };
 }
 
-export function mergePrayerOutcomes(
-  planItems: readonly DailyPlanItem[],
-  outcomes: readonly PlanItemOutcome[],
-  prayerStatuses: Readonly<Record<string, string>>,
-): PlanItemOutcome[] {
-  const byItem = new Map(outcomes.map((outcome) => [outcome.itemId, outcome]));
-  for (const entry of planItems) {
-    if (entry.item.kind !== "prayer" || !entry.item.prayerAnchor) continue;
-    const status = prayerStatuses[entry.item.prayerAnchor];
-    if (!status) continue;
-    const mapped: PlanItemStatus =
-      status === "jamaah" || status === "ontime"
-        ? "completed"
-        : status === "late"
-          ? "partial"
-          : "skipped";
-    const current = byItem.get(entry.item.id);
-    const now = current?.updatedAt ?? 0;
-    byItem.set(entry.item.id, {
-      date: entry.item.date,
-      itemId: entry.item.id,
-      weekStart: "",
+export type PrayerOutcomeLog = {
+  date: string;
+  prayer: string;
+  status: string;
+  updatedAt?: number;
+};
+
+function prayerStatusToPlanStatus(status: string): PlanItemStatus | null {
+  if (status === "jamaah" || status === "ontime") return "completed";
+  if (status === "late") return "partial";
+  if (status === "missed") return "skipped";
+  return null;
+}
+
+/**
+ * يوحّد سجل صلاة مع عنصر الصلاة في الخطة، فتُقاس الصلاة بمصدر واحد.
+ *
+ * القواعد: سجل الصلاة أضبط من تعليم عنصر الخطة (يروي جماعة/وقت/تأخر/فاتت)،
+ * فيحكم حيث يوجد. لكن «مؤجّل» قرار خاص بالخطة لا تعبّر عنه سجل الصلاة،
+ * فيبقى كما كتبه المستخدم.
+ *
+ * تُستدعى من العميل ومن الخادم بنفسها، وإلا اختلفت نتيجة اليوم المعروضة
+ * عن النتيجة التي يبني عليها المراجعة والتكييف.
+ */
+export function mergePrayerLogsIntoOutcomes(input: {
+  items: readonly Pick<WeeklyPlanItem, "id" | "date" | "kind" | "enabled" | "prayerAnchor">[];
+  outcomes: readonly PlanItemOutcome[];
+  prayerLogs: readonly PrayerOutcomeLog[];
+}): PlanItemOutcome[] {
+  const byItem = new Map(input.outcomes.map((outcome) => [outcome.itemId, outcome]));
+  const latestByKey = new Map<string, PrayerOutcomeLog>();
+  for (const log of input.prayerLogs) {
+    const key = `${log.date}:${log.prayer}`;
+    const current = latestByKey.get(key);
+    if (!current || (log.updatedAt ?? 0) >= (current.updatedAt ?? 0)) latestByKey.set(key, log);
+  }
+
+  for (const item of input.items) {
+    if (!item.enabled || item.kind !== "prayer" || !item.prayerAnchor) continue;
+    const log = latestByKey.get(`${item.date}:${item.prayerAnchor}`);
+    if (!log) continue;
+    const mapped = prayerStatusToPlanStatus(log.status);
+    if (!mapped) continue;
+    const current = byItem.get(item.id);
+    if (current?.status === "postponed") continue;
+    const now = log.updatedAt ?? current?.updatedAt ?? 0;
+    byItem.set(item.id, {
+      date: item.date,
+      itemId: item.id,
+      weekStart: current?.weekStart || weekStartOfDateKey(item.date),
       status: mapped,
       postponedTo: null,
-      reason: "",
+      reason: current?.reason ?? "",
       createdAt: current?.createdAt ?? now,
       updatedAt: now,
     });
   }
   return [...byItem.values()];
+}
+
+/** واجهة العميل: حالة اليوم تأتي كخريطة صلاة واحدة بدل سجل كامل. */
+export function mergePrayerOutcomes(
+  planItems: readonly DailyPlanItem[],
+  outcomes: readonly PlanItemOutcome[],
+  prayerStatuses: Readonly<Record<string, string>>,
+): PlanItemOutcome[] {
+  const prayerLogs: PrayerOutcomeLog[] = [];
+  for (const entry of planItems) {
+    const anchor = entry.item.prayerAnchor;
+    const status = anchor ? prayerStatuses[anchor] : undefined;
+    if (!anchor || !status) continue;
+    prayerLogs.push({ date: entry.item.date, prayer: anchor, status });
+  }
+  return mergePrayerLogsIntoOutcomes({
+    items: planItems.map((entry) => entry.item),
+    outcomes,
+    prayerLogs,
+  });
 }
 
 function percent(earned: number, possible: number) {

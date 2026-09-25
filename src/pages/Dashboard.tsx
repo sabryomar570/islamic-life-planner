@@ -41,6 +41,7 @@ import { detectLocation } from "@/lib/location";
 import { calculateDailyScore, mergePrayerOutcomes } from "@/lib/accountability";
 import { buildProgressSummary, type ProgressSummary } from "@/lib/progress";
 import type { WeeklyPlan, WeeklyPlanItem } from "@/lib/weekly-plan";
+import { planItemWeekStart } from "@/lib/weekly-plan";
 import type { WeeklyReview } from "@/lib/weekly-review";
 import {
   clearOfflineProfile,
@@ -53,7 +54,7 @@ import {
 import { PRAYERS, type PrayerKey, type PrayerStatus } from "@/lib/prayers";
 import { useInstallPrompt, useOnlineStatus } from "@/lib/pwa";
 import { cachedSurahNumbers, clearQuranCache, downloadFullQuran } from "@/lib/quran-store";
-import { addMinutes, dateKey, startOfWeekKey, toMinutes } from "@/lib/time";
+import { addMinutes, arabicNumber, dateKey, startOfWeekKey, toMinutes } from "@/lib/time";
 import { useMutation, useQuery } from "convex/react";
 import { Smartphone } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -132,9 +133,10 @@ const FAVORITE_KINDS = ["hadith", "poem", "dhikr", "ayah", "story"] as const;
 
 type PlanProgressDoc = {
   records: { date: string; completed: number; planned: number; reviewed: boolean }[];
+  previous: { weekStart: string; records: { date: string; completed: number; planned: number; reviewed: boolean }[] } | null;
 };
 
-/** ملخص يقرأه الواجهة لا الـUI: كم خطوة من أصل كم في الأسبوع. */
+/** ملخص يقرأه الشاشة لا الـUI: كم خطوة من أصل كم في الأسبوع، ومقابل الأسبوع الذي قبله. */
 function weekProgressSummary(doc: PlanProgressDoc, today: string) {
   const records = doc.records;
   return {
@@ -198,6 +200,12 @@ export default function Dashboard() {
     api.weeklyPlans.getPlanProgress,
     needsPlan && profileDoc ? { weekStart: activeWeekStart } : "skip",
   );
+  /** متوسط الأسبوع الماضي: خط أساس صادق، ولا يُقارن اليوم بأحد إلا بنفسه. */
+  const previousAverage = useMemo(() => {
+    const scores = (planProgress?.previous?.records ?? []).map((record) => record.score);
+    if (scores.length === 0) return null;
+    return Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
+  }, [planProgress]);
   const weeklyReviewDoc = useQuery(
     api.weeklyPlans.getWeeklyReview,
     needsPlan && profileDoc ? { weekStart: activeWeekStart } : "skip",
@@ -216,13 +224,20 @@ export default function Dashboard() {
       }),
     [],
   );
-  const history = useQuery(api.planner.getHistory, { dates: lastWeek });
-  const stats = useQuery(api.planner.getStats);
+  // السجل والإحصاءات لا تُحسب إلا للشاشات التي تقرأهما فعلًا.
+  const needsHistory = view === "prayers" || view === "stats";
+  const history = useQuery(
+    api.planner.getHistory,
+    needsHistory ? { dates: lastWeek } : "skip",
+  );
+  const needsStats = view === "today" || view === "prayers" || view === "stats";
+  const stats = useQuery(api.planner.getStats, needsStats ? undefined : "skip");
 
   const setPrayerStatusMutation = useMutation(api.planner.setPrayerStatus);
   const setAdhkarDoneMutation = useMutation(api.planner.setAdhkarDone);
   const saveDayReviewMutation = useMutation(api.planner.saveDayReview);
   const setLocationMutation = useMutation(api.planner.setLocation);
+  const deleteMyDataMutation = useMutation(api.planner.deleteMyData);
   const ensureWeeklyPlanMutation = useMutation(api.weeklyPlans.ensureWeeklyPlan);
   const setPlanItemStatusMutation = useMutation(api.weeklyPlans.setPlanItemStatus);
   const resetPlanItemStatusMutation = useMutation(api.weeklyPlans.resetPlanItemStatus);
@@ -293,15 +308,15 @@ export default function Dashboard() {
       !profileDoc ||
       (weeklyPlanDoc !== undefined && weeklyPlanDoc !== null)
     ) return;
-    const initKey = `${weekStart}:${profileDoc._id}`;
+    const initKey = `${activeWeekStart}:${profileDoc._id}`;
     if (planInitAttemptedRef.current === initKey) return;
     planInitAttemptedRef.current = initKey;
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
-    void ensureWeeklyPlanMutation({ weekStart, timezone }).catch(() => {
+    void ensureWeeklyPlanMutation({ weekStart: activeWeekStart, timezone }).catch(() => {
       planInitAttemptedRef.current = null;
       toast.error("تعذّر تجهيز خطة الأسبوع. حاول تحديث الصفحة مرة أخرى.");
     });
-  }, [ensureWeeklyPlanMutation, online, profileDoc, view, weekStart, weeklyPlanDoc]);
+  }, [activeWeekStart, ensureWeeklyPlanMutation, online, profileDoc, view, weeklyPlanDoc]);
 
   const dailyPlan = useMemo<DailyPlan | null>(() => {
     if (!answers || !weeklyPlanDoc) return null;
@@ -350,20 +365,26 @@ export default function Dashboard() {
         closed: answers
           ? reminders.now.getHours() * 60 + reminders.now.getMinutes() >= toMinutes(answers.dayEnd)
           : false,
+        // خط الأساس يأتي من الأسبوع الماضي بنفس دالة الاحتساب، فالمقارنة apples-to-apples.
+        ...(previousAverage !== null ? { previousAverage } : {}),
       })
-    : null, [answers, dailyPlan, planOutcomes, reminders.now]);
+    : null, [answers, dailyPlan, planOutcomes, previousAverage, reminders.now]);
 
   const lifeProgress = useMemo<ProgressSummary | null>(() => {
     if (!planProgress) return null;
-    return buildProgressSummary(planProgress.records.map((record) => ({
+    const toDay = (record: { date: string; score: number; completed: number; partial: number; postponed: number; skipped: number; reviewed: boolean }) => ({
       date: record.date,
-      score: record.date === today ? dailyScore?.score ?? null : null,
+      score: record.date === today ? dailyScore?.score ?? record.score : record.score,
       completed: record.completed,
       partial: record.partial,
       postponed: record.postponed,
       skipped: record.skipped,
       reviewed: record.reviewed,
-    })));
+    });
+    return buildProgressSummary(
+      planProgress.records.map(toDay),
+      planProgress.previous?.records.map(toDay) ?? [],
+    );
   }, [dailyScore?.score, planProgress, today]);
 
   /* مرة واحدة: نوافق أوقات التذكير مع إجابات المستخدم عن استيقاظه ونومه. */
@@ -502,6 +523,21 @@ export default function Dashboard() {
     navigate("/");
   }, [signOut, navigate]);
 
+  /** وعد الخصوصية يحتاج مدخلًا في الواجهة لا mutation وحيدة. */
+  const handleDeleteAllData = useCallback(() => {
+    void deleteMyDataMutation()
+      .then(async (removed) => {
+        clearOfflineProfile();
+        resetNudges();
+        setSeenViews({});
+        resetPrefs();
+        toast.success(`حُذفت ${arabicNumber(removed)} سجلًا من حسابك. سنبدأ من جديد.`);
+        await signOut();
+        navigate("/");
+      })
+      .catch(() => toast.error("تعذّر الحذف الآن. حاول مرة أخرى."));
+  }, [deleteMyDataMutation, navigate, resetPrefs, signOut]);
+
   const handlePrayerStatus = useCallback(
     (prayer: string, status: PrayerStatus) => {
       const key = PRAYER_KEYS.find((item) => item === prayer);
@@ -550,12 +586,15 @@ export default function Dashboard() {
   const handleSetPlanOutcome = useCallback(
     (itemId: string, status: PlanItemStatus) => {
       if (!weeklyPlanDoc) return;
+      // الأسبوع يُشتق من العنصر نفسه: تصفّح أسبوع آخر في شاشة الخطة لا يجوز
+      // أن يجعل تسجيل حالة عنصر اليوم يُرفض من الخادم.
+      const itemWeek = planItemWeekStart(itemId) ?? activeWeekStart;
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       setSavingItemId(itemId);
       void setPlanItemStatusMutation({
         date: today,
-        weekStart,
+        weekStart: itemWeek,
         itemId,
         status,
         ...(status === "postponed" ? { postponedTo: dateKey(tomorrow), reason: "ؤجل من مراجعة اليوم" } : {}),
@@ -563,7 +602,7 @@ export default function Dashboard() {
         .catch(() => toast.error("تعذّر تسجيل الحالة. حاول مرة أخرى."))
         .finally(() => setSavingItemId(null));
     },
-    [setPlanItemStatusMutation, today, weekStart, weeklyPlanDoc],
+    [activeWeekStart, setPlanItemStatusMutation, today, weeklyPlanDoc],
   );
 
   const handleResetPlanOutcome = useCallback(
@@ -576,26 +615,46 @@ export default function Dashboard() {
     [resetPlanItemStatusMutation, today],
   );
 
-  const handleSaveWeeklyReview = useCallback(() => {
+  const saveWeeklyReviewFor = useCallback((target: string) => {
     setReviewingWeek(true);
-    void saveWeeklyReviewMutation({ weekStart })
+    void saveWeeklyReviewMutation({ weekStart: target })
       .then(() => toast.success("حُفظت مراجعة الأسبوع. لن يتغير شيء قبل موافقتك."))
       .catch(() => toast.error("تعذّر إنشاء مراجعة الأسبوع."))
       .finally(() => setReviewingWeek(false));
-  }, [saveWeeklyReviewMutation, weekStart]);
+  }, [saveWeeklyReviewMutation]);
 
-  const handleApplySuggestion = useCallback((suggestion: AdaptiveSuggestion) => {
-    if (!weeklyPlanDoc) return;
+  // الشاشة الرئيسية تتحدث عن أسبوع اليوم دائمًا؛ شاشة الخطة تتحدث عن الأسبوع المعروض.
+  const handleSaveWeeklyReview = useCallback(
+    () => saveWeeklyReviewFor(activeWeekStart),
+    [activeWeekStart, saveWeeklyReviewFor],
+  );
+  const handleSaveBrowsedWeeklyReview = useCallback(
+    () => saveWeeklyReviewFor(weekStart),
+    [saveWeeklyReviewFor, weekStart],
+  );
+
+  const applySuggestionFor = useCallback((target: string, doc: { version: number }, suggestion: AdaptiveSuggestion) => {
     setApplyingSuggestion(true);
     void applyPlanSuggestionMutation({
-      weekStart,
+      weekStart: target,
       suggestionId: suggestion.id,
-      expectedVersion: weeklyPlanDoc.version,
+      expectedVersion: doc.version,
     })
       .then(() => toast.success("طُبّق اقتراحك على خطة الأسبوع."))
       .catch(() => toast.error("تعذّر التطبيق؛ حدّث الخطة ثم أعد المحاولة."))
       .finally(() => setApplyingSuggestion(false));
-  }, [applyPlanSuggestionMutation, weekStart, weeklyPlanDoc]);
+  }, [applyPlanSuggestionMutation]);
+
+  const handleApplySuggestion = useCallback((suggestion: AdaptiveSuggestion) => {
+    if (!weeklyPlanDoc) return;
+    applySuggestionFor(activeWeekStart, weeklyPlanDoc, suggestion);
+  }, [activeWeekStart, applySuggestionFor, weeklyPlanDoc]);
+
+  const handleApplyBrowsedSuggestion = useCallback((suggestion: AdaptiveSuggestion) => {
+    const doc = browseWeekPlan ?? weeklyPlanDoc;
+    if (!doc) return;
+    applySuggestionFor(browseWeekPlan ? weekStart : activeWeekStart, doc, suggestion);
+  }, [activeWeekStart, applySuggestionFor, browseWeekPlan, weekStart, weeklyPlanDoc]);
 
   const handleGeoRequest = useCallback(async () => {
     const result = await geo.request();
@@ -906,8 +965,8 @@ export default function Dashboard() {
               savingItemId={savingItemId}
               onWeekChange={handleWeekChange}
               onPatchItem={handlePatchPlanItem}
-              onApplySuggestion={handleApplySuggestion}
-              onSaveWeeklyReview={handleSaveWeeklyReview}
+              onApplySuggestion={handleApplyBrowsedSuggestion}
+              onSaveWeeklyReview={handleSaveBrowsedWeeklyReview}
             />
           </div>
         ) : null}
@@ -968,6 +1027,7 @@ export default function Dashboard() {
             onExportData={handleExportData}
             onSetCity={(value) => void handleSetCity(value)}
             onEditProfile={() => navigate("/onboarding?edit=1")}
+            onDeleteAllData={handleDeleteAllData}
             onSignOut={() => void handleSignOut()}
             city={locationLabel}
           />

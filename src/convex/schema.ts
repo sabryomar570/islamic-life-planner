@@ -63,7 +63,7 @@ const schema = defineSchema(
       workStart: v.optional(v.string()),
       workEnd: v.optional(v.string()),
       restTime: v.optional(v.string()),
-      // التزام.المستخدم يحميه هذا الأسبوع؛ نص قصير اختياري لا قاعدة ثابتة.
+      // التزام يحميه المستخدم هذا الأسبوع؛ نص قصير اختياري لا قاعدة ثابتة.
       commitment: v.optional(v.string()),
       // المدينة المستنتجة من المنطقة الزمنية أو المُعدّل عليها من الإعدادات.
       city: v.optional(v.string()),

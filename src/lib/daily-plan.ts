@@ -111,22 +111,36 @@ function choosePrimary(items: readonly DailyPlanItem[]): DailyPlanItem | null {
   return items[0] ?? null;
 }
 
+/**
+ * عناصر يوم واحد من خطة الأسبوع، مُصنّفة في نطاقاتها.
+ * Time اختياري: الخادم يشتقّ العناصر للتصنيف والاحتساب دون مواقيت الصلاة
+ * (وهي تُحسب على جهاز المستخدم)، والعميل يمرّرها لترتيب اليوم بالساعة.
+ */
+export function buildDayItems(
+  items: readonly WeeklyPlanItem[],
+  date: string,
+  timings?: Timings,
+): DailyPlanItem[] {
+  return items
+    .filter((item) => item.date === date && item.enabled)
+    .map((item) => {
+      const scheduledTime = timings ? itemTime(item, timings) : item.startTime;
+      return {
+        item,
+        band: bandFor(item),
+        ...(scheduledTime ? { scheduledTime } : {}),
+      } satisfies DailyPlanItem;
+    })
+    .sort(compareDailyItems);
+}
+
 export function buildDailyPlan(input: {
   plan: WeeklyPlan;
   date: string;
   timings: Timings;
   now?: Date;
 }): DailyPlan {
-  const dayItems = input.plan.items
-    .filter((item) => item.date === input.date && item.enabled)
-    .map((item) => {
-      const scheduledTime = itemTime(item, input.timings);
-      return {
-        item,
-        band: bandFor(item),
-        ...(scheduledTime ? { scheduledTime } : {}),
-      } satisfies DailyPlanItem;
-    });
+  const dayItems = buildDayItems(input.plan.items, input.date, input.timings);
 
   const sections = SECTION_ORDER.map((key) => ({
     key,

@@ -64,6 +64,18 @@ export function startOfWeekKey(date: Date = new Date()): string {
   return dateKey(value);
 }
 
+/**
+ * بداية الأسبوع (الاثنين) لمفتاح تاريخ YYYY-MM-DD.
+ * الحساب بـ UTC عمدًا: يوم الأسبوع لتقويم مُعبَّر عنه في صورة تاريخ لا يتأثر
+ * بمنطقة الجهاز، فيعطي الخادم والعميل نفس النتيجة.
+ */
+export function weekStartOfDateKey(date: string): string {
+  const value = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(value.getTime())) return date;
+  value.setUTCDate(value.getUTCDate() - ((value.getUTCDay() + 6) % 7));
+  return value.toISOString().slice(0, 10);
+}
+
 export function formatGregorian(date: Date = new Date()): string {
   return date.toLocaleDateString("ar-EG", {
     weekday: "long",

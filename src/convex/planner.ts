@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { dateKey } from "../lib/time";
+import { dateKey, weekStartOfDateKey } from "../lib/time";
 
 /** الحقول الأساسية المستخرجة من أسئلة البداية — كلٌّ منها يؤثر فعليًا في التطبيق. */
 export const answersValidator = v.object({
@@ -100,10 +100,7 @@ function assertDate(date: string) {
 }
 
 function weekStartForDate(date: string) {
-  const value = new Date(`${date}T00:00:00Z`);
-  const offset = (value.getUTCDay() + 6) % 7;
-  value.setUTCDate(value.getUTCDate() - offset);
-  return value.toISOString().slice(0, 10);
+  return weekStartOfDateKey(date);
 }
 
 function assertTime(value: string, field: string) {
@@ -285,10 +282,11 @@ export const getDayState = query({
       .withIndex("by_user_and_date", (q) => q.eq("userId", userId).eq("date", safeDate))
       .collect();
 
+    // مقيّد بالحد الأقصى للمحفوظات: collect غير مقيّد هنا كانا يجلب كل سجلات المستخدم.
     const favorites = await ctx.db
       .query("favorites")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+      .take(MAX_FAVORITES);
 
     const reviewDoc = await ctx.db
       .query("dayReviews")
@@ -829,28 +827,35 @@ export const removeFavorite = mutation({
   },
 });
 
-/** إضافة/إزالة عنصر من المحفوظات (أحاديث، أبيات، أذكار، آيات). */
-export const toggleFavorite = mutation({
+/**
+ * ضبط حالة الحفظ بنية صريحة (saved) لا بتبديل.
+ *
+ * التبديل العمي كان ينقلب مع نقرتين متلاحقتين: العميل يظن أن الحفظ تم
+ * بينما انقلب الخادم في الاتجاه المعاكس. تكرار الطلب نفسه هنا لا يغير شيئا.
+ */
+export const setFavorite = mutation({
   args: {
     itemId: v.string(),
     kind: favoriteKindValidator,
     title: v.string(),
+    saved: v.boolean(),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
     if (!ITEM_ID_PATTERN.test(args.itemId)) throw new Error("معرّف العنصر غير صحيح");
-    const title = cleanText(args.title, MAX_TEXT);
 
     const existing = await ctx.db
       .query("favorites")
       .withIndex("by_user_and_item", (q) => q.eq("userId", userId).eq("itemId", args.itemId))
       .unique();
 
-    if (existing) {
+    if (!args.saved) {
+      if (!existing) return { saved: false, changed: false };
       await ctx.db.delete(existing._id);
-      return false;
+      return { saved: false, changed: true };
     }
 
+    if (existing) return { saved: true, changed: false };
     const all = await ctx.db
       .query("favorites")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -859,6 +864,7 @@ export const toggleFavorite = mutation({
       throw new Error("بلغت الحد الأقصى للمحفوظات، احذف بعضها أولًا");
     }
 
+    const title = cleanText(args.title, MAX_TEXT);
     await ctx.db.insert("favorites", {
       userId,
       itemId: args.itemId,
@@ -866,7 +872,7 @@ export const toggleFavorite = mutation({
       title,
       savedAt: Date.now(),
     });
-    return true;
+    return { saved: true, changed: true };
   },
 });
 

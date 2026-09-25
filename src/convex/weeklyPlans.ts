@@ -9,11 +9,15 @@ import {
   type WeeklyPlanItem,
 } from "../lib/weekly-plan";
 import {
+  calculateDailyScore,
   isValidPostponedDate,
+  mergePrayerLogsIntoOutcomes,
   upsertPlanOutcome,
   type PlanItemOutcome,
   type PlanItemStatus,
 } from "../lib/accountability";
+import { buildDayItems } from "../lib/daily-plan";
+import { weekStartOfDateKey } from "../lib/time";
 import {
   applyApprovedSuggestion,
   buildAdaptiveSuggestions,
@@ -67,6 +71,12 @@ function weekDates(weekStart: string) {
   });
 }
 
+function shiftDays(dateKey: string, days: number) {
+  const value = new Date(`${dateKey}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
 function assertWeekStart(value: string) {
   if (!DAY_PATTERN.test(value)) throw new Error("تاريخ بداية الأسبوع غير صحيح");
   const parsed = new Date(`${value}T00:00:00Z`);
@@ -89,33 +99,37 @@ async function adaptiveContext(ctx: AnyCtx, userId: GenericId<"users">, weekStar
   start.setUTCDate(start.getUTCDate() - 27);
   const from = start.toISOString().slice(0, 10);
   const to = weekDates(weekStart)[6];
-  const [plans, logs] = await Promise.all([
+  const [plans, { logs, prayerLogs }] = await Promise.all([
     ctx.db
       .query("weeklyPlans")
       .withIndex("by_user_and_week", (q) =>
         q.eq("userId", userId).gte("weekStart", from).lte("weekStart", weekStart),
       )
       .take(8),
-    ctx.db
-      .query("planItemLogs")
-      .withIndex("by_user_and_date", (q) =>
-        q.eq("userId", userId).gte("date", from).lte("date", to),
-      )
-      .take(1000),
+    planOutcomesForRange(ctx, userId, from, to),
   ]);
-  const itemById = new Map(
-    plans.flatMap((plan) => plan.items.map((item) => [item.id, item] as const)),
-  );
-  const observations: AdaptiveObservation[] = logs.flatMap((log) => {
-    const item = itemById.get(log.itemId);
+  const rangeItems = plans.flatMap((plan) => plan.items as WeeklyPlanItem[]);
+  const outcomes = mergePrayerLogsIntoOutcomes({
+    items: rangeItems,
+    outcomes: toOutcomes(logs),
+    prayerLogs: prayerLogs.map((log) => ({
+      date: log.date,
+      prayer: log.prayer,
+      status: log.status,
+      updatedAt: log.updatedAt,
+    })),
+  });
+  const itemById = new Map(rangeItems.map((item) => [item.id, item] as const));
+  const observations: AdaptiveObservation[] = outcomes.flatMap((outcome) => {
+    const item = itemById.get(outcome.itemId);
     if (!item) return [];
     return [{
-      itemId: log.itemId,
-      date: log.date,
+      itemId: outcome.itemId,
+      date: outcome.date,
       kind: item.kind as AdaptiveObservation["kind"],
       importance: item.importance as AdaptiveObservation["importance"],
       ...(item.startTime ? { startTime: item.startTime } : {}),
-      status: log.status as PlanItemStatus,
+      status: outcome.status,
     }];
   });
   return {
@@ -126,6 +140,58 @@ async function adaptiveContext(ctx: AnyCtx, userId: GenericId<"users">, weekStar
       observations,
     }),
   };
+}
+
+function toOutcomes(
+  logs: readonly {
+    date: string;
+    itemId: string;
+    weekStart: string;
+    status: string;
+    postponedTo?: string;
+    reason: string;
+    createdAt: number;
+    updatedAt: number;
+  }[],
+): PlanItemOutcome[] {
+  return logs.map((log) => ({
+    date: log.date,
+    itemId: log.itemId,
+    weekStart: log.weekStart,
+    status: log.status as PlanItemStatus,
+    postponedTo: log.postponedTo ?? null,
+    reason: log.reason,
+    createdAt: log.createdAt,
+    updatedAt: log.updatedAt,
+  }));
+}
+
+/**
+ * سجلات الخطة مع سجل الصلاة في مصدر واحد.
+ * بدون هذا تحسب الواجهة نتيجة يومIncludes الصلوات، بينما تحسب المراجعة الأسبوعية
+ * والتكييف من planItemLogs وحدها فيظهر رقمان مختلفان لنفس اليوم.
+ */
+async function planOutcomesForRange(
+  ctx: AnyCtx,
+  userId: GenericId<"users">,
+  from: string,
+  to: string,
+) {
+  const [logs, prayerLogs] = await Promise.all([
+    ctx.db
+      .query("planItemLogs")
+      .withIndex("by_user_and_date", (q) =>
+        q.eq("userId", userId).gte("date", from).lte("date", to),
+      )
+      .take(500),
+    ctx.db
+      .query("prayerLogs")
+      .withIndex("by_user_and_date", (q) =>
+        q.eq("userId", userId).gte("date", from).lte("date", to),
+      )
+      .take(300),
+  ]);
+  return { logs, prayerLogs };
 }
 
 function assertTime(value: string, field: string) {
@@ -424,7 +490,39 @@ export const resetPlanItemStatus = mutation({
   },
 });
 
-/** تجميع الأسبوع عبر فهرس واحد؛ لا استعلام يومي متعدد. */
+/** سجل أسبوع: عدّادات مشتقة من السجلات، ونتيجة بنفس منطق الحساب في العميل. */
+function weekRecords(input: {
+  weekStart: string;
+  items: readonly WeeklyPlanItem[];
+  outcomes: readonly PlanItemOutcome[];
+  reviewedDates: ReadonlySet<string>;
+}) {
+  return weekDates(input.weekStart).map((date) => {
+    const dayOutcomes = input.outcomes.filter((outcome) => outcome.date === date);
+    const counts = { completed: 0, partial: 0, postponed: 0, skipped: 0 };
+    for (const outcome of dayOutcomes) counts[outcome.status] += 1;
+    const dayItems = buildDayItems(input.items, date);
+    return {
+      date,
+      planned: dayItems.length,
+      ...counts,
+      reviewed: input.reviewedDates.has(date),
+      // الأيام المنقضية تُحسب مغلقة: ما لم يُسجَّل يُحسب فائئًا لا معلَّقًا.
+      score: calculateDailyScore({ items: dayItems, outcomes: dayOutcomes, closed: true }).score,
+    };
+  });
+}
+
+function toPrayerLogs(logs: readonly { date: string; prayer: string; status: string; updatedAt: number }[]) {
+  return logs.map((log) => ({
+    date: log.date,
+    prayer: log.prayer,
+    status: log.status,
+    updatedAt: log.updatedAt,
+  }));
+}
+
+/** تجميع الأسبوع عبر فهارس نطاق؛ لا استعلام يومي متعدد. */
 export const getPlanProgress = query({
   args: { weekStart: v.string() },
   handler: async (ctx, { weekStart }) => {
@@ -433,7 +531,7 @@ export const getPlanProgress = query({
     const safeWeekStart = assertWeekStart(weekStart);
     const dates = weekDates(safeWeekStart);
     const from = dates[0];
-    const to = dates[dates.length - 1];
+    const to = dates[6];
     const plan = await ctx.db
       .query("weeklyPlans")
       .withIndex("by_user_and_week", (q) =>
@@ -442,37 +540,66 @@ export const getPlanProgress = query({
       .unique();
     if (!plan) return null;
 
-    const [logs, reviews] = await Promise.all([
+    // الأسبوع السابق يحتاج سجلاته هو، فنقرأ نطاق أسبوعين مرة واحدة ونقسّمه.
+    const previousKey = weekStartOfDateKey(shiftDays(safeWeekStart, -7));
+    const previousFrom = weekDates(previousKey)[0];
+    const [{ logs, prayerLogs }, previousPlan, reviews, previousReviews] = await Promise.all([
+      planOutcomesForRange(ctx, userId, previousFrom, to),
       ctx.db
-        .query("planItemLogs")
-        .withIndex("by_user_and_date", (q) =>
-          q.eq("userId", userId).gte("date", from).lte("date", to),
+        .query("weeklyPlans")
+        .withIndex("by_user_and_week", (q) =>
+          q.eq("userId", userId).eq("weekStart", previousKey),
         )
-        .take(500),
+        .unique(),
       ctx.db
         .query("dayReviews")
         .withIndex("by_user_and_date", (q) =>
           q.eq("userId", userId).gte("date", from).lte("date", to),
         )
         .take(20),
+      ctx.db
+        .query("dayReviews")
+        .withIndex("by_user_and_date", (q) =>
+          q.eq("userId", userId).gte("date", previousFrom).lte("date", to),
+        )
+        .take(20),
     ]);
-    const reviewed = new Set(reviews.map((review) => review.date));
-    return {
+
+    const currentOutcomes = mergePrayerLogsIntoOutcomes({
+      items: plan.items as WeeklyPlanItem[],
+      outcomes: toOutcomes(logs.filter((log) => log.date >= from)),
+      prayerLogs: toPrayerLogs(prayerLogs.filter((log) => log.date >= from)),
+    });
+    const records = weekRecords({
       weekStart: safeWeekStart,
-      records: dates.map((date) => {
-        const dayLogs = logs.filter((log) => log.date === date);
-        const counts = { completed: 0, partial: 0, postponed: 0, skipped: 0 };
-        for (const log of dayLogs) {
-          if (log.status in counts) counts[log.status as keyof typeof counts] += 1;
-        }
-        return {
-          date,
-          planned: plan.items.filter((item) => item.date === date && item.enabled).length,
-          ...counts,
-          reviewed: reviewed.has(date),
-        };
-      }),
-    };
+      items: plan.items as WeeklyPlanItem[],
+      outcomes: currentOutcomes,
+      reviewedDates: new Set(reviews.map((review) => review.date)),
+    });
+
+    // لا مقارنة بلا أساس: إن لم تكن هناك خطة سابقة فلا متوسط سابق.
+    const previous =
+      previousPlan === null
+        ? null
+        : {
+            weekStart: previousKey,
+            records: weekRecords({
+              weekStart: previousKey,
+              items: previousPlan.items as WeeklyPlanItem[],
+              outcomes: mergePrayerLogsIntoOutcomes({
+                items: previousPlan.items as WeeklyPlanItem[],
+                outcomes: toOutcomes(logs.filter((log) => log.date < from)),
+                prayerLogs: toPrayerLogs(prayerLogs.filter((log) => log.date < from)),
+              }),
+              reviewedDates: new Set(
+                previousReviews
+                  .map((review) => review.date)
+                  .filter((date) => date < from),
+              ),
+            }),
+          };
+
+    return { weekStart: safeWeekStart, records, previous };
   },
 });
 
@@ -553,19 +680,8 @@ export const saveWeeklyReview = mutation({
       .unique();
     if (!plan) throw new Error("لا توجد خطة لهذا الأسبوع");
 
-    const [outcomeLogs, prayerLogs, adhkarLogs, reviews] = await Promise.all([
-      ctx.db
-        .query("planItemLogs")
-        .withIndex("by_user_and_date", (q) =>
-          q.eq("userId", userId).gte("date", from).lte("date", to),
-        )
-        .take(500),
-      ctx.db
-        .query("prayerLogs")
-        .withIndex("by_user_and_date", (q) =>
-          q.eq("userId", userId).gte("date", from).lte("date", to),
-        )
-        .take(100),
+    const [{ logs: outcomeLogs, prayerLogs }, adhkarLogs, reviews] = await Promise.all([
+      planOutcomesForRange(ctx, userId, from, to),
       ctx.db
         .query("adhkarLogs")
         .withIndex("by_user_and_date", (q) =>
@@ -579,24 +695,20 @@ export const saveWeeklyReview = mutation({
         )
         .take(20),
     ]);
+    const items = plan.items as WeeklyPlanItem[];
     const safeNote = note && note.trim().length > 0 ? cleanText(note, 500) : "";
     const summary = buildWeeklyReview({
       plan: {
         weekStart: plan.weekStart,
         timezone: plan.timezone,
         weeklyFocus: plan.weeklyFocus,
-        items: plan.items as WeeklyPlanItem[],
+        items,
       },
-      outcomes: outcomeLogs.map((log) => ({
-        date: log.date,
-        itemId: log.itemId,
-        weekStart: log.weekStart,
-        status: log.status as PlanItemStatus,
-        postponedTo: log.postponedTo ?? null,
-        reason: log.reason,
-        createdAt: log.createdAt,
-        updatedAt: log.updatedAt,
-      })),
+      outcomes: mergePrayerLogsIntoOutcomes({
+        items,
+        outcomes: toOutcomes(outcomeLogs),
+        prayerLogs: toPrayerLogs(prayerLogs),
+      }),
       prayerLogs: prayerLogs.map((log) => ({
         date: log.date,
         prayer: log.prayer,

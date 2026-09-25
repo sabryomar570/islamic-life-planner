@@ -6,6 +6,17 @@ import {
 } from "@/components/app/Surfaces";
 import { RING_TONES, playRingTone, type RingTone } from "@/lib/notify";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -125,6 +136,7 @@ export function SettingsView({
   onSetCity,
   onEditProfile,
   onSignOut,
+  onDeleteAllData,
   city,
 }: {
   prefs: Preferences;
@@ -150,6 +162,7 @@ export function SettingsView({
   onSetCity: (value: string) => void;
   onEditProfile: () => void;
   onSignOut: () => void;
+  onDeleteAllData: () => void;
   city: string;
 }) {
   const [cityDraft, setCityDraft] = useState(city);
@@ -653,6 +666,38 @@ export function SettingsView({
               <RotateCcw className="size-4" />
               استعادة الافتراضي
             </Button>
+          </Row>
+
+          <Row
+            title="حذف كل بياناتي من الخادم"
+            hint="يزيل ملفك وسجل صلواتك وأذكارك ومراجعاتك ومحفوظاتك وخططك. لا رجعة فيه."
+          >
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="ghost" className="rounded-full text-destructive">
+                  <Trash2 className="size-4" />
+                  حذف بياناتي
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent dir="rtl" className="rounded-3xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>حذف كل بياناتك نهائيًا؟</AlertDialogTitle>
+                  <AlertDialogDescription className="leading-7">
+                    سيُحذف كل ما سجّلته في حسابك: نموذج الحياة، سجل الصلوات والأذكار،
+                    المراجعات، المحفوظات، وخطط الأسبوع. يبقى الحساب نفسه، ويبدأ من الصفر.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-full">تراجع</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="rounded-full bg-destructive text-destructive-foreground"
+                    onClick={onDeleteAllData}
+                  >
+                    نعم، احذف كل شيء
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </Row>
 
           <Row title="تسجيل الخروج" hint="يمكنك الدخول مرة أخرى بالبريد نفسه.">
