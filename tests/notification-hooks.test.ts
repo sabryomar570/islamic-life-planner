@@ -27,7 +27,7 @@ import {
   writeNotifications,
   type StoredNotification,
 } from "../src/lib/notification-center";
-import { cueForCategory, type AudioCue } from "../src/lib/audio";
+import { channelOf, cueForCategory, type AudioCue } from "../src/lib/audio";
 
 const ALL_AUDIO_CUES: AudioCue[] = [
   "tap",
@@ -71,10 +71,18 @@ describe("الإشعارات — طبقة الصياغة", () => {
       expect(ALL_AUDIO_CUES).toContain(cue);
       seen.add(cue);
     }
-    // الصلاة لها نغمة مستقلة، والاستدراك أخفّ من التنبيه.
+    // الصلاة لها نغمة مستقلة، وما عداها تنبيه واحد.
     expect(cueForCategory("prayer")).toBe("prayer");
-    expect(cueForCategory("recovery")).toBe("tap");
+    expect(cueForCategory("recovery")).toBe("reminder");
     expect(seen.size).toBeGreaterThan(1);
+  });
+
+  test("صوت الإشعار يتبع مفتاح التنبيه، لا مفتاح لم يطلبه المستخدم", () => {
+    // إشعارٌ لا يجوز أن يُسكته إطفاء قناة لم يُختر له: مفتاح التنبيه وحده.
+    for (const template of NOTIFICATION_TEMPLATES) {
+      const channel = channelOf(cueForCategory(template.category));
+      expect(["notification", "prayer"]).toContain(channel);
+    }
   });
 
   test("الإشعار يُترجم إلى مرشح يفهمه المحرّك القائم", () => {

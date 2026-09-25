@@ -166,6 +166,14 @@ describe("أحاديث — حالة التوثيق", () => {
     expect(HADITHS.some((hadith) => canClaimVerified(hadith))).toBe(false);
   });
 
+  test("لا نص في القاعدة يُعتمد عليه قبل مراجعة عالم", () => {
+    // صفر اليوم. فائدة الاختبار تظهر يوم تبدأ مراجعة بشرية فترتفع هذه
+    // القيمة: حينها يجب أن ينزل هذا الرقم إلى ما روجعت منه فعلا.
+    const pending = HADITHS.filter((hadith) => needsScholarlyReview(hadith)).length;
+    expect(pending).toBe(HADITHS.length);
+    expect(pending).toBeGreaterThan(0);
+  });
+
   test("سطر الاستشهاد يجمع المصدر ولا يفقده", () => {
     const hadith = HADITHS[0];
     const line = citationLine(hadith);
@@ -218,7 +226,9 @@ describe("أحاديث — سياق اليوم", () => {
 
 describe("الإحصاء — اقتباسات بلا اختلاق", () => {
   test("كل شريحة تحمل مصدرا حقيقيا من قاعدة البيانات", () => {
-    for (const area of ["today", "prayers", "review", "adhkar", "weekly"] as const) {
+    // الأقسام الثلاثة التي بُني لها المستطيل، لا غير: وجود «الأذكار» أو
+    // «الأسبوع» هنا يعني أن المستطيل تسرّب إلى قسم لم يُرد له.
+    for (const area of ["today", "prayers", "review"] as const) {
       const insights = insightsForArea(area, new Date(2026, 8, 25, 9, 0), 2);
       expect(insights.length).toBeGreaterThan(0);
       expect(insightsAreSourced(insights)).toBe(true);

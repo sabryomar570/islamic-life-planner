@@ -59,22 +59,19 @@ function toInsight(hadith: Hadith): Insight {
   };
 }
 
-/** الأبواب التي يتغذى منها كل قسم من أقسام التطبيق. كلها أبواب حقيقية. */
-const SECTIONS_BY_AREA: Record<string, HadithSectionId[]> = {
+/**
+ * الأبواب التي يتغذى منها كل قسم من أقسام التطبيق.
+ *
+ * **ثلاثة أقسام لا غير:** اليوم والصلاة والمراجعة. كان هنا أربعة عشر
+ * مدخلا منها أحد عشر بلا مستهلك، وكل مدخل زائد دعوة إلى نشر المستطيل
+ * في كل شاشة — وهو ما رُفض في المرحلة. فحُذفوا، وصار النوع مغلوبا:
+ * إضافة قسم رابع تعني تعديل هذا الملف، فيظهر ذلك في المراجعة.
+ */
+const SECTIONS_BY_AREA = {
   today: ["intention", "patience", "gratitude", "sincerity"],
   prayers: ["prayer", "night", "sincerity", "gratitude"],
-  habits: ["intention", "patience", "strength", "provision"],
   review: ["self", "forgiveness", "pardon", "heart"],
-  adhkar: ["adhkar", "gratitude", "healing"],
-  weekly: ["patience", "intention", "provision", "charity"],
-  stats: ["patience", "strength", "gratitude"],
-  tasbih: ["adhkar", "gratitude", "healing"],
-  duas: ["dua", "relief", "forgiveness"],
-  quran: ["quran", "knowledge"],
-  occasions: ["friday", "ramadan", "family"],
-  settings: ["gratitude", "intention"],
-  saved: ["gratitude", "patience"],
-};
+} as const satisfies Record<string, readonly HadithSectionId[]>;
 
 export type InsightArea = keyof typeof SECTIONS_BY_AREA;
 
@@ -83,7 +80,7 @@ export type InsightArea = keyof typeof SECTIONS_BY_AREA;
  * حتى لا تتكرر شاشتان بنفس الاقتباس.
  */
 export function insightsForArea(area: InsightArea, now: Date, count = 2): Insight[] {
-  const sections = SECTIONS_BY_AREA[area] ?? SECTIONS_BY_AREA.today;
+  const sections: readonly HadithSectionId[] = SECTIONS_BY_AREA[area];
   const pool = HADITHS.filter((hadith) => sections.includes(hadith.section));
   if (pool.length === 0) return [];
 

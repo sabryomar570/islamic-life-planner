@@ -9,6 +9,7 @@
  */
 
 import { cueForCategory, playCue, type AudioPreferences } from "@/lib/audio";
+import { isLocalDataCurrent, localDataEpoch } from "@/lib/local-data";
 import {
   appendNotification,
   clearNotifications,
@@ -58,9 +59,14 @@ export function useNotificationCenter({
   // الرسم تخالف قواعد React وقد تعطي قيمة نصف محدّثة.
   const snapshotRef = useRef(getSnapshot);
   const audioRef = useRef(audio);
+  // سجلّ التهدئة يُقرأ من القيمة الحيّة لا من نسخة أول رسم. لولا هذا
+  // لبقيت التهدئة مجمّدة عند التركيب: يختار المحرّك قالبا نُبّه عليه
+  // فعلا، فيسقطه `appendNotification`، ويضيع تذكيره بتلك الدقيقة بصمت.
+  const itemsRef = useRef(items);
   useEffect(() => {
     snapshotRef.current = getSnapshot;
     audioRef.current = audio;
+    itemsRef.current = items;
   });
 
   const replace = useCallback((next: StoredNotification[]) => {
@@ -71,25 +77,40 @@ export function useNotificationCenter({
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
+    // نلتزم بعهد الجهاز عند التركيب: إن مُسحت البيانات بعده — تسجيل
+    // خروج أو حذف حساب — لا يجوز أن يعيد هذا المؤقّت كتابتها.
+    const epoch = localDataEpoch();
 
     const tick = () => {
       if (cancelled) return;
-      const snapshot = snapshotRef.current();
-      const applicable = resolveApplicableTemplates(NOTIFICATION_TEMPLATES, snapshot);
-      const chosen = selectNotifications(applicable, {
-        now: snapshot.now,
-        lastFiredAt: Object.fromEntries(items.map((item) => [item.templateId, item.at])),
-        limit: 1,
-      });
-      if (chosen.length === 0) return;
+      if (!isLocalDataCurrent(epoch)) {
+        cancelled = true;
+        return;
+      }
+      // المؤقّت لا يسقط التطبيق: لقطة ناقصة أو مرفوضة تُتجاهل هذه الدقيقة
+      // ويأتي التقييم التالي بمعلومة سليمة.
+      try {
+        const snapshot = snapshotRef.current();
+        const applicable = resolveApplicableTemplates(NOTIFICATION_TEMPLATES, snapshot);
+        const chosen = selectNotifications(applicable, {
+          now: snapshot.now,
+          lastFiredAt: Object.fromEntries(
+            itemsRef.current.map((item) => [item.templateId, item.at]),
+          ),
+          limit: 1,
+        });
+        if (chosen.length === 0) return;
 
-      const picked = chosen[0].template;
-      setItems((current) => {
-        const next = appendNotification(current, picked, snapshot.now.getTime());
-        writeNotifications(next);
-        return next;
-      });
-      playCue(cueForCategory(picked.category), audioRef.current);
+        const picked = chosen[0].template;
+        setItems((current) => {
+          const next = appendNotification(current, picked, snapshot.now.getTime());
+          writeNotifications(next);
+          return next;
+        });
+        playCue(cueForCategory(picked.category), audioRef.current);
+      } catch {
+        // لا نكتب ولا نُصدر صوتا: التقييم التالي فرصته.
+      }
     };
 
     const warmup = window.setTimeout(tick, WARMUP_MS);

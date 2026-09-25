@@ -162,6 +162,11 @@ export function HadithView({
           <Tag>{topicTitle(topicOfSection(ofTheDay.section))}</Tag>
         </div>
 
+        {/* سطر واحد يشرح الفرق: من لا يعرف اصطلاح «مرفوع» يفهمه من هنا. */}
+        <p className="label-meta px-5 pb-5 text-muted-foreground sm:px-6">
+          {HADITH_KIND_HINTS[hadithKindOf(ofTheDay)]}
+        </p>
+
         <div className="rule-t mx-5 sm:mx-6">
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
             <p className="label-meta min-w-0 text-muted-foreground">

@@ -123,9 +123,30 @@ function audioCtor(): typeof AudioContext | null {
 function getContext(): AudioContext | null {
   const Ctor = audioCtor();
   if (!Ctor) return null;
-  context = context ?? new Ctor();
-  if (context.state === "suspended") void context.resume();
+  if (!context) {
+    // بعض البيئات ترمي من المُنشئ نفسها (سياسة مقيّدة، جهاز بلا صوت).
+    // المولّد نعمة، ورميه هنا كان يسقط التطبيق.
+    try {
+      context = new Ctor();
+    } catch {
+      return null;
+    }
+  }
+  if (context.state === "suspended") resumeSafely(context);
   return context;
+}
+
+/**
+ * `resume()` وعد يرفض حين ترفض سياسة المتصفح الاستئناف. بلا التقاط
+ * الرفض يصير رفضًا غير معالَج يظهر في الطرفية، وقد يبتلع في بعض
+ * البيئات ما حوله. الصوت لا يستحق استثناء.
+ */
+function resumeSafely(ctx: AudioContext) {
+  try {
+    void ctx.resume().catch(() => {});
+  } catch {
+    // متصفح لا يدعم الوعد على resume: نترك السياق معلَّقًا ونسكت.
+  }
 }
 
 /**
@@ -135,7 +156,7 @@ function getContext(): AudioContext | null {
 export function unlockAudio() {
   unlocked = true;
   const ctx = getContext();
-  if (ctx && ctx.state === "suspended") void ctx.resume();
+  if (ctx && ctx.state === "suspended") resumeSafely(ctx);
 }
 
 export function isAudioUnlocked(): boolean {
@@ -203,15 +224,23 @@ export type NotificationCategoryKey =
   | "occasion"
   | "hadith";
 
+/**
+ * قاعدة واحدة: **ما دام الإشعار إشعارا، فصوته يتبع مفتاح التنبيه.**
+ *
+ * كانت الفئات توزّع على قنوات أخرى — «المهمة» على قناة الإنجاز و«العودة
+ * بلطف» على قناة اللمس — فكان إطفاء «رد الفعل الخفيف» يُسكت إشعارًا لم
+ * يسأل المستخدم إسكاته. فلم يبقَ إلا فرقان: الصلاة لها نغمة مستقلة،
+ * وما عداها تنبيه يتبع مفتاح التنبيه وحده.
+ */
 const CUE_BY_CATEGORY: Record<NotificationCategoryKey, AudioCue> = {
   prayer: "prayer",
-  task: "complete",
+  task: "reminder",
   commitment: "reminder",
   review: "reminder",
   dhikr: "reminder",
-  recovery: "tap",
+  recovery: "reminder",
   occasion: "reminder",
-  hadith: "tap",
+  hadith: "reminder",
 };
 
 /** النغمة التي تخص فئة إشعار معينة. */
