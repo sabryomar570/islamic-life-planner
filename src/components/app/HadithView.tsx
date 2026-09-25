@@ -31,11 +31,13 @@ import {
   type HadithSectionId,
 } from "@/data/hadith";
 import {
+  HADITH_KIND_HINTS,
+  HADITH_KIND_LABELS,
+  HADITH_KIND_TONES,
   HADITH_TOPICS,
-  REVIEW_STATUS_LABELS,
   dayContextTopic,
   daySeed,
-  reviewStatusOf,
+  hadithKindOf,
   topicOfSection,
   topicTitle,
   type HadithTopic,
@@ -47,34 +49,38 @@ import { useMemo, useState } from "react";
 
 type Filter = HadithTopic | "all" | "saved";
 
-/** شارة التوثيق: لونها وحدها لا يكفي، Alongside نص صريح. */
+/**
+ * شارة النسبة.
+ *
+ * **قاعدة بصرية لا لفظية:** المرفوع يأخذ نقطة مصمتة، والأثر يأخذ حلقة
+ * مفرّغة. شكلان مختلفان فلا يخطئ العين سريعًا، ثم يأتي النصصريحا لئلا
+ * يخطئ القارئ البطيء. ولون الأثر ليس لون المرفوع أبدًا.
+ */
 function ProvenanceTag({ hadith, className }: { hadith: Hadith; className?: string }) {
-  const status = reviewStatusOf(hadith);
+  const kind = hadithKindOf(hadith);
+  const tone = HADITH_KIND_TONES[kind];
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 label-meta font-medium",
-        status === "verified"
-          ? "bg-[var(--status-success)]/12 text-[var(--status-success)]"
-          : status === "attributed"
-            ? "surface-secondary text-foreground/70"
-            : "bg-[var(--status-attention)]/14 text-[var(--editorial-ink)]",
+        tone === "raised"
+          ? "bg-primary/12 text-primary"
+          : tone === "companion"
+            ? "bg-[var(--status-neutral)]/12 text-[var(--editorial-ink)]"
+            : "bg-[var(--status-attention)]/16 text-[var(--editorial-ink)]",
         className,
       )}
     >
-      {/* نقطة + نص: إشارة-shape ونص، فلا يعتمد الفهم على اللون. */}
-      <span
-        className={cn(
-          "block size-1.5 rounded-full",
-          status === "verified"
-            ? "bg-[var(--status-success)]"
-            : status === "attributed"
-              ? "bg-[var(--status-neutral)]"
-              : "bg-[var(--status-attention)]",
-        )}
-        aria-hidden
-      />
-      {REVIEW_STATUS_LABELS[status]}
+      {tone === "raised" ? (
+        <span className="block size-1.5 rounded-full bg-primary" aria-hidden />
+      ) : (
+        /* حلقة مفرّغة: شكل الأثر لا يخطئ بنقطة المرفوع. */
+        <span
+          className="block size-1.5 rounded-full border-[1.5px] border-current"
+          aria-hidden
+        />
+      )}
+      {HADITH_KIND_LABELS[kind]}
     </span>
   );
 }
@@ -135,7 +141,7 @@ export function HadithView({
       <Panel className="overflow-hidden p-0">
         <div className="flex items-start gap-3 p-5 pb-0 sm:p-6 sm:pb-0">
           <div className="min-w-0 flex-1">
-            <p className="eyebrow">حديث اليوم</p>
+            <p className="eyebrow">نص اليوم</p>
             <p className="label-meta mt-1 text-muted-foreground">
               {new Date().toLocaleDateString("ar-EG", {
                 weekday: "long",
@@ -177,7 +183,7 @@ export function HadithView({
       <Panel className="p-5 sm:p-6">
         <SectionHead
           eyebrow="حسب وقتك الآن"
-          title="حديث هذا الوقت"
+          title="نص هذا الوقت"
           hint={`${topicTitle(contextTopic)} — يُختار بثبات، فيبقى المعنى واحدا كل يوم في وقته.`}
         />
         <HadithLine
@@ -194,9 +200,9 @@ export function HadithView({
         <SectionHead
           eyebrow="المعرفة"
           title="المكتبة"
-          hint={`${arabicNumber(HADITHS.length)} حديثًا في ${arabicNumber(
+          hint={`${arabicNumber(HADITHS.length)} نصا في ${arabicNumber(
             HADITH_SECTIONS.length,
-          )} بابًا، موزعة على ${arabicNumber(HADITH_TOPICS.length)} موضوعات.`}
+          )} بابا، موزعة على ${arabicNumber(HADITH_TOPICS.length)} موضوعات. كل نص موسوم بنسبته.`}
           action={
             <QuietButton
               onClick={() => {
@@ -230,7 +236,7 @@ export function HadithView({
                 active={filter === "all"}
                 onClick={() => setFilter("all")}
               >
-                كل الأحاديث
+                كل النصوص
               </ChoiceChip>
               <ChoiceChip
                 active={filter === "saved"}

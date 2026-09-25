@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { HADITHS, HADITH_SECTIONS, sectionTitle } from "../src/data/hadith";
 import {
+  HADITH_KIND_HINTS,
+  HADITH_KIND_LABELS,
+  HADITH_KIND_TONES,
   HADITH_TOPICS,
   REVIEW_STATUS_LABELS,
   canClaimVerified,
@@ -8,6 +11,9 @@ import {
   dayContextTopic,
   daySeed,
   gradeOf,
+  hadithKindOf,
+  isMarfu,
+  needsScholarlyReview,
   reviewStatusOf,
   topicOfSection,
   topicTitle,
@@ -83,7 +89,7 @@ describe("أحاديث — حالة التوثيق", () => {
       hadithNumber: "١٢٣",
     };
     expect(canClaimVerified(withoutBook)).toBe(false);
-    expect(reviewStatusOf(withoutBook)).toBe("attributed");
+    expect(reviewStatusOf(withoutBook)).toBe("traceable");
   });
 
   test("النسبة الموصوفة تُخرج الحديث من «موثّق» مهما كان مكتملا", () => {
@@ -95,7 +101,8 @@ describe("أحاديث — حالة التوثيق", () => {
       hadithNumber: "١",
     };
     expect(canClaimVerified(vague)).toBe(false);
-    expect(reviewStatusOf(vague)).toBe("needs-review");
+    expect(reviewStatusOf(vague)).not.toBe("verified");
+    expect(hadithKindOf(vague)).toBe("attributed");
   });
 
   test("أثر الصحابة ليس حديثا مرفوعا", () => {
@@ -104,21 +111,59 @@ describe("أحاديث — حالة التوثيق", () => {
       narrator: "عمر بن الخطاب رضي الله عنه",
       source: "من آثار الصحابة — التذكرة",
     };
-    expect(reviewStatusOf(athar)).toBe("needs-review");
+    expect(hadithKindOf(athar)).toBe("athar");
+    expect(isMarfu(athar)).toBe(false);
   });
 
-  test("كل حديث يأخذ إحدى الحالات الثلاث، والحالة تعني شيئا", () => {
-    const counts = { verified: 0, attributed: 0, "needs-review": 0 };
+  test("المصدر يكشف النوع قبل الراوي: الأثر يبقى أثرا", () => {
+    // راويه منسوب، لكن مصدره أثر صحابية — فهو أثر لا منسوب.
+    const mixed = {
+      id: "m",
+      narrator: "يُنسب للصحابة",
+      source: "من آثار الصحابة — التذكرة",
+    };
+    expect(hadithKindOf(mixed)).toBe("athar");
+  });
+
+  test("لا أثر في القاعدة يُعرض على أنه مرفوع", () => {
+    for (const hadith of HADITHS) {
+      if (hadithKindOf(hadith) === "athar") {
+        expect(isMarfu(hadith)).toBe(false);
+        expect(REVIEW_STATUS_LABELS[reviewStatusOf(hadith)]).not.toContain("موثّق");
+      }
+    }
+  });
+
+  test("كل نص يأخذ نوعا من الأربعة، ولكل نوع اسم معنى", () => {
+    const counts = { marfu: 0, athar: 0, attributed: 0, unverified: 0 };
+    for (const hadith of HADITHS) {
+      const kind = hadithKindOf(hadith);
+      counts[kind] += 1;
+      expect(HADITH_KIND_LABELS[kind].length).toBeGreaterThan(0);
+      expect(HADITH_KIND_HINTS[kind].length).toBeGreaterThan(0);
+    }
+    expect(counts.marfu).toBeGreaterThan(0);
+    expect(counts.athar).toBeGreaterThan(0);
+  });
+
+  test("لا أثر ولا منسوب يأخذ نبرة المرفوع بصريا", () => {
+    for (const hadith of HADITHS) {
+      if (hadithKindOf(hadith) !== "marfu") {
+        expect(HADITH_KIND_TONES[hadithKindOf(hadith)]).not.toBe("raised");
+      }
+    }
+  });
+
+  test("كل حديث بأخذ حالة مراجعة من الثلاث، و«موثّق» صفر اليوم", () => {
+    const counts = { verified: 0, traceable: 0, unverified: 0 };
     for (const hadith of HADITHS) {
       const status = reviewStatusOf(hadith);
-      expect(["verified", "attributed", "needs-review"]).toContain(status);
-      expect(REVIEW_STATUS_LABELS[status].length).toBeGreaterThan(0);
       counts[status] += 1;
+      expect(REVIEW_STATUS_LABELS[status].length).toBeGreaterThan(0);
     }
-    expect(counts.attributed).toBeGreaterThan(0);
-    expect(counts["needs-review"]).toBeGreaterThan(0);
-    // لا ندّعي توثيقا لم يقع بعد. اليوم صفر، وهذا صحيح لا نقص.
+    // لا ندّعي توثيقا لم يقع بعد. صفر اليوم، وهذا صحيح لا نقص في التنفيذ.
     expect(counts.verified).toBe(0);
+    expect(HADITHS.some((hadith) => canClaimVerified(hadith))).toBe(false);
   });
 
   test("سطر الاستشهاد يجمع المصدر ولا يفقده", () => {

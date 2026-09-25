@@ -68,7 +68,7 @@ export const VIEW_LABELS: Record<DashView, string> = {
   adhkar: "الأذكار",
   quran: "القرآن",
   tasbih: "المسبحة",
-  hadith: "الأحاديث",
+  hadith: "الأحاديث والآثار",
   duas: "الأدعية",
   poetry: "الأبيات",
   prophets: "قصص الأنبياء",
@@ -121,7 +121,12 @@ export const LIBRARY_GROUPS: NavGroup[] = [
     title: "المعرفة",
     hint: "ما يقرأه قلبك",
     entries: [
-      { key: "hadith", label: "الأحاديث", hint: "بأبوابها ورواتها", icon: ScrollText },
+      {
+        key: "hadith",
+        label: "الأحاديث والآثار",
+        hint: "كل نص موسوم بنسبته الحقيقية",
+        icon: ScrollText,
+      },
       { key: "duas", label: "الأدعية", hint: "من القرآن والسنة", icon: HeartHandshake },
       { key: "prophets", label: "قصص الأنبياء", hint: "موثّقة بمصادرها", icon: Landmark },
       { key: "poetry", label: "الأبيات", hint: "شعر عربي مختار", icon: Feather },

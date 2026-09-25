@@ -20,10 +20,12 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import {
-  REVIEW_STATUS_HINTS,
-  REVIEW_STATUS_LABELS,
+  HADITH_KIND_HINTS,
+  HADITH_KIND_LABELS,
   citationLine,
+  hadithKindOf,
   reviewStatusOf,
+  REVIEW_STATUS_LABELS,
 } from "@/lib/hadith-metadata";
 import { cn } from "@/lib/utils";
 import { sectionTitle, type Hadith } from "@/data/hadith";
@@ -33,7 +35,7 @@ import { toast } from "sonner";
 
 /** النص الذي يظهر بعد النسخ. لا يُزاد عليه. */
 export function hadithCitation(hadith: Hadith): string {
-  return `«${hadith.text}»\n${hadith.narrator} — ${citationLine(hadith)}\n(${sectionTitle(hadith.section)})`;
+  return `«${hadith.text}»\n${HADITH_KIND_LABELS[hadithKindOf(hadith)]} — ${hadith.narrator} — ${citationLine(hadith)}\n(${sectionTitle(hadith.section)})`;
 }
 
 export function HadithReader({
@@ -75,6 +77,9 @@ export function HadithReader({
   if (!hadith) return null;
 
   const status = reviewStatusOf(hadith);
+  const kind = hadithKindOf(hadith);
+  // نص التفريغ يحمل النسبة نفسها، فلا يخرج الأثر مصحوبا بلا وسم.
+  const shareText = `«${hadith.text}»\n${HADITH_KIND_LABELS[kind]} — ${hadith.narrator} — ${citationLine(hadith)}`;
 
   const copy = async () => {
     try {
@@ -86,7 +91,7 @@ export function HadithReader({
   };
 
   const share = async () => {
-    const text = `«${hadith.text}»\n${hadith.narrator} — ${citationLine(hadith)}`;
+    const text = shareText;
     if (navigator.share) {
       try {
         await navigator.share({ title: "حديث", text });
@@ -152,13 +157,17 @@ export function HadithReader({
               <dd className="label-body text-foreground/85">{citationLine(hadith)}</dd>
             </div>
             <div className="flex flex-wrap items-baseline gap-x-2">
-              <dt className="label-meta font-semibold text-foreground/70">حالة التوثيق</dt>
-              <dd className="label-body text-foreground/85">
-                {REVIEW_STATUS_LABELS[status]}
-                <span className="mt-1 block text-muted-foreground">
-                  {REVIEW_STATUS_HINTS[status]}
+              <dt className="label-meta font-semibold text-foreground/70">النسبة</dt>
+              <dd className="label-body font-semibold text-foreground/85">
+                {HADITH_KIND_LABELS[kind]}
+                <span className="mt-1 block font-normal text-muted-foreground">
+                  {HADITH_KIND_HINTS[kind]}
                 </span>
               </dd>
+            </div>
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <dt className="label-meta font-semibold text-foreground/70">المراجعة العلمية</dt>
+              <dd className="label-body text-foreground/85">{REVIEW_STATUS_LABELS[status]}</dd>
             </div>
           </dl>
         </div>

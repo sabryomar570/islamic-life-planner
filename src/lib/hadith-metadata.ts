@@ -1,35 +1,60 @@
 /**
  * PHASE 3 — طبقة بيانات الأحاديث.
  *
- * **القاعدة الحاكمة:** لا نخترع حديثًا ولا راويًا ولا مصدرًا ولا درجة. كل ما هنا
- * اشتقاق من الحقول الموجودة في `src/data/hadith.ts`، ولا يضيف ادّعاءً جديدًا.
+ * **القاعدة الحاكمة:** لا نخترع حديثًا ولا راويًا ولا مصدرًا ولا درجة.
+ * كل ما هنا اشتقاق من الحقول القائمة في `src/data/hadith.ts`.
  *
- * لماذا هذه الطبقة أصلًا؟ لأن قاعدة البيانات الحالية فيها ثلاثة مستويات مختلفة من
- * التوثيق مخلوطة في شكل واحد:
+ * لماذا الطبقة موجودة؟ لأن قاعدة البيانات تخلط أربعة أنواع مختلفة في شكل واحد،
+ * ولا يصحّ أن يقرأها المستخدم كلها على أنها «أحاديث نبوية»:
  *
- * 1. حديث براويه معلوم ومصدره جامع صحيح  → `attributed`
- * 2. أثر أو كلام صحابي أو نسبة موصوفة بـ«يُنسب»  → `needs-review`
- * 3. ما لم يوجد بعد كتاب ورقم حديث ومراجعة بشرية  → `verified` (لا يوجد اليوم)
+ *   1. حديث مرفوع   — لفظ عن راوٍ محدّد، رواه كتاب جامع
+ *   2. أثر صحابي    — كلام الصحابة نفسه، وليس مرفوعًا
+ *   3. منسوب        — نسبة موصوفة («يُنسب»)، لم تثبت
+ *   4. ينقصه توثيق  — راوٍ أو مصدر ناقص
  *
- * إدخال المستوى الثاني في واجهة «الأحاديث» بلا تمييز يُظهر أثرًا أو كلامًا كأنه
- * حديث مرفوع، وهذا أخطر خطأ ممكن في هذا القسم. لذلك الحالة صارت جزءًا من
- * العنصر المعروض، لا خاصية مخفية.
+ * **الترتيب مقصود:** أثرُ الصحابة يُفحص قبل النسبة الموصوفة، لأن المصدر
+ * يكشف النوع بدقة أكبر من الراوي. عنصرٌ راويه «يُنسب للصحابة» ومصدره
+ * «من آثار الصحابة» **أثر** لا منسوب، ولو عُكس الترتيب صار منسوبًا.
  */
 
-/** حالة التوثيق كما يعرضها التطبيق — النصّان جزء من العقد، لا زينة. */
-export type HadithReviewStatus = "verified" | "attributed" | "needs-review";
+/** نوع النسبة — هذا ما يحدّده للمستخدم، وهو صنف لا حالة توثيق. */
+export type HadithKind = "marfu" | "athar" | "attributed" | "unverified";
+
+export const HADITH_KIND_LABELS: Record<HadithKind, string> = {
+  marfu: "حديث مرفوع",
+  athar: "أثر صحابي",
+  attributed: "منسوب",
+  unverified: "ينقصه توثيق",
+};
+
+/** الشرح يوضّح الفرق لمن لا يعرف اصطلاح «مرفوع». */
+export const HADITH_KIND_HINTS: Record<HadithKind, string> = {
+  marfu: "ألفظه عن راوٍ محدّد، ورواه كتاب جامع معروف.",
+  athar: "من كلام الصحابة رضي الله عنهم، وليس حديثًا مرفوعًا.",
+  attributed: "النسبة فيه موصوفة لا ثابتة، فلم يثبت أنها مروية.",
+  unverified: "ينقصه راوٍ أو مصدر، فلا يعرض كحديث حتى يتحقق.",
+};
+
+/**
+ * ثلاث نغمات بصرية لا أربع، لأن المشغول لا يقرأ أربع شارات.
+ * الأثر لا يأخذ شكل المرفوع أبدا — هذه هي الحماية البصرية لا اللفظية.
+ */
+export type HadithTone = "raised" | "companion" | "uncertain";
+
+export const HADITH_KIND_TONES: Record<HadithKind, HadithTone> = {
+  marfu: "raised",
+  athar: "companion",
+  attributed: "uncertain",
+  unverified: "uncertain",
+};
+
+/** حالة المراجعة العلمية. مستقلة عن النوع، وحقلها اليوم فارغ عمدًا. */
+export type HadithReviewStatus = "verified" | "traceable" | "unverified";
 
 export const REVIEW_STATUS_LABELS: Record<HadithReviewStatus, string> = {
   verified: "موثّق برقمه في مصدره",
-  attributed: "منسوب إلى مصدره",
-  "needs-review": "يحتاج مراجعة",
-};
-
-/** شرح قصير يظهر عند الحاجة، حتى لا يظن المستخدم أن الشارة زخرفة. */
-export const REVIEW_STATUS_HINTS: Record<HadithReviewStatus, string> = {
-  verified: "رواه مذكور باسمه ورقمه في مصدره، وراجعه أهل العلم.",
-  attributed: "الراوي والمصدر مذكوران، ولم يُثبَّت رقم الحديث في قاعدة البيانات بعد.",
-  "needs-review": "النسبة فيه موصوفة لا ثابتة. لم تُراجَع علميًا، فلا تُعرض كحديث مرفوع.",
+  traceable: "الراوي والمصدر مذكوران",
+  unverified: "لم يُراجَع علميًا بعد",
 };
 
 /* ————————————————————— الموضوعات ————————————————————— */
@@ -136,6 +161,27 @@ function isBlank(value: string | undefined) {
 }
 
 /**
+ * يصنّف نوع النسبة. الترتيب: نقص ← أثر ← نسبة موصوفة ← مرفوع.
+ * الأولوية للمصدر على الراوي، لأن «من آثار الصحابة» قاطع في النوع.
+ */
+export function hadithKindOf(item: ProvenanceInput): HadithKind {
+  if (isBlank(item.narrator) || isBlank(item.source)) return "unverified";
+  if (isCompanionAthar(item)) return "athar";
+  if (hasVagueNarrator(item)) return "attributed";
+  return "marfu";
+}
+
+/** هل يصحّ عرضه بوصفه حديثا مرفوعا؟ الأثر والنسبة لا يصحّ. */
+export function isMarfu(item: ProvenanceInput): boolean {
+  return hadithKindOf(item) === "marfu";
+}
+
+/** هل يحتاج مراجعة بشرية قبل الاعتماد عليه؟ */
+export function needsScholarlyReview(item: ProvenanceInput): boolean {
+  return hadithKindOf(item) !== "marfu" || !canClaimVerified(item);
+}
+
+/**
  * هل يحقّ لعنصر أن يُعرض كـ«موثّق»؟ الشرط متعمَّد التشدد: لا بدّ من اسم الكتاب
  * ورقم الحديث معا. وغيابهما لا يترك إلا رقما ناقصا، والوصف بما لم يراجع
  * أمر من أشكال الاختلاق.
@@ -160,14 +206,13 @@ function isCompanionAthar(item: ProvenanceInput) {
 }
 
 /**
- * يصنّف عنصرًا من قاعدة البيانات. ترتيب الفحوص مقصود: النسبة الموصوفة أولًا
- * لأنها تُبطل أي مطابقة لرقم حديث موجود.
+ * حالة المراجعة العلمية. `verified` تتطلّب كتابًا ورقمًا ** ومراجعة بشرية**.
+ * لا يوجد اليوم عنصر واحد يحقّ له هذا الوصف، وهذا صحيح لا نقص في التنفيذ.
  */
 export function reviewStatusOf(item: ProvenanceInput): HadithReviewStatus {
   if (canClaimVerified(item)) return "verified";
-  if (hasVagueNarrator(item) || isCompanionAthar(item)) return "needs-review";
-  if (isBlank(item.narrator) || isBlank(item.source)) return "needs-review";
-  return "attributed";
+  if (isBlank(item.narrator) || isBlank(item.source)) return "unverified";
+  return "traceable";
 }
 
 /** لا نعرض درجة لم تُسجَّل. نصوص المصدر تحمل الحكم إن وُجد، وتُعرض كاملة. */

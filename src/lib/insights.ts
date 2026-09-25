@@ -13,9 +13,9 @@ import type { ArtworkName } from "@/components/app/Artworks";
 import type { Insight } from "@/components/app/InsightCarousel";
 import { HADITHS, sectionTitle, type Hadith, type HadithSectionId } from "@/data/hadith";
 import {
-  REVIEW_STATUS_LABELS,
+  HADITH_KIND_LABELS,
   daySeed,
-  reviewStatusOf,
+  hadithKindOf,
   topicOfSection,
   topicTitle,
 } from "@/lib/hadith-metadata";
@@ -47,12 +47,11 @@ const ARTWORK_BY_TOPIC: Record<string, ArtworkName> = {
 };
 
 function toInsight(hadith: Hadith): Insight {
-  const status = reviewStatusOf(hadith);
   return {
     id: `insight-${hadith.id}`,
     text: `«${shorten(hadith.text)}»`,
-    // المصدر حقيقي من القاعدة، وحالة التوثيق مقترنة به فلا تنفصل.
-    source: `${hadith.narrator} — ${hadith.source} · ${REVIEW_STATUS_LABELS[status]}`,
+    // النسبة مذكورة مع المصدر، فلا يظنه القارئ مرفوعا وهو أثر.
+    source: `${HADITH_KIND_LABELS[hadithKindOf(hadith)]} — ${hadith.narrator} — ${hadith.source}`,
     category: topicTitle(topicOfSection(hadith.section)),
     artwork: ARTWORK_BY_TOPIC[topicOfSection(hadith.section)] ?? "prayer",
     onOpen: "hadith",
