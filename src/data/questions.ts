@@ -25,6 +25,10 @@ export type AnswerKey =
   // ——— أسئلة «حياتك»: كل إجابة تُغيّر ترتيب الرئيسية أو وقت المراجعة أو نبرة المحاسبة ———
   | "dayRhythm"
   | "dayEnd"
+  | "focusTime"
+  | "movement"
+  | "distraction"
+  | "eveningReset"
   | "disciplineLevel"
   | "weeklyFocus";
 
@@ -156,6 +160,52 @@ export const QUESTIONS: Question[] = [
     kind: "time",
   },
   {
+    key: "focusTime",
+    title: "متى تبدأ أهم مسؤولية في يومك؟",
+    hint: "نضعها في سطر خطة اليوم حتى لا يضيع أول يومك بين التنقلات.",
+    section: "حياتك",
+    kind: "time",
+  },
+  {
+    key: "movement",
+    title: "ما الحركة التي تستطيع إبقاءها على يومك؟",
+    hint: "نذكّرك بها كخطوة واقعية، لا كهدف تفشل فيه.",
+    section: "حياتك",
+    kind: "choice",
+    options: [
+      { value: "walk", label: "مشي خفيف" },
+      { value: "sport", label: "رياضة أو تمرين" },
+      { value: "active", label: "نشاط داخل العمل أو الدراسة" },
+      { value: "rest", label: "الراحة أولًا", hint: "نبدأ بخطوة أخف الآن" },
+    ],
+  },
+  {
+    key: "distraction",
+    title: "ما أكثر ما يسحب انتباهك عن واجبك؟",
+    hint: "نحوّلها إلى تذكير صغير يحترم وقتك، بلا لوم أو مبالغة.",
+    section: "حياتك",
+    kind: "choice",
+    options: [
+      { value: "phone", label: "الهاتف" },
+      { value: "social", label: "التواصل الاجتماعي" },
+      { value: "fatigue", label: "الإرهاق" },
+      { value: "noise", label: "الضجيج أو تشتت المكان" },
+    ],
+  },
+  {
+    key: "eveningReset",
+    title: "كيف تحب أن تهدأ قبل النوم؟",
+    hint: "نقترح نهاية يوم قصيرة تتناسب مع التزاماتك بدل وصفة عامة.",
+    section: "حياتك",
+    kind: "choice",
+    options: [
+      { value: "quran", label: "قراءة خفيفة" },
+      { value: "adhkar", label: "أذكار المساء والنوم" },
+      { value: "reflection", label: "مراجعة اليوم" },
+      { value: "calm", label: "هدوء ودون شاشة" },
+    ],
+  },
+  {
     key: "disciplineLevel",
     title: "كيف تحب أن أتابعك؟",
     hint: "توازن بين الرفق والجدّ؛ تختاره أنت ويمكن تغييره من الإعدادات.",
@@ -193,6 +243,10 @@ export const DEFAULT_ANSWERS: ProfileAnswers = {
   startingRitual: "wird",
   dayRhythm: "open",
   dayEnd: "17:00",
+  focusTime: "08:00",
+  movement: "walk",
+  distraction: "phone",
+  eveningReset: "adhkar",
   disciplineLevel: "balanced",
   weeklyFocus: "prayer",
 };
@@ -217,7 +271,7 @@ export function optionsFor(key: AnswerKey): QuestionOption[] {
 export function labelFor(key: AnswerKey, value: string): string {
   const option = optionsFor(key).find((item) => item.value === value);
   if (option) return option.label;
-  if (key === "wakeTime" || key === "sleepTime" || key === "dayEnd") {
+  if (key === "wakeTime" || key === "sleepTime" || key === "dayEnd" || key === "focusTime") {
     return `الساعة ${value}`;
   }
   return value;
