@@ -15,6 +15,10 @@ export const answersValidator = v.object({
   /** حقول «حياتك» — اختيارية ليبقى التوافق مع الملفات القديمة. */
   dayRhythm: v.optional(v.string()),
   dayEnd: v.optional(v.string()),
+  focusTime: v.optional(v.string()),
+  movement: v.optional(v.string()),
+  distraction: v.optional(v.string()),
+  eveningReset: v.optional(v.string()),
   disciplineLevel: v.optional(v.string()),
   weeklyFocus: v.optional(v.string()),
 });
@@ -25,6 +29,9 @@ const PRAYER_STATUSES = ["jamaah", "ontime", "late", "missed"] as const;
 const ADHKAR_KINDS = ["morning", "evening", "sleep", "after_prayer", "distress"] as const;
 const FAVORITE_KINDS = ["hadith", "poem", "dhikr", "ayah", "story"] as const;
 const DAY_RHYTHMS = ["study", "work", "both", "open"] as const;
+const MOVEMENTS = ["walk", "sport", "active", "rest"] as const;
+const DISTRACTIONS = ["phone", "social", "fatigue", "noise"] as const;
+const EVENING_RESETS = ["quran", "adhkar", "reflection", "calm"] as const;
 const DISCIPLINE_LEVELS = ["gentle", "balanced", "firm"] as const;
 const WEEKLY_FOCUS = ["prayer", "adhkar", "consistency"] as const;
 const REVIEW_MOODS = ["bad", "ok", "good", "great"] as const;
@@ -124,6 +131,10 @@ export const saveProfile = mutation({
       // حقول «حياتك»: قيم افتراضية آمنة لمن لم يجب عليها بعد.
       dayRhythm: pickFromList(answers.dayRhythm, DAY_RHYTHMS, "open"),
       dayEnd: answers.dayEnd ? assertTime(answers.dayEnd, "نهاية يومك") : "17:00",
+      focusTime: answers.focusTime ? assertTime(answers.focusTime, "موعد التركيز") : "08:00",
+      movement: pickFromList(answers.movement, MOVEMENTS, "walk"),
+      distraction: pickFromList(answers.distraction, DISTRACTIONS, "phone"),
+      eveningReset: pickFromList(answers.eveningReset, EVENING_RESETS, "adhkar"),
       disciplineLevel: pickFromList(answers.disciplineLevel, DISCIPLINE_LEVELS, "balanced"),
       weeklyFocus: pickFromList(answers.weeklyFocus, WEEKLY_FOCUS, "prayer"),
     };

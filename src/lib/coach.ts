@@ -41,10 +41,31 @@ export const REVIEW_TIPS: Record<ReviewBlocker, string> = {
 };
 
 export const RHYTHM_LABELS: Record<string, string> = {
-  study: "يومك غالبًا دراسة",
-  work: "يومك غالبًا عمل",
-  both: "بين الدراسة والعمل",
-  open: "يومك مرن",
+  study: "دراسة",
+  work: "عمل",
+  both: "دراسة وعمل",
+  open: "يوم مرن",
+};
+
+export const MOVEMENT_LABELS: Record<string, string> = {
+  walk: "مشي خفيف",
+  sport: "رياضة أو تمرين",
+  active: "حركة داخل الدراسة أو العمل",
+  rest: "راحة متدرجة",
+};
+
+export const DISTRACTION_LABELS: Record<string, string> = {
+  phone: "الهاتف",
+  social: "التواصل الاجتماعي",
+  fatigue: "الإرهاق",
+  noise: "الضجيج وتشتت المكان",
+};
+
+export const EVENING_RESET_LABELS: Record<string, string> = {
+  quran: "قراءة خفيفة",
+  adhkar: "أذكار المساء والنوم",
+  reflection: "مراجعة اليوم",
+  calm: "هدوء ودون شاشة",
 };
 
 export const DISCIPLINE_LABELS: Record<string, string> = {
@@ -79,20 +100,24 @@ export function reviewDue(now: Date, input: { dayEnd?: string } = {}): boolean {
 export function planLine(input: {
   dayRhythm?: string;
   dayEnd?: string;
-  wakeTime?: string;
+  focusTime?: string;
+  movement?: string;
+  eveningReset?: string;
   startingRitual?: string;
 }): string {
   const rhythm = RHYTHM_LABELS[input.dayRhythm ?? "open"] ?? RHYTHM_LABELS.open;
-  const end = formatArabicTime(input.dayEnd ?? "17:00");
+  const focus = formatArabicTime(input.focusTime ?? "08:00");
+  const movement = MOVEMENT_LABELS[input.movement ?? "walk"] ?? MOVEMENT_LABELS.walk;
+  const reset = EVENING_RESET_LABELS[input.eveningReset ?? "adhkar"] ?? EVENING_RESET_LABELS.adhkar;
   const ritual =
     input.startingRitual === "wird"
-      ? "نبدأ بورَدك بعد الاستيقاظ"
+      ? "ابدأ بالورد"
       : input.startingRitual === "adhkar"
-        ? "نبدأ بأذكار الصباح بعد الاستيقاظ"
+        ? "ابدأ بأذكار الصباح"
         : input.startingRitual === "dua"
-          ? "نبدأ بدعاء الصباح"
-          : "نبدأ بجلسة ذكر قصيرة";
-  return `${rhythm}، ينتهي التزامك اليومي ${end}، وآنذاك نفتح مراجعة يومك.`;
+          ? "ابدأ بدعاء الصباح"
+          : "ابدأ بذكر قصير";
+  return `${rhythm} • ${ritual} • مسؤوليتك ${focus} • ${movement} • قبل النوم: ${reset}.`;
 }
 
 export type DailyRow = {

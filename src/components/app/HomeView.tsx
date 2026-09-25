@@ -1,4 +1,5 @@
 import { GlassCard } from "@/components/app/GlassCard";
+import { DailyReview, type DayReviewRecord } from "@/components/app/DailyReview";
 import { ADHKAR_GROUPS, type AdhkarGroupId } from "@/data/adhkar";
 import { duaOfTheDay } from "@/data/duas";
 import { hadithOfTheDay } from "@/data/hadith";
@@ -7,6 +8,7 @@ import { ayahOfTheDay, getSurah } from "@/data/quran";
 import type { ProfileAnswers } from "@/data/questions";
 import { useNow } from "@/hooks/use-clock";
 import { hijriParts, toArabicDigits } from "@/lib/hijri";
+import { planLine, reviewDue } from "@/lib/coach";
 import { PRAYERS, nextPrayer, type Timings } from "@/lib/prayers";
 import { arabicNumber, formatArabicTime, formatGregorian, greeting } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -24,7 +26,7 @@ import {
   Sparkles,
   Sun,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 export type HomeSection =
   | "prayers"
@@ -206,9 +208,16 @@ export function HomeView({
   locationLabel: string;
   timings: Timings;
   hijri: string | null;
-  dayState: { prayers: Record<string, string>; adhkar: string[]; favorites: string[] };
+  dayState: {
+    prayers: Record<string, string>;
+    adhkar: string[];
+    favorites: string[];
+    review: { mood: string; blocker: string; note: string } | null;
+  };
   /** إحصاءات آخر ٣٠ يومًا — تخفى البطاقة إن لم يوجد سجل بعد. */
   stats?: WeekStats | null;
+  onSaveReview: (review: DayReviewRecord) => void;
+  reviewSaving: boolean;
   onOpenSection: (section: HomeSection) => void;
   onOpenAdhkar: (group: AdhkarGroupId) => void;
   /** يفتح نافذة «كل الأقسام» في الشريط العلوي. */
@@ -218,19 +227,15 @@ export function HomeView({
   /** أول عمل صباحي — يوضع أول الشريط. */
   startingRitual: string;
 }) {
-  const now = useNow(1000);
-  const [lastSurah, setLastSurah] = useState<number | null>(null);
-  const [bookmark, setBookmark] = useState<{ surah: number; ayah: number } | null>(null);
-
-  useEffect(() => {
-    setLastSurah(readSurahNumber());
-    setBookmark(readBookmark());
-  }, []);
+  // الساعة الرئيسية كل 30 ثانية؛ العدّادات الحيّة وحدها تعمل كل ثانية.
+  const now = useNow(30_000);
+  const [lastSurah] = useState<number | null>(() => readSurahNumber());
+  const [bookmark] = useState<{ surah: number; ayah: number } | null>(() => readBookmark());
 
   const dailyAyah = ayahOfTheDay(now);
   const dateSeed = now.getDate() + now.getMonth() * 31;
   const dailyHadith = useMemo(() => hadithOfTheDay(dateSeed), [dateSeed]);
-  const dailyDua = useMemo(() => duaOfTheDay(now), [dateSeed]);
+  const dailyDua = useMemo(() => duaOfTheDay(now), [now]);
 
   // التاريخ الهجري يتغيّر مرة كل يوم: لا نُعيد حساب المناسبات كل ثانية.
   const hijriDay = hijriParts(now);
@@ -244,16 +249,16 @@ export function HomeView({
     target.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
     if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
     return target;
-  }, [next.time, now.getDate(), now.getHours(), now.getMinutes()]);
+  }, [next.time, now]);
 
   const prayedCount = PRAYERS.filter(
     (prayer) => dayState.prayers[prayer.key] === "jamaah" || dayState.prayers[prayer.key] === "ontime",
   ).length;
 
-  const dailyDhikr = useMemo(() => {
+  const dailyDhikr = (() => {
     const group = ADHKAR_GROUPS.find((item) => item.id === "morning") ?? ADHKAR_GROUPS[0];
     return group.items[now.getDate() % group.items.length];
-  }, [now.getDate()]);
+  })();
 
   const surahName = (number: number) => getSurah(number)?.name ?? arabicNumber(number);
   const positionLabel = bookmark
@@ -261,6 +266,15 @@ export function HomeView({
     : lastSurah
       ? `سورة ${surahName(lastSurah)}`
       : null;
+  const review = dayState.review as DayReviewRecord | null;
+  const plan = planLine({
+    dayRhythm: profile.dayRhythm,
+    dayEnd: profile.dayEnd,
+    focusTime: profile.focusTime,
+    movement: profile.movement,
+    eveningReset: profile.eveningReset,
+    startingRitual: profile.startingRitual,
+  });
 
   return (
     <div className="space-y-3.5">
@@ -274,6 +288,9 @@ export function HomeView({
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             {formatGregorian(now)}
             {hijri ? ` • ${hijri}` : ""}
+          </p>
+          <p className="mt-1 line-clamp-1 text-[10px] text-primary/80" title={plan}>
+            {plan}
           </p>
         </div>
         <span className="rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-medium text-foreground/70 ring-1 ring-white/80">
@@ -402,6 +419,14 @@ export function HomeView({
           })()}
         </GlassCard>
       ) : null}
+
+      <DailyReview
+        visible={Boolean(review) || reviewDue(now, { dayEnd: profile.dayEnd })}
+        review={review}
+        prayedToday={prayedCount}
+        saving={reviewSaving}
+        onSave={onSaveReview}
+      />
 
       {/* أذكار مختصرة: صباح / مساء / نوم */}
       <div className="grid grid-cols-3 gap-2.5">

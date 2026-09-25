@@ -82,7 +82,7 @@ function TourIntro({ onStart, onSkip }: { onStart: () => void; onSkip: () => voi
             className="btn-primary-edge w-full max-w-xs rounded-full font-semibold"
             onClick={onStart}
           >
-            نبدأ — {arabicNumber(7)} أسئلة قصيرة
+            نبدأ — {arabicNumber(15)} سؤالًا قصيرًا
           </Button>
           <button
             type="button"

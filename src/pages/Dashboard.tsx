@@ -1,5 +1,6 @@
 import { AdhkarDialog } from "@/components/app/AdhkarDialog";
 import { AppHeader, type DashView } from "@/components/app/AppHeader";
+import type { DayReviewRecord } from "@/components/app/DailyReview";
 import { DuasView } from "@/components/app/DuasView";
 import { GlassCard } from "@/components/app/GlassCard";
 import { HadithView } from "@/components/app/HadithView";
@@ -106,6 +107,7 @@ export default function Dashboard() {
     return param === "morning" || param === "evening" || param === "sleep" ? param : null;
   });
   const [quranCache, setQuranCache] = useState({ cachedCount: 0, downloading: false, progress: 0 });
+  const [reviewSaving, setReviewSaving] = useState(false);
 
   const profileDoc = useQuery(api.planner.getProfile);
   const today = dateKey();
@@ -125,6 +127,7 @@ export default function Dashboard() {
 
   const setPrayerStatusMutation = useMutation(api.planner.setPrayerStatus);
   const setAdhkarDoneMutation = useMutation(api.planner.setAdhkarDone);
+  const saveDayReviewMutation = useMutation(api.planner.saveDayReview);
   const setLocationMutation = useMutation(api.planner.setLocation);
 
   /** نظام الحفظ الموحّد: حالة فورية محليًا + مزامنة الخادم. */
@@ -362,6 +365,26 @@ export default function Dashboard() {
     [setAdhkarDoneMutation, today],
   );
 
+  const handleReviewSave = useCallback(
+    (review: DayReviewRecord) => {
+      if (!online) {
+        toast.error("المراجعة تحتاج اتصالًا واحدًا للحفظ؛ لن نُظهرها كأنها حُفظت.");
+        return;
+      }
+      setReviewSaving(true);
+      void saveDayReviewMutation({
+        date: today,
+        mood: review.mood,
+        blocker: review.blocker,
+        note: review.note,
+      })
+        .then(() => toast.success("حُفظت مراجعة اليوم. هذه بياناتك، وسنقترح خطوة للغد فقط."))
+        .catch(() => toast.error("تعذّر حفظ المراجعة. حاول مرة أخرى."))
+        .finally(() => setReviewSaving(false));
+    },
+    [online, saveDayReviewMutation, today],
+  );
+
   const handleGeoRequest = useCallback(async () => {
     const result = await geo.request();
     if (!result) return;
@@ -487,6 +510,8 @@ export default function Dashboard() {
             hijri={times.hijri}
             dayState={state}
             stats={stats}
+            onSaveReview={handleReviewSave}
+            reviewSaving={reviewSaving}
             onOpenSection={changeView}
             onOpenAdhkar={setAdhkarGroup}
             onOpenAllSections={() => setMoreOpen(true)}

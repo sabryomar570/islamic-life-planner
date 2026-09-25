@@ -47,6 +47,14 @@ const schema = defineSchema(
       dayRhythm: v.optional(v.string()),
       // نهاية الالتزام اليومي (HH:MM) — يفتح مراجعة اليوم بعدها.
       dayEnd: v.optional(v.string()),
+      // أول مسؤولية مهمة في اليوم (HH:MM) — يختصر خط سير اليوم.
+      focusTime: v.optional(v.string()),
+      // حركة يومية قابلة للاستمرار: walk | sport | active | rest
+      movement: v.optional(v.string()),
+      // أكثر مشتت يومي: phone | social | fatigue | noise
+      distraction: v.optional(v.string()),
+      // ختام هادئ قبل النوم: quran | adhkar | reflection | calm
+      eveningReset: v.optional(v.string()),
       // مستوى المتابعة المطلوب: gentle | balanced | firm
       disciplineLevel: v.optional(v.string()),
       // تركيز الأسبوع: prayer | adhkar | consistency

@@ -6,9 +6,15 @@ export type OfflineDayState = {
   prayers: Record<string, string>;
   adhkar: string[];
   favorites: string[];
+  review: { mood: string; blocker: string; note: string } | null;
 };
 
-export const EMPTY_DAY_STATE: OfflineDayState = { prayers: {}, adhkar: [], favorites: [] };
+export const EMPTY_DAY_STATE: OfflineDayState = {
+  prayers: {},
+  adhkar: [],
+  favorites: [],
+  review: null,
+};
 
 const PROFILE_KEY = "sakinah:offline:profile:v1";
 const DAY_KEY = "sakinah:offline:day:v1";
@@ -60,6 +66,7 @@ export function readOfflineDayState(date: string): OfflineDayState | null {
     prayers: stored.prayers ?? {},
     adhkar: stored.adhkar ?? [],
     favorites: stored.favorites ?? [],
+    review: stored.review ?? null,
   };
 }
 
