@@ -18,6 +18,11 @@ import {
 import { isOddNightOfLastTen, isRamadan } from "@/lib/hijri";
 import { PRAYERS, currentPrayer, nextPrayer, type Timings } from "@/lib/prayers";
 import { prioritizeNotifications } from "@/lib/notification-intelligence";
+import {
+  oudReminderBody,
+  type OudReminderContext,
+  type OudReminderKind,
+} from "@/lib/oud-voice";
 import { dateKey, formatDuration, toMinutes } from "@/lib/time";
 import { needsGentlePrayerReminders } from "@/data/questions";
 import type { Preferences } from "@/hooks/use-preferences";
@@ -28,7 +33,15 @@ const MISSED_LEAD_MINUTES = 25;
 export type ReminderEvent = {
   id: string;
   at: Date;
-  kind: "prayer" | "lead" | "adhkar" | "wird" | "sleep" | "friday" | "ramadan";
+  kind:
+    | "prayer"
+    | "lead"
+    | "adhkar"
+    | "wird"
+    | "sleep"
+    | "friday"
+    | "ramadan"
+    | "salawat";
   title: string;
   body: string;
   url?: string;
@@ -94,6 +107,9 @@ export function buildReminderSchedule(input: {
   const wantsLead = prayerCommitment !== "always" && prefs.leadMinutes > 0;
   const day = dateKey(now);
   const events: ReminderEvent[] = [];
+  // نبر جملة الشخصية نفسها. الحقل الناقص يُسقط الجملة فلا نكتب نصا مكسورا.
+  const voice = (kind: OudReminderKind, context?: OudReminderContext) =>
+    oudReminderBody(kind, context, now);
 
   if (prefs.prayerAlerts) {
     for (const prayer of PRAYERS) {
@@ -103,7 +119,8 @@ export function buildReminderSchedule(input: {
         at,
         kind: "prayer",
         title: `حان وقت صلاة ${prayer.name}`,
-        body: `${prayer.hint} • ﴿وَأَقِمِ الصَّلَاةَ لِذِكْرِي﴾`,
+        // النصّ دوت، والآية سطر ثانٍ **بمصدرها**. لا نصّ ديني بلا نسبة.
+        body: `${voice("prayer", { prayer: prayer.name })}\n﴿وَأَقِمِ الصَّلَاةَ لِذِكْرِي﴾ — طه ١٤`,
         url: "/dashboard?view=prayers",
       });
       if (wantsLead) {
@@ -112,7 +129,7 @@ export function buildReminderSchedule(input: {
           at: new Date(at.getTime() - prefs.leadMinutes * 60_000),
           kind: "lead",
           title: `باقٍ ${prefs.leadMinutes} دقيقة على ${prayer.name}`,
-          body: "توضّأ وتهيّأ؛ أفضل ما تكون حين تُقبل على الله بقلب فارغ.",
+          body: voice("lead", { prayer: prayer.name, minutes: prefs.leadMinutes }) ?? "",
           url: "/dashboard?view=prayers",
         });
       }
@@ -124,7 +141,7 @@ export function buildReminderSchedule(input: {
           at: new Date(at.getTime() - MISSED_LEAD_MINUTES * 60_000),
           kind: "lead",
           title: `باقٍ ${MISSED_LEAD_MINUTES} دقيقة على ${prayer.name} — وهي أكثر ما تفوتك`,
-          body: "اجعلها موعدًا ثابتًا: توضّأ الآن، ولا تؤجّلها.",
+          body: voice("after", { prayer: prayer.name }) ?? "",
           url: "/dashboard?view=prayers",
         });
       }
@@ -136,7 +153,7 @@ export function buildReminderSchedule(input: {
           at: new Date(at.getTime() + MISSED_LEAD_MINUTES * 60_000),
           kind: "lead",
           title: `هل صلّيت ${prayer.name}؟`,
-          body: "إن كنت نسيت فالوقت باقٍ؛ قُم الآن وسجّلها.",
+          body: voice("after", { prayer: prayer.name }) ?? "",
           url: "/dashboard?view=prayers",
         });
       }
@@ -150,7 +167,7 @@ export function buildReminderSchedule(input: {
         at: timeToDate(prefs.morningTime, now),
         kind: "adhkar",
         title: "أذكار الصباح في انتظارك",
-        body: "دقيقة واحدة تكفي للبداية: آية الكرسي والمعوذات وسيد الاستغفار.",
+        body: voice("adhkar-morning") ?? "",
         url: "/dashboard?adhkar=morning",
       });
     }
@@ -160,7 +177,7 @@ export function buildReminderSchedule(input: {
         at: timeToDate(prefs.eveningTime, now),
         kind: "adhkar",
         title: "أذكار المساء",
-        body: "اختم نهارك بذكر: سيد الاستغفار والمعوذات والرضا بالإسلام.",
+        body: voice("adhkar-evening") ?? "",
         url: "/dashboard?adhkar=evening",
       });
     }
@@ -172,7 +189,7 @@ export function buildReminderSchedule(input: {
       at: timeToDate(shift(sleepTime, -20), now),
       kind: "sleep",
       title: "قبل الفراش: أذكار النوم",
-      body: "آية الكرسي، المعوذات، وتسبيح ٣٣/٣٣/٣٣ ثم نم على وضوء.",
+      body: voice("sleep") ?? "",
       url: "/dashboard?adhkar=sleep",
     });
   }
@@ -183,7 +200,7 @@ export function buildReminderSchedule(input: {
       at: timeToDate(prefs.wirdTime, now),
       kind: "wird",
       title: "ورد القرآن اليومي",
-      body: "لا تترك وردك؛ صفحة واحدة بحضور قلب خير من كثير بلا تدبّر.",
+      body: voice("wird") ?? "",
       url: "/dashboard?view=quran",
     });
   }
@@ -194,8 +211,23 @@ export function buildReminderSchedule(input: {
       at: timeToDate("09:00", now),
       kind: "friday",
       title: "يوم الجمعة",
-      body: "سورة الكهف، والتبكير إلى المسجد، والإكثار من الصلاة على النبي ﷺ.",
+      body: voice("friday") ?? "",
       url: "/dashboard?view=occasions",
+    });
+  }
+
+  /**
+   * الصلاة على النبي ﷺ: **بمفتاحه هو**. مطفأ افتراضا، فلا يجيء من
+   * تلقاء نفسه. وهو تذكير لا وعد: دقيقة واحدة، بلا ذكر لعدد ولا لفضل.
+   */
+  if (prefs.salawatReminder) {
+    events.push({
+      id: `${day}:salawat`,
+      at: timeToDate(prefs.salawatTime, now),
+      kind: "salawat",
+      title: "صلاة على النبي ﷺ",
+      body: voice("salawat") ?? "",
+      url: "/dashboard?view=today",
     });
   }
 
@@ -205,7 +237,7 @@ export function buildReminderSchedule(input: {
       at: timeToDate(shift(timings.fajr, -45), now),
       kind: "ramadan",
       title: "وقت السحور",
-      body: "تسحّر ولو بتمر وماء؛ «فإن في السحور بركة».",
+      body: voice("suhoor") ?? "",
       url: "/dashboard?view=occasions",
     });
     events.push({
@@ -213,7 +245,7 @@ export function buildReminderSchedule(input: {
       at: timeToDate(timings.maghrib, now),
       kind: "ramadan",
       title: "أفطر الآن",
-      body: "«ذهب الظمأ وابتلّت العروق وثبت الأجر إن شاء الله» — رواه أبو داود.",
+      body: voice("iftar") ?? "",
       url: "/dashboard?view=occasions",
     });
     if (isOddNightOfLastTen(now)) {
@@ -222,7 +254,7 @@ export function buildReminderSchedule(input: {
         at: timeToDate("21:30", now),
         kind: "ramadan",
         title: "ليلة وترية من العشر الأواخر",
-        body: "قُم وادعُ: «اللهم إنك عفو تحب العفو فاعف عني».",
+        body: "قُم وادعُ الليلة، ودعاؤك بين يديك.",
         url: "/dashboard?view=occasions",
       });
     }
@@ -305,8 +337,9 @@ export function useReminderCenter(options: {
   const dispatch = useCallback(
     (event: ReminderEvent) => {
       const isPrayerTime = event.kind === "prayer";
+      // سؤال ما بعد الصلاة بصوت عود لا بنصّ مرسل، وبنفس اللهجة.
       const body = isPrayerTime && prefs.postPrayerPrompt
-        ? `${event.body}\nبعد الصلاة سنفحص معك: هل صلّيت؟ الصدق هنا سجلّك أمام نفسك — فلا تكذب عليه.`
+        ? `${event.body}\n${oudReminderBody("post-prayer", { prayer: event.title.replace(/^حان وقت صلاة /, "") }, now) ?? ""}`
         : event.body;
       toast(event.title, { description: body, duration: isPrayerTime ? 16_000 : 12_000 });
       vibrate([30, 50, 30]);

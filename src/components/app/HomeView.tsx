@@ -3,6 +3,7 @@ import { DayTimeline } from "@/components/app/DayTimeline";
 import { MosqueCard } from "@/components/app/MosqueCard";
 import { NextPrayerHero } from "@/components/app/NextPrayerHero";
 import { OudLineCard } from "@/components/app/OudLineCard";
+import { QiblaCard } from "@/components/app/QiblaView";
 import {
   Meter,
   Panel,
@@ -23,9 +24,10 @@ import type { WeeklyReview } from "@/lib/weekly-review";
 import { focusMetric, planLine, reviewDue, type WeeklyFocus } from "@/lib/coach";
 import type { MosqueState } from "@/hooks/use-oud";
 import type { MosquePlace } from "@/lib/oud-mosque";
+import type { QiblaPoint } from "@/lib/qibla";
 import type { OudLine } from "@/lib/oud-voice";
 import { PRAYERS, type PrayerKey, type PrayerStatus, type Timings } from "@/lib/prayers";
-import { arabicNumber, formatGregorian, greeting } from "@/lib/time";
+import { arabicNumber, dateKey, formatGregorian, greeting } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { BookOpen, Check, ChevronLeft, Moon, Sun, Target } from "lucide-react";
 import { useMemo, useState, lazy, Suspense } from "react";
@@ -48,6 +50,8 @@ const InsightSlot = lazy(() =>
 
 export type HomeSection =
   | "prayers"
+  | "qibla"
+  | "zakat"
   | "quran"
   | "duas"
   | "tasbih"
@@ -120,6 +124,7 @@ export function HomeView({
   oudLine,
   oudXp,
   mosque,
+  qibla,
   weeklyReview,
   adaptiveSuggestions,
   savingItemId,
@@ -155,6 +160,7 @@ export function HomeView({
   oudLine: OudLine | null;
   oudXp: { total: number; today: number; levelLabel: string };
   mosque: { state: MosqueState; places: readonly MosquePlace[] };
+  qibla: { coords: QiblaPoint | null; denied: boolean };
   weeklyReview: WeeklyReview | null;
   adaptiveSuggestions: readonly AdaptiveSuggestion[];
   savingItemId: string | null;
@@ -166,6 +172,7 @@ export function HomeView({
   onApplySuggestion: (suggestion: AdaptiveSuggestion) => void;
 }) {
   const now = useNow(30_000);
+  const todayKey = dateKey(now);
   const [lastSurah] = useState<number | null>(() => readSurahNumber());
   const [bookmark] = useState<{ surah: number; ayah: number } | null>(() => readBookmark());
 
@@ -208,6 +215,20 @@ export function HomeView({
     (item) => item.kind === "move" || item.kind === "reduce",
   );
 
+  /**
+   * أهم مهمة اليوم، وحالتها الحقيقية.
+   *
+   * **لماذا زرّ هنا ولا هناك:** كان العنوان أظهر خطوة في الشاشة كلها،
+   * لكن بلا فعل: لا زرّ يفتحها ولا زرّ يسجّلها، فبقيت جملة. وخطر
+   * التكرار: لو ضاعفنا البطاقة، صار اليوم لوحتين. فنُبقيها موضعها
+   * ونجعلها **قابلة للتنفيذ بنقرة واحدة**، مع حالة «تمّت» صريحة.
+   */
+  const primaryItem = dailyPlan?.primaryAction ?? null;
+  const primaryId = primaryItem?.item.id ?? null;
+  const primaryDone =
+    primaryId !== null &&
+    planOutcomes.some((item) => item.date === todayKey && item.itemId === primaryId && item.status === "completed");
+
   return (
     <div className="stack">
       {/* ——— 1) الترويسة: صغيرة، تُخبر بالوقت والمكان ولا تنافس البطل ——— */}
@@ -245,6 +266,12 @@ export function HomeView({
         onOpenSettings={() => onOpenSection("settings")}
         onRetry={() => onOpenSection("settings")}
       />
+      <QiblaCard
+        coords={qibla.coords}
+        denied={qibla.denied}
+        onOpenSettings={() => onOpenSection("settings")}
+        onOpenQibla={() => onOpenSection("qibla")}
+      />
 
       {/* ——— 2.7) إحصاء اليوم: اقتباس واحد ثابت، لا شريط إعلانات ——— */}
       <Suspense fallback={null}>
@@ -277,10 +304,10 @@ export function HomeView({
           <div className="min-w-0 flex-1">
             <p className="eyebrow flex items-center gap-1.5">
               <Target className="size-3.5" />
-              تركيزك اليوم
+              أهم خطوة في يومك
             </p>
-            <p className="mt-2 text-[15px] leading-8 font-semibold text-foreground">
-              {dailyPlan?.primaryAction?.item.title ??
+            <p className="mt-2 text-[17px] leading-9 font-bold text-foreground">
+              {primaryItem?.item.title ??
                 (profile.mainGoal === "quran"
                   ? `وردك: ${WIRD_LABEL[profile.quranAmount] ?? "صفحة واحدة"}`
                   : profile.mainGoal === "adhkar"
@@ -292,6 +319,27 @@ export function HomeView({
             <p className="label-body mt-1.5 text-muted-foreground">
               {dailyPlan?.nextAnchor.prompt ?? planLineText}
             </p>
+            {primaryId ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {primaryDone ? (
+                  <p className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--status-success)]/10 px-4 text-[12px] font-semibold text-[var(--status-success)]">
+                    <Check className="size-4" aria-hidden />
+                    تمّت الخطوة الأهم اليوم
+                  </p>
+                ) : (
+                  <PrimaryButton
+                    onClick={() => onSetPlanOutcome(primaryId, "completed")}
+                    className="px-5 text-[12px]"
+                  >
+                    <Check className="size-3.5" aria-hidden />
+                    عملتها
+                  </PrimaryButton>
+                )}
+                <QuietButton onClick={() => onOpenSection("weekly")} className="px-4 text-[12px]">
+                  الخطة الأسبوعية
+                </QuietButton>
+              </div>
+            ) : null}
           </div>
           {dailyScore ? (
             <div className="shrink-0 text-end">

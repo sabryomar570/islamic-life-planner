@@ -303,8 +303,11 @@ const POOLS: Record<OudLineId, GroupMeta> = {
 /**
  * بذرة صغيرة وثابتة. ليست عشوائية: نفس (المعرّف + اليوم) يعطي نفس الصيغة.
  * لو تغيّرت، ترتجف الرسالة كل دقيقة وتضيع نتيجة الاختبارات.
+ *
+ * المعامل أوسع من `OudLineId` قصدا: تستعمله صيغ التذكير أدناه ببذرة
+ * مستقلة، فلا تتزاحم صيغ الإشعار مع صيغ البطاقة على نفس المفتاح.
  */
-export function seedOf(id: OudLineId, dayKey: string): number {
+export function seedOf(id: string, dayKey: string): number {
   let hash = 2166136261;
   const source = `${id}|${dayKey}`;
   for (let index = 0; index < source.length; index += 1) {
@@ -419,7 +422,7 @@ export function applicableGroups(context: OudVoiceContext): OudLineId[] {
  */
 export function oudLine(context: OudVoiceContext): OudLine | null {
   const { now } = context;
-  const dayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  const dayKey = dayKeyOf(now);
   const groups = applicableGroups(context).sort((a, b) => POOLS[b].priority - POOLS[a].priority);
 
   for (const id of groups) {
@@ -485,9 +488,177 @@ export function toneLabel(tone: OudTone): string {
   }
 }
 
+/* ————————————————————— صوت التذكير ————————————————————— */
+
+/**
+ * **نفس الشخصية في الإشعار، لا نبرة ثانية.** كانت نصوص التذكير
+ * فصحى مهذّبة لا علاقة لها باللهجة ولا بسبب ظهورها، فكان التطبيق يتكلم
+ * بأصوات. هذه الصيغ تربط كل تنبيه بسببه: تذكير الصلاة يعرف الصلاة
+ * والدقائق، وتذكير الأذكار يعرف أنه أذكار.
+ *
+ * قواعد لا تساوم: بلا إيموجي، وبلا ادعاء ديني، وبلا وعد بعدد ولا
+ * فضل. الجملة قصيرة لأنها تُقرأ على شاشة مقفلة.
+ */
+export type OudReminderKind =
+  | "prayer"
+  | "lead"
+  | "after"
+  | "adhkar-morning"
+  | "adhkar-evening"
+  | "sleep"
+  | "wird"
+  | "friday"
+  | "suhoor"
+  | "iftar"
+  | "salawat"
+  | "post-prayer";
+
+/** ما تحتاجه صيغة التذكير لتخرج جملة كاملة. الغائب يُسقط الصيغة. */
+export type OudReminderContext = {
+  /** اسم الصلاة: الفجر، الظهر… */
+  prayer?: string;
+  /** الدقائق المتبقية قبل الدخول. */
+  minutes?: number;
+};
+
+const REMINDER_POOLS: Record<OudReminderKind, { requires: (keyof OudReminderContext)[]; pool: Pool[] }> = {
+  prayer: {
+    requires: ["prayer"],
+    pool: [
+      { variant: "a", text: "حان وقت {prayer}. وقّف اللي في إيدك.", tone: "direct" },
+      { variant: "b", text: "{prayer} جه وقتها. روح اتوضا.", tone: "direct" },
+    ],
+  },
+  lead: {
+    requires: ["prayer", "minutes"],
+    pool: [
+      { variant: "a", text: "{prayer} بعد {n} دقيقة. جهّز حالك من دلوقتي.", tone: "direct" },
+      { variant: "b", text: "قرب وقت {prayer}. توضّأ وهو لسه فاضي.", tone: "calm" },
+    ],
+  },
+  after: {
+    requires: ["prayer"],
+    pool: [
+      { variant: "a", text: "فات وقت {prayer}. الوقت لسه باق، فقوم دلوقتي.", tone: "direct" },
+      { variant: "b", text: "{prayer} اتأخرت. مش لازم تؤجلها تاني.", tone: "direct" },
+    ],
+  },
+  "adhkar-morning": {
+    requires: [],
+    pool: [
+      { variant: "a", text: "أذكار الصباح لسه قدامك. دقيقة واحدة تفي.", tone: "calm" },
+      { variant: "b", text: "صباحك لسه فاضي. خد راحتك مع الأذكار.", tone: "calm" },
+    ],
+  },
+  "adhkar-evening": {
+    requires: [],
+    pool: [
+      { variant: "a", text: "أذكار المساء مستنياك. دقيقة تكفي.", tone: "calm" },
+      { variant: "b", text: "اختم نهارك بذكر. دقيقة واحدة بس.", tone: "calm" },
+    ],
+  },
+  sleep: {
+    requires: [],
+    pool: [
+      { variant: "a", text: "قبل الفراش: أذكار النوم. دقيقة واحدة.", tone: "calm" },
+      { variant: "b", text: "مستنيك تنام. خد أذكار النوم وريّح.", tone: "calm" },
+    ],
+  },
+  wird: {
+    requires: [],
+    pool: [
+      { variant: "a", text: "وردك لسه. صفحة واحدة بتفي.", tone: "calm" },
+      { variant: "b", text: "وقّف وردك. ولا تقطعه في النص.", tone: "calm" },
+    ],
+  },
+  friday: {
+    requires: [],
+    pool: [
+      { variant: "a", text: "الجمعة. سورة الكهف وحدها تفرق.", tone: "calm" },
+      { variant: "b", text: "يوم الجمعة. لو بس كلمة، تكفي.", tone: "calm" },
+    ],
+  },
+  suhoor: {
+    requires: [],
+    pool: [{ variant: "a", text: "السحور قرّب. تمر وماء وخلاص.", tone: "calm" }],
+  },
+  iftar: {
+    requires: [],
+    pool: [{ variant: "a", text: "الفطر جه. افطر وكمّل يومك.", tone: "calm" }],
+  },
+  salawat: {
+    requires: [],
+    pool: [
+      { variant: "a", text: "وقفة للصلاة على النبي ﷺ. دقيقة واحدة.", tone: "calm" },
+      { variant: "b", text: "صلاة على النبي ﷺ تستاهل وقفتك.", tone: "calm" },
+    ],
+  },
+  "post-prayer": {
+    requires: ["prayer"],
+    pool: [
+      {
+        variant: "a",
+        text: "بعد {prayer} هسألك: صلّيت؟ سجّل بصراحة، السجل دلوقتي مش لحد تاني.",
+        tone: "direct",
+      },
+      {
+        variant: "b",
+        text: "خلّينا نعرف حالك في {prayer}. إجابة واحدة وخلاص.",
+        tone: "calm",
+      },
+    ],
+  },
+};
+
+/** مفتاح اليوم نفسه المستعمل في `oudLine`، حتى تتأرجح الصيغ معا. */
+function dayKeyOf(now: Date): string {
+  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+}
+
+/**
+ * سطر التذكير للسياق الحالي.
+ *
+ * **بلا `Math.random`**: البذرة على (النوع + اليوم)، فيبقى النص
+ * مستقرا خلال اليوم ومتنوعا بين الأيام. لو زحف كل تنبيه لنفس الجملة
+ * صار التطبيق باردا، ولو تغيّر كل مرة صار مهزوزا.
+ *
+ * @returns الجملة، أو `null` إن كان الحقل الناقص يمنعها.
+ */
+export function oudReminderBody(
+  kind: OudReminderKind,
+  context: OudReminderContext = {},
+  now: Date = new Date(),
+): string | null {
+  const meta = REMINDER_POOLS[kind];
+  for (const key of meta.requires) {
+    if (!carriesValue(context[key])) return null;
+  }
+  const seed = seedOf(`reminder:${kind}`, dayKeyOf(now));
+  for (let offset = 0; offset < meta.pool.length; offset += 1) {
+    const variant = meta.pool[(seed + offset) % meta.pool.length];
+    const text = variant.text
+      .replace(/\{prayer\}/g, context.prayer ?? "")
+      .replace(/\{n\}/g, arabicNumber(context.minutes ?? 0))
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    if (text) return text;
+  }
+  return null;
+}
+
+/** كل أنواع التذكير — يستعملها الاختبار ليغطّي كل واحد. */
+export function allReminderKinds(): OudReminderKind[] {
+  return Object.keys(REMINDER_POOLS) as OudReminderKind[];
+}
+
 /** كل الصيغ مجمّعة — يستعملها حارس المحتوى الديني ليقرأ النص كله. */
 export function allVoiceTexts(): string[] {
-  return Object.values(POOLS).flatMap((group) => group.pool.map((variant) => variant.text));
+  return [
+    ...Object.values(POOLS).flatMap((group) => group.pool.map((variant) => variant.text)),
+    ...Object.values(REMINDER_POOLS).flatMap((group) =>
+      group.pool.map((variant) => variant.text),
+    ),
+  ];
 }
 
 /** كل المعرّفات — يستعملها الاختبار ليغطّي كل سياق. */

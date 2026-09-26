@@ -11,7 +11,7 @@ import {
   NotificationBell,
   NotificationCenter,
 } from "@/components/app/NotificationCenter";
-import { unlockAudio } from "@/lib/audio";
+import { unlockAudio, playCue } from "@/lib/audio";
 import { useNotificationCenter } from "@/hooks/use-notification-center";
 import { audioPreferencesOf } from "@/hooks/use-preferences";
 import { toMinutes as toMinutesOfDay } from "@/lib/time";
@@ -93,6 +93,12 @@ const PoetryView = lazy(() =>
 );
 const PrayerView = lazy(() =>
   import("@/components/app/PrayerView").then((module) => ({ default: module.PrayerView })),
+);
+const QiblaView = lazy(() =>
+  import("@/components/app/QiblaView").then((module) => ({ default: module.QiblaView })),
+);
+const ZakatView = lazy(() =>
+  import("@/components/app/ZakatView").then((module) => ({ default: module.ZakatView })),
 );
 const ProphetsView = lazy(() =>
   import("@/components/app/ProphetsView").then((module) => ({ default: module.ProphetsView })),
@@ -494,6 +500,26 @@ export default function Dashboard() {
     daysPlanFullyCompleted,
   });
 
+  /* ————— صوت للأحداث الجديدة: فتح إنجاز —————
+   *
+   * **لماذا هنا تحديدا:** قناة الإنجاز كانت تغطي إتمام مهمة أو صلاة أو
+   * ورد، بينما فتح شارة جديدة — وهو حدث جديد في هذه المرحلة — كان
+   * صامتا. فمن أطفأ الإنجاز كان يطفئ صوتا لحدث لم يكن داخل قناة الإنجاز
+   * أصلا. النغمة نفسها `complete`، فلا قناة جديدة ولا مفتاح جديد ولا ذوق
+   * جديد: نفس النغمة التي تسمعها حين تُتم صلاة أو تختار وردا.
+   *
+   * ونشغلها مرة واحدة لكل شارة: التكرار يجعل الصوت مزعجا، والأثر المرجعي
+   * يبقى نظيفا. `cueAllowed` يفرض مفتاح المستخدم والقمة، فمن أطفأ الصوت
+   * لا يسمع شيئا ولا يتغير شيء.
+   */
+  const unlockAudioRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = oud.newUnlock?.id ?? null;
+    if (!id || unlockAudioRef.current === id) return;
+    unlockAudioRef.current = id;
+    playCue("complete", audioPrefs);
+  }, [oud.newUnlock, audioPrefs]);
+
   /* مرة واحدة: نوافق أوقات التذكير مع إجابات المستخدم عن استيقاظه ونومه. */
   useEffect(() => {
     if (!answers) return;
@@ -689,6 +715,8 @@ export default function Dashboard() {
         .find((prayer) => toMinutesOfDay(times.timings[prayer.key]) <= minutes && !prayers[prayer.key]);
       if (passed) {
         handlePrayerStatus(passed.key, "ontime");
+        // الردّ من الإشعار حدث إنجاز: قناة الإنجاز هي، لا قناة جديدة.
+        playCue("complete", audioPrefs);
         toast.success(`اتسجّلت ${passed.name} من الإشعار.`);
       } else {
         toast.error("مفيش صلاة مستنية التسجيل دلوقتي.");
@@ -700,7 +728,7 @@ export default function Dashboard() {
     const params = new URLSearchParams(searchParams);
     params.delete("reply");
     setSearchParams(params, { replace: true });
-  }, [searchParams, times.timings, prayers, handlePrayerStatus, setSearchParams]);
+  }, [searchParams, times.timings, prayers, handlePrayerStatus, setSearchParams, audioPrefs]);
 
   const handleAdhkarDone = useCallback(
     (kind: string, done: boolean) => {
@@ -1011,6 +1039,7 @@ export default function Dashboard() {
                 levelLabel: oud.xp.levelLabel,
               }}
               mosque={{ state: oud.mosque.state, places: oud.mosque.places }}
+              qibla={{ coords: geo.coords, denied: geo.status === "denied" }}
               onSaveReview={handleReviewSave}
               reviewSaving={reviewSaving}
               onOpenSection={changeView}
@@ -1050,6 +1079,12 @@ export default function Dashboard() {
             />
           </div>
         ) : null}
+
+        {view === "qibla" ? (
+          <QiblaView coords={geo.coords} denied={geo.status === "denied"} />
+        ) : null}
+
+        {view === "zakat" ? <ZakatView /> : null}
 
         {view === "adhkar" ? (
           <div className="motion-swap">

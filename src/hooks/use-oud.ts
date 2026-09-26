@@ -230,6 +230,16 @@ export function useOud(input: OudInput): OudState {
     if (quietDays >= 2) setReturned(true);
   }, [hasActivity, lastActive, today, quietDays]);
 
+  /**
+   * ما فُتح للتو، فيدخل كلام الشخصية.
+   *
+   * **لماذا كان ناقصا:** مجموعة `unlock` كانت مكتوبة في `oud-voice`
+   * ومختبَرة، ولا يمرّ عليها شيء: `unlocked` لم يكن يُملأ أبدا، فكانت
+   * صيغها ميتة في التطبيق ومحاكاة في الاختبار. فنصلها الآن بالحدث
+   * الحقيقي: الاسم يأتي من `ACHIEVEMENTS` لا من نصّ مكتوب في الجسر.
+   */
+  const unlockName = newUnlock?.label;
+
   /* ————— السياق: كل حقل من حالة حقيقية، ولا حقل بلا مصدر ————— */
   const context = useMemo<OudVoiceContext>(() => {
     const last = lastPrayerOf(timings, prayers, now);
@@ -289,6 +299,7 @@ export function useOud(input: OudInput): OudState {
         (group) => !adhkarDone.includes(group),
       ),
       sleepMinutes: input.sleepMinutes,
+      unlocked: unlockName,
     };
   }, [
     now,
@@ -301,6 +312,7 @@ export function useOud(input: OudInput): OudState {
     quietDays,
     returned,
     mosque.places,
+    unlockName,
     input.leadMinutes,
     input.sleepMinutes,
   ]);
@@ -403,6 +415,7 @@ export function useOud(input: OudInput): OudState {
   }, [unlockedIds, seen]);
 
   return {
+
     line,
     context,
     mosque: {

@@ -43,8 +43,10 @@ export const OWNED_LOCAL_KEYS = [
   "oud:voice:shown:v1",
   "oud:voice:last-active:v1",
   "oud:voice:returned:v1",
-  // PHASE NEXT: قائمة المساجد القريبة، مخبوزة يوما من مصدر مفتوح.
+  // PHASE NEXT: قائمة المساجد القريبة، مخبوزة يوماً من مصدر مفتوح.
   "oud:mosque:near:v1",
+  // PHASE NEXT: مسودة تقدير الزكاة، أرقام كتبها المستخدم على جهازه.
+  "oud:zakat:v1",
 ] as const;
 
 /** بادئات مفاتيح ديناميكية (مفاتيح تحمل تاريخ اليوم مثلًا). */

@@ -8,8 +8,10 @@ import {
   CircleDot,
   ClipboardCheck,
   Clock,
+  Compass,
   Feather,
   Fingerprint,
+  HandCoins,
   HeartHandshake,
   Landmark,
   MessageCircle,
@@ -29,6 +31,8 @@ export type DashView =
   | "today"
   | "chat"
   | "prayers"
+  | "qibla"
+  | "zakat"
   | "adhkar"
   | "quran"
   | "tasbih"
@@ -48,6 +52,8 @@ export const DASH_VIEWS: DashView[] = [
   "today",
   "chat",
   "prayers",
+  "qibla",
+  "zakat",
   "adhkar",
   "quran",
   "tasbih",
@@ -72,6 +78,8 @@ export const VIEW_LABELS: Record<DashView, string> = {
   today: "اليوم",
   chat: "كلّم عود",
   prayers: "الصلاة",
+  qibla: "القبلة",
+  zakat: "الزكاة",
   adhkar: "الأذكار",
   quran: "القرآن",
   tasbih: "المسبحة",
@@ -119,9 +127,11 @@ export const LIBRARY_GROUPS: NavGroup[] = [
     hint: "ما يؤدّيه كل يوم",
     entries: [
       { key: "prayers", label: "الصلاة", hint: "المواقيت والتسجيل", icon: Clock },
+      { key: "qibla", label: "القبلة", hint: "زاويتك من موقعك", icon: Compass },
       { key: "adhkar", label: "الأذكار", hint: "الصباح والمساء والنوم", icon: Sparkles },
       { key: "quran", label: "القرآن", hint: "المصحف كاملًا", icon: BookOpen },
       { key: "tasbih", label: "المسبحة", hint: "عدّاد محفوظ", icon: CircleDot },
+      { key: "zakat", label: "الزكاة", hint: "تقدير على أرقامك", icon: HandCoins },
     ],
   },
   {

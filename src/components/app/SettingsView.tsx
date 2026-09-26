@@ -561,6 +561,27 @@ export function SettingsView({
               aria-label="نافذة الصلاة على النبي"
             />
           </Row>
+
+          <Row
+            title="تذكير الصلاة على النبي ﷺ"
+            hint="مطفأ افتراضا. لو فعّلته، تذكير واحد في اليوم وقفة دقيقة: بلا عدد ولا فضل ولا وعد."
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Switch
+                checked={prefs.salawatReminder}
+                onCheckedChange={(value) => setPref("salawatReminder", value)}
+                aria-label="تذكير الصلاة على النبي"
+              />
+              <Input
+                type="time"
+                value={prefs.salawatTime}
+                onChange={(event) => setPref("salawatTime", event.target.value)}
+                disabled={!prefs.salawatReminder}
+                aria-label="وقت تذكير الصلاة على النبي"
+                className="glass-tile h-9 w-28 rounded-full text-xs disabled:opacity-50"
+              />
+            </div>
+          </Row>
         </div>
       </Group>
 

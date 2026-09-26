@@ -12,7 +12,7 @@ export const PRAYERS: {
 }[] = [
   { key: "fajr", name: "الفجر", ornament: "🌄", hint: "أذكار الصباح بعدها مباشرة" },
   { key: "dhuhr", name: "الظهر", ornament: "☀️", hint: "أفضل وقت لورد القرآن" },
-  { key: "asr", name: "العصر", ornament: "🌤️", hint: "صلاة البردين، من حافظ عليها دخل الجنة" },
+  { key: "asr", name: "العصر", ornament: "🌤️", hint: "الصلاة الثانية من البردين: الفجر والعصر" },
   { key: "maghrib", name: "المغرب", ornament: "🌇", hint: "بعدها أذكار المساء" },
   { key: "isha", name: "العشاء", ornament: "🌙", hint: "ثم أذكار النوم" },
 ];

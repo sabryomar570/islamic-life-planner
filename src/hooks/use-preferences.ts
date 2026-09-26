@@ -31,6 +31,13 @@ export type Preferences = {
   /** رسالة «هل صلّيت؟» بعد كل صلاة مع سطر الصدق. */
   postPrayerPrompt: boolean;
   salawatPopup: boolean;
+  /**
+   * PHASE NEXT: تذكير الصلاة على النبي اختياري بالكامل.
+   * **مطفأ افتراضا**: نرسل تنبيهها حين يطلبه صاحبه فقط، فلا نصير منتجا
+   * يقتحم إيمانه بلا إذن.
+   */
+  salawatReminder: boolean;
+  salawatTime: string;
   method: number;
   fontScale: number;
   reducedMotion: boolean;
@@ -57,6 +64,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   soundVolume: DEFAULT_AUDIO_PREFERENCES.volume,
   postPrayerPrompt: true,
   salawatPopup: true,
+  salawatReminder: false,
+  salawatTime: "20:00",
   method: 3,
   fontScale: 1.2,
   reducedMotion: false,
@@ -101,7 +110,7 @@ export function readPreferences(): Preferences {
     merged.method = PRAYER_METHODS.some((item) => item.value === merged.method)
       ? merged.method
       : DEFAULT_PREFERENCES.method;
-    for (const key of ["morningTime", "eveningTime", "wirdTime"] as const) {
+    for (const key of ["morningTime", "eveningTime", "wirdTime", "salawatTime"] as const) {
       if (!TIME_PATTERN.test(merged[key])) merged[key] = DEFAULT_PREFERENCES[key];
     }
     return merged;
