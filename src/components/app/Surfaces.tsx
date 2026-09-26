@@ -23,8 +23,7 @@ export function Panel({ children, className, as: Tag = "section", role }: Surfac
     <Tag
       role={role}
       className={cn(
-        "relative rounded-3xl surface-primary",
-        "before:pointer-events-none before:absolute before:inset-x-[12%] before:top-0 before:h-px before:bg-gradient-to-l before:from-transparent before:via-white/90 before:to-transparent",
+        "oud-card rounded-3xl",
         className,
       )}
     >
@@ -37,7 +36,7 @@ export function Panel({ children, className, as: Tag = "section", role }: Surfac
 /** Sunken — حفرة أو حالة فارغة. بصريًا «أخفض» من محيطه. */
 export function Sunken({ children, className, as: Tag = "div", role }: SurfaceProps) {
   return (
-    <Tag role={role} className={cn("rounded-2xl surface-sunken", className)}>
+    <Tag role={role} className={cn("rounded-2xl oud-sunken", className)}>
       {children}
     </Tag>
   );
@@ -414,7 +413,7 @@ export function OfflineNote({ children }: { children?: ReactNode }) {
   return (
     <div
       role="status"
-      className="flex items-center gap-2 rounded-2xl bg-[var(--status-attention)]/10 px-3 py-2 label-meta text-foreground/75"
+      className="flex items-center gap-2 rounded-2xl bg-[var(--status-attention)]/12 px-3.5 py-2.5 label-meta text-foreground/80"
     >
       <span className="status-dot bg-[var(--status-attention)]" aria-hidden />
       {children ?? "أنت دون إنترنت — يعمل المحتوى المحفوظ، وتُرسل تسجيلاتك عند عودة الاتصال."}

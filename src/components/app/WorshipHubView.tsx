@@ -1,20 +1,29 @@
-import { Panel, SectionHead } from "@/components/app/Surfaces";
+import { Search } from "lucide-react";
+import { useMemo, useState } from "react";
+
 import { LIBRARY_GROUPS, type DashView, type NavGroup } from "@/components/app/Navigation";
-import { ChevronLeft } from "lucide-react";
+import {
+  EmptyState,
+  Field,
+  ScreenTitle,
+  SectionHeader,
+  ServiceCard,
+  TextLink,
+} from "@/components/oud/primitives";
 
 /**
- * «عبادتي» — فهرس أدوات العبادة.
+ * «عبادتي» — an index of worship services, not a dashboard.
  *
- * **ليست لوحة ثانية:** لا مخطط ولا إحصاء ولا توصيات. سؤالها واحد:
- * «أين أداة الصلاة أو الأذكار أو القبلة؟» فجوابها فهرس واضح.
+ * **A grid, not a list.** These are things you might open, not steps you
+ * follow, so each service is a square you reach for rather than a row
+ * with a chevron. The chevron language is kept for lists that do have an
+ * order.
  *
- * **بلا نصوص جديدة:** النصوص كلها مأخوخة من `LIBRARY_GROUPS`، وهو
- * مصدر واحد للاسم والوصف. فلا يمكن أن يختلف ما يراه المستخدم في الفهرس
- * عمّا يراه في قائمة «كل الأقسام».
+ * **One search field, not a title per card.** A hub with a heading above
+ * every tile is a list pretending to be a grid.
  *
- * **«المعرفة» هنا أم لا:** مجموعات القراءة التي لا تُؤدّى (قصص الأنبياء،
- * الأبيات، المناسبات) ليست عبادة يومية، فبقيت في لوحة «كل الأقسام»
- * ولم تُكرَّر هنا. من أراد العبادة فقط وجدها في صفحة واحدة.
+ * **No new copy.** Names and descriptions come from `LIBRARY_GROUPS`, the
+ * same source the all-sections sheet reads, so the two can never disagree.
  */
 
 type Props = {
@@ -22,50 +31,70 @@ type Props = {
   onOpenAll: () => void;
 };
 
-/** أول مجموعة فقط: ما يؤدّيه كل يوم. */
 const WORSHIP_GROUP: NavGroup = LIBRARY_GROUPS[0];
 
-export function WorshipHubView({ onOpen, onOpenAll }: Props) {
-  return (
-    <div className="stack">
-      <Panel className="px-5 py-6 sm:px-6">
-        <SectionHead
-          eyebrow="عبادتي"
-          title={WORSHIP_GROUP.title}
-          hint={WORSHIP_GROUP.hint}
-          action={
-            <button
-              type="button"
-              onClick={onOpenAll}
-              className="touch-target inline-flex items-center gap-1 rounded-full px-3 text-[12px] font-semibold text-primary"
-            >
-              كل الأقسام
-              <ChevronLeft className="size-3.5" />
-            </button>
-          }
-        />
-      </Panel>
+function normalize(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[ً-ٰٟ]/g, "")
+    .trim();
+}
 
-      {WORSHIP_GROUP.entries.map((entry) => (
-        <button
-          key={entry.key}
-          type="button"
-          onClick={() => onOpen(entry.key)}
-          className="motion-press surface-primary focus-ring flex min-h-16 w-full items-center gap-3.5 rounded-3xl px-4 py-3.5 text-start sm:px-5"
-        >
-          <span
-            className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-            aria-hidden
-          >
-            <entry.icon className="size-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="label-section block text-foreground">{entry.label}</span>
-            <span className="label-meta block truncate text-muted-foreground">{entry.hint}</span>
-          </span>
-          <ChevronLeft className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        </button>
-      ))}
+export function WorshipHubView({ onOpen, onOpenAll }: Props) {
+  const [query, setQuery] = useState("");
+
+  const services = useMemo(() => {
+    const needle = normalize(query);
+    if (!needle) return WORSHIP_GROUP.entries;
+    return WORSHIP_GROUP.entries.filter(
+      (entry) =>
+        normalize(entry.label).includes(needle) || normalize(entry.hint).includes(needle),
+    );
+  }, [query]);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <ScreenTitle title={WORSHIP_GROUP.title} subtitle={WORSHIP_GROUP.hint} />
+
+      <Field
+        label="ابحث في خدماتك"
+        icon={Search}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={WORSHIP_GROUP.entries[0]?.label ?? ""}
+      />
+
+      {services.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="لا توجد خدمة بهذا الاسم"
+          body="جرّب كلمة أقصر، أو افتح كل الأقسام من أعلى الشاشة."
+          action={<TextLink onClick={onOpenAll}>كل الأقسام</TextLink>}
+        />
+      ) : (
+        <>
+          <SectionHeader
+            title="ما يؤدّيه كل يوم"
+            action={<TextLink onClick={onOpenAll}>كل الأقسام</TextLink>}
+          />
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {services.map((entry) => (
+              <li key={entry.key}>
+                <ServiceCard
+                  icon={entry.icon}
+                  title={entry.label}
+                  description={entry.hint}
+                  onClick={() => onOpen(entry.key)}
+                  className="h-full w-full"
+                />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

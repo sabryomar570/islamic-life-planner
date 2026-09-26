@@ -275,24 +275,22 @@
   }
 
   .btn-edge {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.8));
-    border: 1px solid oklch(0.84 0.025 252);
-    box-shadow:
-      0 2px 0 0 oklch(0.9 0.02 252),
-      0 12px 22px -16px oklch(0.42 0.06 255 / 0.6),
-      inset 0 1px 0 rgba(255, 255, 255, 0.98);
-    transition: transform 140ms ease, box-shadow 160ms ease, background 160ms ease;
+    background: var(--oud-surface);
+    border: 1px solid var(--oud-line);
+    box-shadow: var(--oud-shadow-1);
+    transition:
+      transform 140ms var(--ease-calm),
+      box-shadow 160ms var(--ease-calm),
+      background-color 160ms var(--ease-calm),
+      border-color 160ms var(--ease-calm);
   }
   .btn-edge:hover:not(:disabled) {
-    background: #fff;
-    transform: translateY(-1px);
+    border-color: var(--oud-line-strong);
+    box-shadow: var(--oud-shadow-2);
   }
   .btn-edge:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow:
-      0 1px 0 0 oklch(0.9 0.02 252),
-      0 6px 12px -12px oklch(0.42 0.06 255 / 0.6),
-      inset 0 1px 0 rgba(255, 255, 255, 0.98);
+    transform: scale(0.978);
+    box-shadow: var(--oud-inset-soft);
   }
   .btn-edge:focus-visible {
     outline: 2px solid var(--primary);
@@ -451,9 +449,9 @@
 
   /* Primary surface: اللوح الرئيسي للشاشة. واحد فقط في كل شاشة. */
   .surface-primary {
-    background: var(--surface-primary);
-    border: 1px solid var(--hairline);
-    box-shadow: var(--shadow-card);
+    background: var(--oud-elevated);
+    border: 1px solid var(--oud-line);
+    box-shadow: var(--oud-shadow-2);
   }
 
   /* Elevated: البطاقة التي يجب أن تسبق كل ما حولها بصريًا.
@@ -466,21 +464,21 @@
 
   /* Secondary surface: عنصر داخل اللوح — أخف، بلا ضباب. */
   .surface-secondary {
-    background: var(--surface-secondary);
-    border: 1px solid var(--hairline-soft);
+    background: var(--oud-canvas);
+    border: 1px solid var(--oud-line-soft);
   }
 
   /* Sunken: حفرة أو حالة فارغة — بصريًا «أخفض». */
   .surface-sunken {
-    background: var(--surface-sunken);
-    border: 1px solid var(--rule);
-    box-shadow: var(--shadow-pressed);
+    background: var(--oud-canvas);
+    border: 1px solid var(--oud-line-soft);
+    box-shadow: var(--oud-inset-soft);
   }
 
   /* Quiet: أسطح القراءة والمصحف — أقرب للورق. */
   .surface-quiet {
-    background: var(--surface-quiet);
-    border: 1px solid var(--rule);
+    background: var(--oud-surface);
+    border: 1px solid var(--oud-line-soft);
   }
 
   /* Editorial: ورق دافئ للقرآن والشعر — لا زجاج ولا أزرق. */

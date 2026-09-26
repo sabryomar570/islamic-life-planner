@@ -157,60 +157,9 @@ export function AppHeader({
         </div>
       </header>
 
-      {/* ——— الموبايل: شريط ملتصق هادئ، أربع مناطق ———
-       *
-       * القرار البصري: **ملتصق لا طاف**. لا كبسولة عائمة، ولا ظل ثقيل،
-       * ولا ضباب زجاجي. سطح شبه أبيض بخط علوي واحد، وأربع وجهات.
-       * النشط: أيقونة بلون primary + نقطة ٥px تحتها + label أثقل.
-       * الساكن: رمادي هادئ بلا أي خلفية. الهدف وضوح وهدوء، لا استعراض. */}
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--hairline)] bg-[var(--surface-veil)] pb-[env(safe-area-inset-bottom)]"
-        aria-label="التنقّل الرئيسي"
-      >
-        <ul className="mx-auto flex max-w-md items-stretch px-1">
-          {PRIMARY_NAV.map((item) => {
-            const active = view === item.key;
-            return (
-              <li key={item.key} className="min-w-0 flex-1">
-                <button
-                  type="button"
-                  onClick={() => onViewChange(item.key)}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "motion-press flex min-h-16 w-full flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-2",
-                    active ? "text-primary" : "text-muted-foreground hover:text-foreground/80",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                      active && "bg-primary/10",
-                    )}
-                  >
-                    <item.icon className="size-[22px] shrink-0" aria-hidden />
-                  </span>
-                  <span
-                    className={cn(
-                      "truncate text-[11px] leading-none",
-                      active ? "font-semibold" : "font-medium",
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-1.5 shrink-0 rounded-full transition-colors",
-                      active ? "bg-primary" : "bg-transparent",
-                    )}
-                  />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
+      {/* الشريط السفلي انتقل إلى `components/oud/BottomNav`: كتلة واحدة
+       * مستقلة بدل أن يكون جزءًا من الترويسة. هنا لا يبقى إلا سطح
+       * المكتب ولوحة الأقسام. */}
       <LibrarySheet
         open={moreOpen}
         onOpenChange={setMoreOpen}

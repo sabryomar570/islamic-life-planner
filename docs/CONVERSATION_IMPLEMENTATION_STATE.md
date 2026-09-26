@@ -168,10 +168,34 @@ Applied to the token layer:
 - The header now shows the screen title, so every screen reads as one titled surface of the
   same product.
 
+## 6.b UI rebuild, generation two
+
+The presentation layer was rebuilt from the tokens up. The product engine was not touched.
+
+- New foundation: `src/components/oud/`, with one import surface at `components/oud/index.ts`.
+- Four depth levels and nothing else: canvas, surface, elevated card, hero. A test fails if a
+  fifth level appears.
+- One gel material for every icon, in four sizes. The tile gives the glyph a surface, a
+  highlight, an edge and an inner shadow, so an icon reads as an object.
+- The bottom bar carries four zones and a single gel droplet that travels between them with a
+  spring, and an instant change when motion is reduced.
+- Home rebuilt: prayer hero is the only Level 3 on the screen, then the Oud line, then exactly
+  one prominent action, then quiet quick access.
+- عبادتي rebuilt as a service grid with a real search filter.
+-ومي rebuilt around progress first, then three equal stat cards, then plan, review and week.
+- The old surface vocabulary was re-pointed at the new tokens, so screens not yet rewritten
+  still render inside the new system instead of the previous one. Composition is what still
+  differs on those screens, not their material.
+
+Locked by `tests/oud-design-system.test.tsx`: four levels, one gel class, four icon sizes, the
+droplet contract, reduced motion, and a ban on the old glass and heavy-shadow classes inside the
+rebuilt screens.
+
 Still open, waiting on the owner:
 
 - Whether knowledge content moves into عبادتي.
 - Whether `DeveloperView` stays in the app group or moves under Settings.
+- All final personality copy, still awaiting one batch from the owner.
 
 ---
 

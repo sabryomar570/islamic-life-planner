@@ -4,6 +4,7 @@ import {
   QuietButton,
   SectionHead,
 } from "@/components/app/Surfaces";
+import { ElevatedCard, SectionHeader } from "@/components/oud/primitives";
 import { RING_TONES, playRingTone, type RingTone } from "@/lib/notify";
 import { PermissionReasonDialog } from "@/components/app/PermissionReasonDialog";
 import {
@@ -72,10 +73,10 @@ type InstallProps = {
 };
 
 /**
- * PHASE 2M — صف إعداد واحد.
+ * صف إعداد واحد: سطر داخل بطاقة واحدة، مفصول بشعرة لا صندوق.
  *
- * سطر مفصول بشعرة لا صندوق. كل إعداد في بطاقة منفصلة كان يجعل القائمة
- * تبدو كشبكة من القطع بدل إعدادات قابلة للقراءة.
+ * كل إعداد في بطاقة منفصلة كان يجعل القائمة تبدو كشبكة قطع. الصف
+ * يقرأ التتابع، والبطاقة تقرأ المجموعة.
  */
 function Row({
   title,
@@ -87,9 +88,9 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--rule)] py-3.5 last:border-b-0">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--oud-line-soft)] py-3.5 last:border-b-0">
       <div className="max-w-md">
-        <p className="text-[13px] font-semibold">{title}</p>
+        <p className="text-[14px] font-semibold text-foreground">{title}</p>
         {hint ? <p className="label-meta mt-0.5 leading-5 text-muted-foreground">{hint}</p> : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">{children}</div>
@@ -112,12 +113,12 @@ function Group({
   children: React.ReactNode;
 }) {
   return (
-    <Panel className="overflow-hidden">
+    <ElevatedCard className="overflow-hidden">
       <div className="p-5 sm:p-6">
-        <SectionHead eyebrow={eyebrow} title={title} hint={hint} action={action} />
+        <SectionHeader title={eyebrow ? `${eyebrow} · ${title}` : title} subtitle={hint} action={action} />
       </div>
-      <div className="rule-t px-5 pb-4 sm:px-6">{children}</div>
-    </Panel>
+      <div className="border-t border-[var(--oud-line-soft)] px-5 pb-4 sm:px-6">{children}</div>
+    </ElevatedCard>
   );
 }
 

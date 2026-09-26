@@ -1,9 +1,9 @@
-import { Meter, StatusDot, Panel, PrimaryButton } from "@/components/app/Surfaces";
+import { Badge, HeroCard, ProgressBar, ActionButton, TextLink } from "@/components/oud/primitives";
 import { useNow } from "@/hooks/use-clock";
 import { toArabicDigits } from "@/lib/hijri";
 import { PRAYERS, currentPrayer, nextPrayer, type PrayerKey, type PrayerStatus, type Timings } from "@/lib/prayers";
 import { arabicNumber, formatArabicTime } from "@/lib/time";
-import { ChevronLeft, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 
 /**
  * PHASE 2A — بطل الشاشة الأولى.
@@ -94,75 +94,74 @@ export function NextPrayerHero({
   const awaiting = nextState === "missed" && nextMinutes <= nowMinutes;
 
   return (
-    <Panel className="overflow-hidden shadow-[var(--shadow-elevated)] ring-1 ring-primary/10">
-      <div className="flex flex-col gap-5 bg-gradient-to-b from-primary/8 to-transparent p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
-        <div className="min-w-0">
-          <p className="eyebrow flex items-center gap-1.5">
-            {next.key === "fajr" || next.key === "isha" ? (
-              <Moon className="size-3.5" />
-            ) : (
-              <Sun className="size-3.5" />
-            )}
-            الصلاة القادمة
-          </p>
-          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 className="label-display text-primary">{next.name}</h1>
-            <span className="text-[15px] font-semibold text-foreground/70">
-              {formatArabicTime(next.time)}
-            </span>
-          </div>
-          <p className="label-meta mt-2 text-muted-foreground">
-            {active
-              ? `${active.name} الآن · بعدها ${next.name}`
-              : `${next.hint}`}
-          </p>
+    <HeroCard className="overflow-hidden">
+      {/* الأثر المعماري: طبقتان من ضوء هادئ خلف البيانات. نسيج فقط، لا
+          صورة. أي عنصر يُقرأ هنا هو رقم الصلاة، لا الخلفية. */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <div className="absolute -top-24 -start-20 size-64 rounded-full bg-[radial-gradient(circle,oklch(0.86_0.07_250/0.55),transparent_65%)]" />
+        <div className="absolute -bottom-28 -end-24 size-72 rounded-full bg-[radial-gradient(circle,oklch(0.9_0.05_205/0.45),transparent_65%)]" />
+      </div>
 
-          {/* شريط واحد يقول: كم من وقتك بين الصلاةين مرّ. */}
-          <div className="mt-4 max-w-xs">
+      <div className="relative flex flex-col gap-5 p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-[12px] font-semibold text-primary">
+              {next.key === "fajr" || next.key === "isha" ? (
+                <Moon className="size-3.5" aria-hidden />
+              ) : (
+                <Sun className="size-3.5" aria-hidden />
+              )}
+              الصلاة القادمة
+            </p>
+            <h1 className="mt-1 text-[30px] leading-10 font-bold text-foreground">{next.name}</h1>
+            <p className="label-meta mt-1 text-muted-foreground">
+              {formatArabicTime(next.time)}
+              {active ? ` · ${active.name} الآن` : ""}
+            </p>
+          </div>
+          {awaiting ? (
+            <ActionButton
+              onClick={() => onLogCurrent(next.key, "ontime")}
+              className="shrink-0 px-4 text-[13px]"
+            >
+              صلّيت {next.name}
+            </ActionButton>
+          ) : null}
+        </div>
+
+        {/* العدّاد هو أكبر رقم في الشاشة. */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="label-meta text-muted-foreground">المتبقّي</p>
+            {/* العدّاد يتحدّث كل ثانية: إعلانُه لقارئ الشاشة كل ثانية إزعاج،
+                فيبقى خارج المنطقة الحيّة عمدا. */}
+            <p aria-live="off" className="text-[34px] leading-11 font-bold tracking-tight text-foreground">
+              <LiveCountdown target={target} />
+            </p>
+          </div>
+          <div className="min-w-[10rem] flex-1 sm:max-w-xs">
             <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
               <span>{active?.name ?? "منذ منتصف الليل"}</span>
               <span>{next.name}</span>
             </div>
-            <Meter value={progress} label={`التقدّم إلى ${next.name}`} />
+            <ProgressBar value={progress} label={`التقدّم إلى ${next.name}`} />
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-          <div className="rounded-2xl surface-sunken px-4 py-3 text-center">
-            <p className="label-meta text-muted-foreground">المتبقّي</p>
-            {/* العدّاد يتحدّث كل نصف دقيقة: إعلانُه لقارئ الشاشة كل ٣٠ ثانية إزعاج.
-               aria-live="off" يجعل ذلك مقصودًا لا مجرّد نتيجة عرضية. */}
-            <div aria-live="off">
-              <LiveCountdown target={target} />
-            </div>
-          </div>
-          {awaiting ? (
-            <PrimaryButton
-              onClick={() => onLogCurrent(next.key, "ontime")}
-              className="text-[12px]"
-            >
-              صلّيت {next.name}
-            </PrimaryButton>
-          ) : (
-            <button
-              type="button"
-              onClick={onOpenPrayers}
-              className="motion-press touch-target inline-flex items-center justify-center gap-1 rounded-full px-4 text-[12px] font-semibold text-primary"
-            >
-              سجل الصلاة
-              <ChevronLeft className="size-3.5" />
-            </button>
-          )}
-        </div>
+        {!awaiting ? (
+          <TextLink onClick={onOpenPrayers} className="self-start">
+            سجل الصلاة
+          </TextLink>
+        ) : null}
       </div>
 
       {/* شريط اليوم: نقطة لكل صلاة، بلا صندوق إضافي. */}
-      <div className="rule-t px-5 py-3.5 sm:px-6">
-        <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="relative border-t border-[var(--oud-line-soft)] px-5 py-3.5">
+        <div className="mb-2.5 flex items-center justify-between gap-3">
           <p className="text-[12px] font-semibold text-foreground/80">
             صلّيت اليوم {arabicNumber(doneCount)} من {arabicNumber(PRAYERS.length)}
           </p>
-          <span className="label-meta text-muted-foreground">دخول الوقت</span>
+          <Badge tone="primary">دخول الوقت</Badge>
         </div>
         <ol className="flex items-stretch gap-1.5" aria-label="حالة صلوات اليوم" aria-live="polite">
           {PRAYERS.map((prayer) => {
@@ -172,48 +171,25 @@ export function NextPrayerHero({
               toMinutes(timings[prayer.key]),
               nowMinutes,
             );
+            const color =
+              state === "done"
+                ? "var(--status-success)"
+                : state === "late"
+                  ? "var(--status-attention)"
+                  : state === "missed"
+                    ? "var(--status-missed)"
+                    : "transparent";
             return (
               <li key={prayer.key} className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <StatusDot
-                    state={
-                      state === "done"
-                        ? "success"
-                        : state === "late"
-                          ? "attention"
-                          : state === "missed"
-                            ? "missed"
-                            : "idle"
-                    }
-                  />
-                  <span className="truncate text-[11px] text-muted-foreground">{prayer.name}</span>
-                </div>
-                <div
-                  className="mt-1.5 h-1 rounded-full bg-[var(--status-idle)]"
+                <span
                   aria-hidden
-                >
-                  <div
-                    className="h-1 rounded-full"
-                    style={{
-                      width:
-                        state === "done"
-                          ? "100%"
-                          : state === "late"
-                            ? "100%"
-                            : state === "missed"
-                              ? "100%"
-                              : "0%",
-                      background:
-                        state === "done"
-                          ? "var(--status-success)"
-                          : state === "late"
-                            ? "var(--status-attention)"
-                            : state === "missed"
-                              ? "var(--status-missed)"
-                              : "transparent",
-                    }}
-                  />
+                  className="block size-2 rounded-full"
+                  style={{ background: color === "transparent" ? "var(--status-idle)" : color }}
+                />
+                <div className="mt-1.5 h-1 rounded-full bg-[var(--status-idle)]" aria-hidden>
+                  <div className="h-1 rounded-full" style={{ width: color === "transparent" ? "0%" : "100%", background: color }} />
                 </div>
+                <span className="mt-1 block truncate text-[11px] text-muted-foreground">{prayer.name}</span>
                 <span className="sr-only">
                   {prayer.name}: {STATE_LABEL[state]}
                 </span>
@@ -222,6 +198,6 @@ export function NextPrayerHero({
           })}
         </ol>
       </div>
-    </Panel>
+    </HeroCard>
   );
 }

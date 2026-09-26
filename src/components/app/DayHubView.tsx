@@ -1,36 +1,44 @@
+import { CalendarRange, BarChart3, Flame, Sparkles, Star } from "lucide-react";
+
 import { DailyReview, type DayReviewRecord } from "@/components/app/DailyReview";
 import { DayTimeline } from "@/components/app/DayTimeline";
 import {
-  Meter,
-  Panel,
-  QuietButton,
-  SectionHead,
+  ElevatedCard,
+  IconTile,
+  ProgressBar,
+  ScreenTitle,
+  SectionHeader,
+  SecondaryButton,
+  StatCard,
   Sunken,
-} from "@/components/app/Surfaces";
+  TextLink,
+} from "@/components/oud/primitives";
 import type { ProfileAnswers } from "@/data/questions";
 import { useNow } from "@/hooks/use-clock";
 import type { PlanItemOutcome } from "@/lib/accountability";
 import type { DailyPlan } from "@/lib/daily-plan";
-import type { ProgressSummary } from "@/lib/progress";
 import type { DailyRow } from "@/lib/coach";
+import type { ProgressSummary } from "@/lib/progress";
 import type { WeeklyReview } from "@/lib/weekly-review";
 import { focusMetric, reviewDue, type WeeklyFocus } from "@/lib/coach";
-
 import { PRAYERS } from "@/lib/prayers";
 import { arabicNumber, dateKey } from "@/lib/time";
-import { BarChart3, CalendarRange, ChevronLeft } from "lucide-react";
 
 /**
- * «يومي» — منطقة إدارة اليوم ومراجعته.
+ * «يومي» — how is the day going, and what did I finish.
  *
- * **لماذا وُجدت:** كانت كل خطة اليوم والمراجعة والإحصاء مكتوبة داخل
- * الشاشة الرئيسية، فصارت الشاشة الواحدة تجمع «أين أنا» و«كيف يسير
- * يومي» معا. الأولى سؤال الرئيسية، والثانية سؤال هذه المنطقة. فمُنعت
- * الأولى عن الثاني، لا حُذفت البيانات ولا تغيّر المنطق: كل ما هنا
- * نفس الاستعلامات ونفس الدوال، نُقلت كما هي.
+ * **It is not a second home screen.** Home answers *what matters now* and
+ * stops after one action. This screen answers the other question, so it is
+ * allowed to be longer: the plan, the review, the week, the streak, the
+ * points. Nothing here competes for attention because nothing here is
+ * urgent.
  *
- * **بلا نصوص جديدة:** كل سطر هنا منقول بحرفه من مكانه القديم. اسم
- * المنطقة («يومي») هو الاسم المعتمد في خريطة المعلومات.
+ * **Read order:** progress first, then the three numbers that summarise it,
+ * then the plan that produces those numbers, then the review, then the
+ * week. A number before the thing that changes it is a scoreboard.
+ *
+ * **No new copy.** Every string moved here from the home screen, or came
+ * from a data source. The section titles are technical UI labels.
  */
 
 type Props = {
@@ -40,7 +48,6 @@ type Props = {
     adhkar: string[];
     review: Omit<DayReviewRecord, "mood" | "blocker"> & { mood: string; blocker: string } | null;
   };
-  /** نفس ما كانت تتلقاه الشاشة الرئيسية: النسب واليومي الأسبوعي. */
   stats?: {
     days: number;
     prayerRate: number;
@@ -59,6 +66,8 @@ type Props = {
   weeklyReview: WeeklyReview | null;
   reviewingWeek: boolean;
   onSaveWeeklyReview: () => void;
+  xp: { total: number; today: number; levelLabel: string };
+  achievements: { unlocked: number; total: number };
   onOpenSection: (section: string) => void;
 };
 
@@ -77,11 +86,14 @@ export function DayHubView({
   weeklyReview,
   reviewingWeek,
   onSaveWeeklyReview,
+  xp,
+  achievements,
   onOpenSection,
 }: Props) {
   const now = useNow(30_000);
   const nowLabel = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   const review = dayState.review as DayReviewRecord | null;
+  const todayKey = dateKey(now);
 
   const prayedToday = PRAYERS.filter(
     (prayer) =>
@@ -93,42 +105,76 @@ export function DayHubView({
       ? profile.weeklyFocus
       : "prayer";
   const weeklyMetric = stats ? focusMetric(weeklyFocus, stats.daily) : null;
-  const todayKey = dateKey(now);
+
   const doneToday = planOutcomes.filter(
     (item) => item.date === todayKey && item.status === "completed",
   ).length;
-
-  const shortcuts = [
-    { key: "weekly", label: "الخطة الأسبوعية", icon: CalendarRange },
-    { key: "stats", label: "الإحصاءات", icon: BarChart3 },
-  ];
+  const planTotal = dailyPlan?.sections.reduce((total, section) => total + section.items.length, 0) ?? 0;
+  const prayerPct = Math.round((prayedToday / PRAYERS.length) * 100);
 
   return (
-    <div className="stack">
-      <Panel className="px-5 py-6 sm:px-6">
-        <SectionHead
-          eyebrow="يومي"
-          title="خطة اليوم ومراجعته"
-          hint={`${arabicNumber(doneToday)} خطوة منفَّذة اليوم`}
-        />
-        <ul className="mt-4 flex flex-wrap gap-2">
-          {shortcuts.map((item) => (
-            <li key={item.key}>
-              <button
-                type="button"
-                onClick={() => onOpenSection(item.key)}
-                className="motion-press surface-secondary flex min-h-11 items-center gap-2 rounded-full px-4 text-[13px] font-semibold text-foreground/80"
-              >
-                <item.icon className="size-4" aria-hidden />
-                {item.label}
-                <ChevronLeft className="size-3.5 text-muted-foreground" aria-hidden />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </Panel>
+    <div className="flex flex-col gap-5">
+      <ScreenTitle title="يومي" subtitle="خطة اليوم ومراجعته وتقدّمك" />
 
-      {/* خطة اليوم كاملة — هنا موطنها، لا في الرئيسية. */}
+      {/* 1 — progress first, because everything below explains it. */}
+      <ElevatedCard className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="label-meta text-muted-foreground">الصلاة اليوم</p>
+            <p className="mt-1 text-[24px] leading-9 font-bold text-foreground">
+              {arabicNumber(prayedToday)} / {arabicNumber(PRAYERS.length)}
+            </p>
+          </div>
+          <IconTile icon={Sparkles} size="lg" />
+        </div>
+        <ProgressBar className="mt-3" value={prayerPct} label="الصلاة اليوم" />
+
+        <p className="label-meta mt-3 text-muted-foreground">
+          خطة اليوم: {arabicNumber(doneToday)} من {arabicNumber(planTotal)} منفَّذة
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <SecondaryButton icon={CalendarRange} onClick={() => onOpenSection("weekly")} className="px-4 text-[13px]">
+            الخطة الأسبوعية
+          </SecondaryButton>
+          <SecondaryButton icon={BarChart3} onClick={() => onOpenSection("stats")} className="px-4 text-[13px]">
+            الإحصاءات
+          </SecondaryButton>
+        </div>
+      </ElevatedCard>
+
+      {/* 2 — three numbers, equal weight, no hero among them. */}
+      <ul className="grid grid-cols-3 gap-2.5">
+        <li>
+          <StatCard
+            icon={Star}
+            size="sm"
+            label="XP"
+            value={arabicNumber(xp.total)}
+            hint={xp.levelLabel}
+            className="h-full"
+          />
+        </li>
+        <li>
+          <StatCard
+            icon={Flame}
+            size="sm"
+            label="أيام متصلة"
+            value={arabicNumber(lifeProgress?.currentStreak ?? stats?.streak ?? 0)}
+            className="h-full"
+          />
+        </li>
+        <li>
+          <StatCard
+            icon={Sparkles}
+            size="sm"
+            label="الإنجازات"
+            value={`${arabicNumber(achievements.unlocked)}/${arabicNumber(achievements.total)}`}
+            className="h-full"
+          />
+        </li>
+      </ul>
+
+      {/* 3 — the plan itself. */}
       {dailyPlan ? (
         <DayTimeline
           plan={dailyPlan}
@@ -139,15 +185,18 @@ export function DayHubView({
           onResetOutcome={onResetPlanOutcome}
         />
       ) : (
-        <Panel className="px-5 py-6 sm:px-6">
-          <SectionHead
-            eyebrow="خطة اليوم"
-            title="نجهّز خطتك من نموذج حياتك"
-            hint="لن نضيف مهمة لم تخترها — انتظر لحظة واحدة."
+        <ElevatedCard className="p-5">
+          <SectionHeader
+            title="خطة اليوم"
+            subtitle="نجهّز خطتك من نموذج حياتك"
           />
-        </Panel>
+          <p className="label-body mt-2 text-muted-foreground">
+            لن نضيف مهمة لم تخترها — انتظر لحظة واحدة.
+          </p>
+        </ElevatedCard>
       )}
 
+      {/* 4 — the review. A ritual, not a form. */}
       <DailyReview
         visible={Boolean(review) || reviewDue(now, { dayEnd: profile.dayEnd })}
         review={review}
@@ -156,93 +205,63 @@ export function DayHubView({
         onSave={onSaveReview}
       />
 
+      {/* 5 — the week behind today. */}
       {stats && stats.days > 0 ? (
-        <Panel className="p-5 sm:p-6">
-          <SectionHead
-            eyebrow="متابعتي"
+        <ElevatedCard className="p-5">
+          <SectionHeader
             title="كيف يسير أسبوعك"
-            action={
-              <button
-                type="button"
-                onClick={() => onOpenSection("stats")}
-                className="touch-target inline-flex items-center gap-1 rounded-full px-3 text-[12px] font-semibold text-primary"
-              >
-                الإحصاءات
-                <ChevronLeft className="size-3.5" />
-              </button>
-            }
+            action={<TextLink onClick={() => onOpenSection("stats")}>الإحصاءات</TextLink>}
           />
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 flex flex-col gap-4">
             <div>
-              <div className="flex items-baseline justify-between gap-2">
+              <div className="mb-1.5 flex items-baseline justify-between gap-2">
                 <p className="label-meta text-muted-foreground">الصلاة في وقتها</p>
                 <p className="text-[13px] font-bold text-foreground">{arabicNumber(stats.prayerRate)}٪</p>
               </div>
-              <Meter className="mt-1.5" value={stats.prayerRate} tone="success" label="نسبة الصلاة في وقتها" />
+              <ProgressBar value={stats.prayerRate} tone="success" label="نسبة الصلاة في وقتها" />
             </div>
             <div>
-              <div className="flex items-baseline justify-between gap-2">
+              <div className="mb-1.5 flex items-baseline justify-between gap-2">
                 <p className="label-meta text-muted-foreground">أيام فيها أذكار</p>
                 <p className="text-[13px] font-bold text-foreground">{arabicNumber(stats.adhkarRate)}٪</p>
               </div>
-              <Meter className="mt-1.5" value={stats.adhkarRate} label="نسبة الأيام التي فيها أذكار" />
-            </div>
-            <div>
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="label-meta text-muted-foreground">سجل خطة الأسبوع</p>
-                <p className="text-[13px] font-bold text-foreground">
-                  {arabicNumber(lifeProgress?.currentStreak ?? stats.streak)}
-                </p>
-              </div>
-              <Meter
-                className="mt-1.5"
-                value={Math.min(100, (lifeProgress?.currentStreak ?? stats.streak) * 14)}
-                tone="attention"
-                label="أيام متصلة"
-              />
+              <ProgressBar value={stats.adhkarRate} label="نسبة الأيام التي فيها أذكار" />
             </div>
           </div>
 
           {weeklyMetric ? (
             <p className="label-meta mt-4 text-muted-foreground">
               تركيز الأسبوع:{" "}
-              {weeklyFocus === "prayer" ? "الصلاة في وقتها" : weeklyFocus === "adhkar" ? "الأذكار" : "الاستمرار"} —{" "}
-              {arabicNumber(weeklyMetric.done)} من {arabicNumber(weeklyMetric.total)} {weeklyMetric.unit}.
+              {weeklyFocus === "prayer"
+                ? "الصلاة في وقتها"
+                : weeklyFocus === "adhkar"
+                  ? "الأذكار"
+                  : "الاستمرار"}{" "}
+              — {arabicNumber(weeklyMetric.done)} من {arabicNumber(weeklyMetric.total)}{" "}
+              {weeklyMetric.unit}.
             </p>
           ) : null}
 
           {lifeProgress ? (
             <p className="label-meta mt-1 leading-6 text-muted-foreground">
               من خطة الأسبوع: {arabicNumber(lifeProgress.weekly.completed)} خطوة منفَّذة في{" "}
-              {arabicNumber(lifeProgress.weekly.activeDays)} أيام نشطة
-              {lifeProgress.weekly.postponed > 0
-                ? ` · ${arabicNumber(lifeProgress.weekly.postponed)} مؤجّل`
-                : ""}{" "}
-              · {arabicNumber(lifeProgress.weekly.reviewedDays)} يوم مراجَع
-              {lifeProgress.weekly.averageScore !== null
-                ? ` · متوسّط ${arabicNumber(lifeProgress.weekly.averageScore)}`
-                : ""}
-              {lifeProgress.weekly.changeFromPrevious !== null
-                ? ` · ${lifeProgress.weekly.changeFromPrevious >= 0 ? "أعلى" : "أقل"} من الأسبوع الذي قبله بـ${arabicNumber(
-                    Math.abs(lifeProgress.weekly.changeFromPrevious),
-                  )} نقطة`
-                : ""}
-              .<br />
-              أطول سلسلة: {arabicNumber(lifeProgress.longestStreak)} يوم
+              {arabicNumber(lifeProgress.weekly.activeDays)} أيام نشطة ·{" "}
+              {arabicNumber(lifeProgress.weekly.reviewedDays)} يوم مراجَع · أطول سلسلة:{" "}
+              {arabicNumber(lifeProgress.longestStreak)} يوم
             </p>
           ) : null}
-        </Panel>
+        </ElevatedCard>
       ) : null}
 
       {weeklyReview ? (
         <Sunken className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <p className="label-meta min-w-0 flex-1 text-muted-foreground">
-            مراجعة الأسبوع: التزام {arabicNumber(weeklyReview.adherence)}٪ عبر {arabicNumber(weeklyReview.reviewedDays)} أيام.
+            مراجعة الأسبوع: التزام {arabicNumber(weeklyReview.adherence)}٪ عبر{" "}
+            {arabicNumber(weeklyReview.reviewedDays)} أيام.
           </p>
-          <QuietButton onClick={onSaveWeeklyReview} disabled={reviewingWeek} className="h-9 px-4">
+          <SecondaryButton onClick={onSaveWeeklyReview} disabled={reviewingWeek} className="h-9 px-4">
             {reviewingWeek ? "جارٍ الحفظ…" : "تحديث المراجعة"}
-          </QuietButton>
+          </SecondaryButton>
         </Sunken>
       ) : null}
     </div>

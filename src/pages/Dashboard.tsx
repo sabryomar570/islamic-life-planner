@@ -17,6 +17,7 @@ import { audioPreferencesOf } from "@/hooks/use-preferences";
 import { toMinutes as toMinutesOfDay } from "@/lib/time";
 import { OpeningGreeting } from "@/components/app/OpeningGreeting";
 import { ViewBoundary } from "@/components/app/ViewBoundary";
+import { BottomNav } from "@/components/oud/BottomNav";
 import { DayHubView } from "@/components/app/DayHubView";
 import { WorshipHubView } from "@/components/app/WorshipHubView";
 import { EmptyState, OfflineNote, Panel, PrimaryButton, Skeleton } from "@/components/app/Surfaces";
@@ -918,7 +919,7 @@ export default function Dashboard() {
 
   if (profileDoc === undefined && !useCachedData) {
     return (
-      <div className="min-h-dvh pb-[calc(7rem+env(safe-area-inset-bottom))]" role="status" aria-live="polite" aria-busy="true">
+      <div className="oud-canvas min-h-dvh pb-[calc(6.5rem+env(safe-area-inset-bottom))]" role="status" aria-live="polite" aria-busy="true">
         <AppHeader
           view={view}
           onViewChange={changeView}
@@ -1001,7 +1002,7 @@ export default function Dashboard() {
   return (
     // الفراغ السفلي = ارتفاع شريط التنقّل (٧rem) + شريط نظام الجوّال،
     // وإلا غطى الشريط آخر عنصر على الأجهزة ذات المؤشّر.
-    <div className="min-h-screen pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    <div className="oud-canvas min-h-screen pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
       <AppHeader
         view={view}
         onViewChange={changeView}
@@ -1048,7 +1049,6 @@ export default function Dashboard() {
               planOutcomes={planOutcomes}
               dailyScore={dailyScore}
               adaptiveSuggestions={adaptiveSuggestions ?? []}
-              savingItemId={savingItemId}
               applyingSuggestion={applyingSuggestion}
               onSetPlanOutcome={handleSetPlanOutcome}
               onApplySuggestion={handleApplySuggestion}
@@ -1082,6 +1082,11 @@ export default function Dashboard() {
               weeklyReview={(weeklyReviewDoc?.summary as WeeklyReview | undefined) ?? null}
               reviewingWeek={reviewingWeek}
               onSaveWeeklyReview={handleSaveWeeklyReview}
+              xp={{ total: oud.xp.total, today: oud.xp.today, levelLabel: oud.xp.levelLabel }}
+              achievements={{
+                unlocked: oud.unlockedIds.length,
+                total: oud.achievements.length,
+              }}
               onOpenSection={changeView}
             />
           </div>
@@ -1416,6 +1421,9 @@ export default function Dashboard() {
           </DialogContent>
         </Dialog>
       ) : null}
+
+      {/* الشريط السفلي: أربعة مناطق، وقطرة جلية تنتقل بينها. */}
+      <BottomNav view={view} onChange={changeView} />
     </div>
   );
 }

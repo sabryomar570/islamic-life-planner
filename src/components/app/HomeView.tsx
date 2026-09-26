@@ -1,12 +1,19 @@
 import { lazy, Suspense } from "react";
 import { Check, Target } from "lucide-react";
 
-import { LIBRARY_GROUPS, type DashView } from "@/components/app/Navigation";
-import { MosqueCard } from "@/components/app/MosqueCard";
 import { NextPrayerHero } from "@/components/app/NextPrayerHero";
 import { OudLineCard } from "@/components/app/OudLineCard";
+import { MosqueCard } from "@/components/app/MosqueCard";
 import { QiblaCard } from "@/components/app/QiblaView";
-import { Panel, PrimaryButton, QuietButton, Ring } from "@/components/app/Surfaces";
+import {
+  ActionButton,
+  ElevatedCard,
+  IconTile,
+  ProgressRing,
+  SectionHeader,
+  SecondaryButton,
+} from "@/components/oud/primitives";
+import { LIBRARY_GROUPS, type DashView } from "@/components/app/Navigation";
 import type { ProfileAnswers } from "@/data/questions";
 import { useNow } from "@/hooks/use-clock";
 import type { MosqueState } from "@/hooks/use-oud";
@@ -20,22 +27,26 @@ import { PRAYERS, type PrayerKey, type PrayerStatus, type Timings } from "@/lib/
 import { arabicNumber, dateKey, formatGregorian, greeting } from "@/lib/time";
 
 /**
- * «الرئيسية» — أين أنا الآن، وما أهم خطوة دلوقتي.
+ * «الرئيسية» — the only question on the home screen is *what matters now*.
  *
- * **الترتيب الهرمي المعتمد:** الصلاة (أكبر عنصر) ← سطر عود ← **خطوة
- * واحدة بارزة** ← ثم الباقي: المسجد والقبلة والاقتباس والوصول السريع.
+ * **The order is the design.** Prayer is the single Level 3 element on
+ * this screen. Everything after it steps down the ladder, one level per
+ * step, and nothing is allowed to compete:
  *
- * **لماذا اقتُطع كل هذا من هنا:** كانت الخطة اليومية والمراجعة
- * والإحصاءات والقرآن والأذكار مكتوبة كلها في هذه الشاشة، فصارت «أين
- * أنا» و«كيف يسير يومي» في مكان واحد. نُقلت الخطة والمراجعة
- * والإحصاءات إلى منطقة «يومي»، والخدمات إلى «عبادتي». لم يُحذف منطق
- * ولا استعلام ولا نص: الشاشة أضيق لأن سؤالها واحد.
+ *   1  prayer hero          level 3
+ *   2  the line from Oud    level 2, one sentence
+ *   3  one important action level 2, the only other thing that gets a button
+ *   4  quick access         level 1, quiet, no buttons inside
  *
- * **بلا نصوص جديدة:** أسماء الخدمات وأوصاف الوصول السريع مأخوذة من
- * `LIBRARY_GROUPS`، وهو مصدر واحد لاسم كل خدمة ووصفها.
+ * There is no second hero. The mosque, the qibla, the plan and the task
+ * are not four cards competing to be read first; they are one hero and
+ * three supporting layers.
+ *
+ * **No new copy here.** Service names and hints come from `LIBRARY_GROUPS`.
+ * The greeting, the day score label and the action label are strings that
+ * already existed in the product.
  */
 
-/** الاقتباس كسول: شريط واحد صغير لا يستحق أن يكون في الحزمة الأولى. */
 const InsightSlot = lazy(() =>
   import("@/components/app/InsightSlot").then((module) => ({ default: module.InsightSlot })),
 );
@@ -50,10 +61,9 @@ type HomeSection =
   | "zakat"
   | "weekly"
   | "stats"
-  | "review"
   | "chat";
 
-/** الوصول السريع: نفس أسماء ووصف الخدمات في «عبادتي». */
+/** Quick access names and hints come from the same source as «عبادتي». */
 const WORSHIP = LIBRARY_GROUPS[0].entries;
 const QUICK_KEYS: DashView[] = ["quran", "adhkar", "qibla", "tasbih"];
 
@@ -75,7 +85,6 @@ export function HomeView({
   planOutcomes,
   dailyScore,
   adaptiveSuggestions,
-  savingItemId,
   applyingSuggestion,
   onSetPlanOutcome,
   onApplySuggestion,
@@ -101,7 +110,6 @@ export function HomeView({
   planOutcomes: readonly PlanItemOutcome[];
   dailyScore: DailyScore | null;
   adaptiveSuggestions: readonly AdaptiveSuggestion[];
-  savingItemId: string | null;
   applyingSuggestion: boolean;
   onSetPlanOutcome: (itemId: string, status: PlanItemStatus) => void;
   onApplySuggestion: (suggestion: AdaptiveSuggestion) => void;
@@ -113,18 +121,13 @@ export function HomeView({
     (prayer) => dayState.prayers[prayer.key] === "jamaah" || dayState.prayers[prayer.key] === "ontime",
   ).length;
 
-  // الاقتراح التكيّفي لا يعلو على الخطة؛ يظهر عند وجود سبب حقيقي فقط.
   const actionable = adaptiveSuggestions.find(
     (item) => item.kind === "move" || item.kind === "reduce",
   );
 
   /**
-   * أهم مهمة اليوم، وحالتها الحقيقية.
-   *
-   * العنوان كان أظهر خطوة في الشاشة كلها لكن بلا فعل: لا زرّ يفتحها ولا
-   * زرّ يسجّلها، فبقيت جملة. فبقيت موضعها **بعد الصلاة مباشرة** —
-   * كما هو الترتيب الهرمي المعتمد — وصارت قابلة للتنفيذ بنقرة واحدة،
-   * مع حالة «تمّت» صريحة.
+   * The one action. It is the only thing on this screen with a filled
+   * button, because a second filled button would be a second hero.
    */
   const primaryItem = dailyPlan?.primaryAction ?? null;
   const primaryId = primaryItem?.item.id ?? null;
@@ -137,15 +140,15 @@ export function HomeView({
   );
 
   return (
-    <div className="stack">
-      {/* ——— 1) الترويسة: صغيرة، تُخبر بالوقت والمكان ولا تنافس البطل ——— */}
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+    <div className="flex flex-col gap-4">
+      {/* 0 — a quiet line of orientation. Not a card: it must not compete. */}
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 px-1">
         <div className="min-w-0">
-          <h1 className="label-display">
+          <h1 className="text-[22px] leading-8 font-bold text-foreground">
             {greeting(now)}
             {userName ? `، ${userName.split(" ")[0]}` : ""}
           </h1>
-          <p className="label-meta mt-1 text-muted-foreground">
+          <p className="label-meta mt-0.5 text-muted-foreground">
             {formatGregorian(now)}
             {hijri ? ` · ${hijri}` : ""}
           </p>
@@ -153,7 +156,7 @@ export function HomeView({
         <p className="label-meta truncate text-muted-foreground">{locationLabel}</p>
       </header>
 
-      {/* ——— 2) بطل الشاشة: الصلاة القادمة ——— */}
+      {/* 1 — the hero. One per screen. */}
       <NextPrayerHero
         timings={timings}
         dayState={dayState}
@@ -161,22 +164,20 @@ export function HomeView({
         onLogCurrent={onLogPrayer}
       />
 
-      {/* ——— 3) سطر عود: تحت البطل مباشرة، ولا يعلو عليه ——— */}
+      {/* 2 — Oud, one line, immediately under the prayer. */}
       <OudLineCard
         line={oudLine}
         xp={oudXp}
         onOpen={(view) => onOpenSection(view as HomeSection)}
       />
 
-      {/* ——— 4) الخطوة الأهم: عنصر واحد بارز، لا ثلاث بطاقات متساوية ——— */}
-      <Panel className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* 3 — the one important action. */}
+      <ElevatedCard className="p-5">
+        <div className="flex items-start gap-4">
+          <IconTile icon={Target} size="lg" />
           <div className="min-w-0 flex-1">
-            <p className="eyebrow flex items-center gap-1.5">
-              <Target className="size-3.5" />
-              أهم خطوة في يومك
-            </p>
-            <p className="mt-2 text-[17px] leading-9 font-bold text-foreground">
+            <p className="label-meta text-muted-foreground">أهم خطوة في يومك</p>
+            <p className="mt-1 text-[18px] leading-8 font-bold text-foreground">
               {primaryItem?.item.title ??
                 (profile.mainGoal === "quran"
                   ? "وردك اليوم"
@@ -186,44 +187,40 @@ export function HomeView({
                       ? "الصلاة في وقتها"
                       : "خطوة واحدة تُنجَز اليوم")}
             </p>
-            <p className="label-body mt-1.5 text-muted-foreground">
-              {dailyPlan?.nextAnchor.prompt ?? ""}
-            </p>
-            {primaryId ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {primaryDone ? (
-                  <p className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--status-success)]/10 px-4 text-[12px] font-semibold text-[var(--status-success)]">
+            {dailyPlan?.nextAnchor.prompt ? (
+              <p className="label-body mt-1 text-muted-foreground">{dailyPlan.nextAnchor.prompt}</p>
+            ) : null}
+
+            <div className="mt-3.5 flex flex-wrap items-center gap-2">
+              {primaryId ? (
+                primaryDone ? (
+                  <span className="inline-flex oud-tap items-center gap-1.5 rounded-full bg-[var(--status-success)]/12 px-4 text-[13px] font-semibold text-[var(--status-success)]">
                     <Check className="size-4" aria-hidden />
                     تمّت الخطوة الأهم اليوم
-                  </p>
+                  </span>
                 ) : (
-                  <PrimaryButton
+                  <ActionButton
+                    icon={Check}
                     onClick={() => onSetPlanOutcome(primaryId, "completed")}
-                    className="px-5 text-[12px]"
+                    className="px-5"
                   >
-                    <Check className="size-3.5" aria-hidden />
                     عملتها
-                  </PrimaryButton>
-                )}
-                <QuietButton onClick={() => onOpenSection("weekly")} className="px-4 text-[12px]">
-                  الخطة الأسبوعية
-                </QuietButton>
-              </div>
-            ) : null}
+                  </ActionButton>
+                )
+              ) : null}
+              <SecondaryButton onClick={() => onOpenSection("weekly")} className="px-4">
+                الخطة الأسبوعية
+              </SecondaryButton>
+            </div>
           </div>
+
           {dailyScore ? (
             <div className="flex shrink-0 flex-col items-center gap-1.5">
-              <Ring
-                value={dailyScore.score}
-                tone="primary"
-                size={68}
-                stroke={6}
-                label="تقدم اليوم"
-              >
+              <ProgressRing value={dailyScore.score} size={72} stroke={7} label="تقدم اليوم">
                 <span className="text-[19px] leading-none font-bold text-primary">
                   {arabicNumber(dailyScore.score)}
                 </span>
-              </Ring>
+              </ProgressRing>
               <p className="label-meta text-muted-foreground">تقدم اليوم</p>
               <p className="label-meta text-muted-foreground">
                 {arabicNumber(prayedCount)} من {arabicNumber(PRAYERS.length)}
@@ -233,27 +230,24 @@ export function HomeView({
         </div>
 
         {actionable ? (
-          <div className="mt-4 rounded-2xl surface-sunken p-3">
-            <p className="text-[12px] font-semibold">اقتراح لتعديل الخطة</p>
-            <p className="label-meta mt-1 leading-5 text-muted-foreground">{actionable.reason}</p>
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              <PrimaryButton
-                onClick={() => onApplySuggestion(actionable)}
-                disabled={applyingSuggestion}
-                className="h-9 px-4 text-[12px]"
-              >
-                <Check className="size-3.5" />
-                موافقتي وتطبيقه
-              </PrimaryButton>
-              <QuietButton onClick={() => onOpenSection("weekly")} className="h-9 px-4">
-                الخطة الأسبوعية
-              </QuietButton>
+          <div className="oud-sunken mt-4 flex flex-wrap items-center justify-between gap-3 p-3.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold">اقتراح لتعديل الخطة</p>
+              <p className="label-meta mt-0.5 text-muted-foreground">{actionable.reason}</p>
             </div>
+            <ActionButton
+              icon={Check}
+              onClick={() => onApplySuggestion(actionable)}
+              disabled={applyingSuggestion}
+              className="px-4 text-[13px]"
+            >
+              موافقتي وتطبيقه
+            </ActionButton>
           </div>
         ) : null}
-      </Panel>
+      </ElevatedCard>
 
-      {/* ——— 5) السياق القريب: المسجد والقبلة ——— */}
+      {/* 4 — supporting context. Quiet by construction. */}
       <MosqueCard
         state={mosque.state}
         places={mosque.places}
@@ -267,32 +261,32 @@ export function HomeView({
         onOpenQibla={() => onOpenSection("qibla")}
       />
 
-      {/* اقتباس واحد ثابت، لا شريط إعلانات. */}
       <Suspense fallback={null}>
         <InsightSlot area="today" onNavigate={(view) => onOpenSection(view as HomeSection)} />
       </Suspense>
 
-      {/* ——— 6) وصول سريع: أربع خدمات، أوزان متساوية لا هيمنة ——— */}
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {quick.map((entry) => (
-          <li key={entry.key}>
-            <button
-              type="button"
-              onClick={() => {
-                if (entry.key === "adhkar") onOpenAdhkar("morning");
-                else onOpenSection(entry.key as HomeSection);
-              }}
-              className="motion-press surface-secondary flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2"
-            >
-              <entry.icon className="size-5 shrink-0 text-primary" aria-hidden />
-              <span className="truncate text-[12px] font-semibold">{entry.label}</span>
-              <span className="truncate text-[11px] text-muted-foreground">{entry.hint}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <p className="sr-only">{savingItemId ? "جارٍ الحفظ" : ""}</p>
+      {/* 5 — quick access. Four tiles, equal weight, no button inside. */}
+      <section aria-label="وصول سريع" className="flex flex-col gap-3">
+        <SectionHeader title="وصول سريع" />
+        <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {quick.map((entry) => (
+            <li key={entry.key}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (entry.key === "adhkar") onOpenAdhkar("morning");
+                  else onOpenSection(entry.key as HomeSection);
+                }}
+                className="oud-press oud-card oud-tap flex w-full flex-col items-center gap-2 rounded-3xl px-3 py-4"
+              >
+                <IconTile icon={entry.icon} size="md" />
+                <span className="truncate text-[13px] font-semibold text-foreground">{entry.label}</span>
+                <span className="truncate text-[11px] text-muted-foreground">{entry.hint}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

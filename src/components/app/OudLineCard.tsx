@@ -40,27 +40,29 @@ export function OudLineCard({
   const Tag_ = clickable ? "button" : "div";
 
   return (
-    <section aria-label="عود معك" className="space-y-2">
+    <section aria-label="عود معك" className="flex flex-col gap-2">
       <Tag_
         {...(clickable
           ? { type: "button" as const, onClick: () => onOpen?.(line!.view!) }
           : {})}
         className={cn(
-          "motion-press w-full rounded-3xl surface-secondary px-4 py-3.5 text-start",
-          clickable && "hover:bg-white/75",
+          "oud-press oud-card oud-tap flex w-full items-center gap-3 rounded-3xl px-4 py-3.5 text-start",
           !clickable && "cursor-default",
         )}
       >
-        <p className="eyebrow flex items-center gap-1.5">
-          <Sparkles className="size-3.5" aria-hidden />
-          عود
-        </p>
-        <p
-          className={cn("mt-1.5 text-[15px] leading-8 font-semibold", TONE_CLASS[line?.tone ?? "calm"])}
-        >
-          {line?.text ?? "أنا هنا… يومك معاك"}
-        </p>
-        <p className="sr-only">نبرة عود: {toneLabel(line?.tone ?? "calm")}</p>
+        {/* علامة عود: بلاطة جلية صغيرة، لا فقاعة محادثة. */}
+        <span className="oud-icon-tile oud-icon-md shrink-0" aria-hidden>
+          <Sparkles className="size-[1.25rem]" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="label-meta block text-primary">عود</span>
+          <span
+            className={cn("mt-0.5 block text-[15px] leading-8 font-semibold", TONE_CLASS[line?.tone ?? "calm"])}
+          >
+            {line?.text ?? "أنا هنا… يومك معاك"}
+          </span>
+        </span>
+        <span className="sr-only">نبرة عود: {toneLabel(line?.tone ?? "calm")}</span>
       </Tag_>
 
       {xp.today > 0 ? (
@@ -95,11 +97,11 @@ export function AchievementToast({
     <div
       role="status"
       aria-live="polite"
-      className="motion-swap fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-50 mx-auto max-w-sm"
+      className="motion-swap fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6rem)] z-50 mx-auto max-w-sm"
     >
-      <div className="flex items-start gap-3 rounded-2xl surface-veil p-4 shadow-lg">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Sparkles className="size-4" aria-hidden />
+      <div className="oud-card flex items-start gap-3 rounded-3xl p-4 shadow-[var(--oud-shadow-3)]">
+        <span className="oud-icon-tile oud-icon-sm shrink-0" aria-hidden>
+          <Sparkles className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-bold">فتحت: {achievement.label}</p>
