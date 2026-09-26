@@ -1,6 +1,8 @@
 import { DailyReview, type DayReviewRecord } from "@/components/app/DailyReview";
 import { DayTimeline } from "@/components/app/DayTimeline";
+import { MosqueCard } from "@/components/app/MosqueCard";
 import { NextPrayerHero } from "@/components/app/NextPrayerHero";
+import { OudLineCard } from "@/components/app/OudLineCard";
 import {
   Meter,
   Panel,
@@ -19,6 +21,9 @@ import type { DailyPlan } from "@/lib/daily-plan";
 import type { ProgressSummary } from "@/lib/progress";
 import type { WeeklyReview } from "@/lib/weekly-review";
 import { focusMetric, planLine, reviewDue, type WeeklyFocus } from "@/lib/coach";
+import type { MosqueState } from "@/hooks/use-oud";
+import type { MosquePlace } from "@/lib/oud-mosque";
+import type { OudLine } from "@/lib/oud-voice";
 import { PRAYERS, type PrayerKey, type PrayerStatus, type Timings } from "@/lib/prayers";
 import { arabicNumber, formatGregorian, greeting } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -112,6 +117,9 @@ export function HomeView({
   planOutcomes,
   dailyScore,
   lifeProgress,
+  oudLine,
+  oudXp,
+  mosque,
   weeklyReview,
   adaptiveSuggestions,
   savingItemId,
@@ -143,6 +151,10 @@ export function HomeView({
   planOutcomes: readonly PlanItemOutcome[];
   dailyScore: DailyScore | null;
   lifeProgress: ProgressSummary | null;
+  /** سطر الشخصية المحسوب من حالة اليوم، وقد لا يوجد سبب للكلام. */
+  oudLine: OudLine | null;
+  oudXp: { total: number; today: number; levelLabel: string };
+  mosque: { state: MosqueState; places: readonly MosquePlace[] };
   weeklyReview: WeeklyReview | null;
   adaptiveSuggestions: readonly AdaptiveSuggestion[];
   savingItemId: string | null;
@@ -221,7 +233,20 @@ export function HomeView({
         onLogCurrent={onLogPrayer}
       />
 
-      {/* ——— 2.5) إحصاء اليوم: اقتباس واحد ثابت، لا شريط إعلانات ——— */}
+      {/* ——— 2.5) عود: سطر واحد بعد الصلاة، وبطاقة المسجد تحته ——— */}
+      <OudLineCard
+        line={oudLine}
+        xp={oudXp}
+        onOpen={(view) => onOpenSection(view as HomeSection)}
+      />
+      <MosqueCard
+        state={mosque.state}
+        places={mosque.places}
+        onOpenSettings={() => onOpenSection("settings")}
+        onRetry={() => onOpenSection("settings")}
+      />
+
+      {/* ——— 2.7) إحصاء اليوم: اقتباس واحد ثابت، لا شريط إعلانات ——— */}
       <Suspense fallback={null}>
         <InsightSlot area="today" onNavigate={(view) => onOpenSection(view as HomeSection)} />
       </Suspense>

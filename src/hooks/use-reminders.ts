@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   askNotificationPermission,
+  notificationActionsSupported,
   notificationPermission,
   notificationsSupported,
   playChime,
@@ -312,11 +313,24 @@ export function useReminderCenter(options: {
       if (isPrayerTime && prefs.prayerRing) playRingTone(prefs.ringTone);
       else if (prefs.soundOn) playChime();
       if (notificationPermission() === "granted") {
+        /**
+         * الردّ من الإشعار: زرّان بدل صندوق كتابة لا وجود له في الويب.
+         * يعملان على Chromium و Firefox-أندرويد، ويتجاهلهما المتصفح في
+         * غيرها بصمت. والنتيجة واحدة في الحالتين: التطبيق يُفتح على صلاتك
+         * ومعه ردّ محفوظ، فيُسجَّل أو يُؤجَّل بلا كتابة حرف واحد.
+         */
+        const replyable = event.url?.includes("view=prayers") === true;
         void showNotification({
           title: event.title,
           body,
           tag: event.id,
           url: event.url,
+          actions: replyable && notificationActionsSupported()
+            ? [
+                { action: "logged", title: "سجّلتها" },
+                { action: "later", title: "لسه" },
+              ]
+            : undefined,
         });
       }
     },

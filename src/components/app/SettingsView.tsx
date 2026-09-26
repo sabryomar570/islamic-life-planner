@@ -5,6 +5,7 @@ import {
   SectionHead,
 } from "@/components/app/Surfaces";
 import { RING_TONES, playRingTone, type RingTone } from "@/lib/notify";
+import { PermissionReasonDialog } from "@/components/app/PermissionReasonDialog";
 import {
   AUDIO_CHANNELS,
   playCue,
@@ -178,6 +179,8 @@ export function SettingsView({
   // قياس حقيقي من المتصفح: لا رقم مُقدَّر. null = غير مدعوم أوCalculation لم تجرِ.
   const [storageLabel, setStorageLabel] = useState<string | null>(null);
   const [clearingCaches, setClearingCaches] = useState(false);
+  // نطلب الإذن **بعد** أن نقول لماذا. لا نافذة نظام بلا سبب.
+  const [locationReasonOpen, setLocationReasonOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -278,7 +281,7 @@ export function SettingsView({
               </QuietButton>
             ) : (
               <PrimaryButton
-                onClick={() => void geo.request()}
+                onClick={() => setLocationReasonOpen(true)}
                 disabled={geo.status === "loading" || geo.status === "unsupported"}
                 className="mt-1 px-4 text-[12px]"
               >
@@ -865,6 +868,14 @@ export function SettingsView({
         ومواقيت الصلاة من خدمة Aladhan حسب الطريقة التي اخترتها، والأحاديث والأذكار مذكور
         مصدرها على كل عنصر. لا يرسل التطبيق موقعك لأي طرف آخر غير خدمة المواقيت لحساب الوقت.
       </p>
+
+      <PermissionReasonDialog
+        kind="location"
+        open={locationReasonOpen}
+        onOpenChange={setLocationReasonOpen}
+        onAllow={() => void geo.request()}
+        pending={geo.status === "loading"}
+      />
     </div>
   );
 }

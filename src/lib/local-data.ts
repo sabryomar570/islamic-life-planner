@@ -36,6 +36,15 @@ export const OWNED_LOCAL_KEYS = [
   "sakinah:seen:v1",
   // PHASE 3: سجل الإشعارات محلي على الجهاز، فليس ملك المستخدم وحده.
   "oud:notifications:v1",
+  // PHASE NEXT: نقاط التقدّم وفتح الإنجازات — شخصية الجهاز، فتكمل المسح.
+  "oud:xp:ledger:v1",
+  "oud:achievements:seen:v1",
+  // PHASE NEXT: ذاكرة الشخصية وتهدئتها، وتاريخ آخر نشاط (وعلم الرجوع).
+  "oud:voice:shown:v1",
+  "oud:voice:last-active:v1",
+  "oud:voice:returned:v1",
+  // PHASE NEXT: قائمة المساجد القريبة، مخبوزة يوما من مصدر مفتوح.
+  "oud:mosque:near:v1",
 ] as const;
 
 /** بادئات مفاتيح ديناميكية (مفاتيح تحمل تاريخ اليوم مثلًا). */

@@ -5,6 +5,7 @@ import type { DayReviewRecord } from "@/components/app/DailyReview";
 import { DailyReview } from "@/components/app/DailyReview";
 import { HomeView } from "@/components/app/HomeView";
 import { isDashView, VIEW_LABELS, type DashView } from "@/components/app/Navigation";
+import { AchievementToast } from "@/components/app/OudLineCard";
 import { NudgeCenter } from "@/components/app/NudgeCenter";
 import {
   NotificationBell,
@@ -33,6 +34,7 @@ import { SURAH_COUNT } from "@/data/quran";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useAuth } from "@/hooks/use-auth";
 import { useGeolocation } from "@/hooks/use-location";
+import { useOud } from "@/hooks/use-oud";
 import { usePrayerTimes, type Coords } from "@/hooks/use-prayer-times";
 import { usePreferences } from "@/hooks/use-preferences";
 import { useReminderCenter } from "@/hooks/use-reminders";
@@ -79,6 +81,9 @@ const DeveloperView = lazy(() =>
 );
 const HadithView = lazy(() =>
   import("@/components/app/HadithView").then((module) => ({ default: module.HadithView })),
+);
+const OudChatView = lazy(() =>
+  import("@/components/app/OudChatView").then((module) => ({ default: module.OudChatView })),
 );
 const OccasionsView = lazy(() =>
   import("@/components/app/OccasionsView").then((module) => ({ default: module.OccasionsView })),
@@ -446,6 +451,49 @@ export default function Dashboard() {
     );
   }, [dailyScore?.score, planProgress, today]);
 
+  /**
+   * عود: شخصية واحدة تقرأ من هذه الحالة كلها.
+   * لا يُحسب سطر ولا إنجاز إلا من واقع مسجّل، فلا يتكلم من فراغ.
+   * الساعة هي ساعة التذكيرات (تتبدّل كل دقيقة) فلا نُعيد البناء كل رسم.
+   */
+  const daysPlanFullyCompleted = useMemo(
+    () =>
+      (planProgress?.records ?? []).filter(
+        (record) => record.planned > 0 && record.completed >= record.planned,
+      ).length,
+    [planProgress],
+  );
+  const remainingSteps = useMemo(
+    () =>
+      dailyPlan
+        ? dailyPlan.sections.reduce(
+            (total, section) =>
+              total +
+              section.items.filter((item) => {
+                const outcome = planOutcomes.find((entry) => entry.itemId === item.item.id);
+                return !outcome || outcome.status !== "completed";
+              }).length,
+            0,
+          )
+        : 0,
+    [dailyPlan, planOutcomes],
+  );
+  const oud = useOud({
+    now: reminders.now,
+    timings: times.timings,
+    prayers,
+    adhkarDone,
+    planOutcomes,
+    dailyPlan,
+    lifeProgress,
+    sleepMinutes,
+    leadMinutes: prefs.leadMinutes,
+    coords: geo.coords,
+    geoStatus: geo.status,
+    userName: user?.name ?? undefined,
+    daysPlanFullyCompleted,
+  });
+
   /* مرة واحدة: نوافق أوقات التذكير مع إجابات المستخدم عن استيقاظه ونومه. */
   useEffect(() => {
     if (!answers) return;
@@ -509,6 +557,7 @@ export default function Dashboard() {
       setAdhkarGroup(adhkarParam);
     }
   }, [searchParams, view]);
+
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -618,6 +667,40 @@ export default function Dashboard() {
     },
     [setPrayerStatusMutation, today],
   );
+
+  /**
+   * الردّ من الإشعار: زرّ «سجّلتها» أو «لسه» في التطبيق بنقرة على زرّ الإشعار.
+   *
+   * **لماذا نكتب في السجل بلا أن نسأل:** الضغطة على الزر إجابة
+   * صريحة، وسؤالها مرة أخرى حِرمان. لكن **لا نختلق صلاة لم تُسجّل
+   * في مكانها الصحيح**: نختار آخر صلاة دخل وقتها، ونعلن ما سجّلناه،
+   * ونمحو `reply` من الرابط حتى لا يتكرر الرد عند كل فتح.
+   */
+  const replyHandled = useRef(false);
+  useEffect(() => {
+    const reply = searchParams.get("reply");
+    if (!reply || replyHandled.current) return;
+    replyHandled.current = true;
+
+    if (reply === "logged") {
+      const minutes = new Date().getHours() * 60 + new Date().getMinutes();
+      const passed = [...PRAYERS]
+        .reverse()
+        .find((prayer) => toMinutesOfDay(times.timings[prayer.key]) <= minutes && !prayers[prayer.key]);
+      if (passed) {
+        handlePrayerStatus(passed.key, "ontime");
+        toast.success(`اتسجّلت ${passed.name} من الإشعار.`);
+      } else {
+        toast.error("مفيش صلاة مستنية التسجيل دلوقتي.");
+      }
+    } else if (reply === "later") {
+      toast("تمام، هنتسنى. الوقت لسه باق.");
+    }
+
+    const params = new URLSearchParams(searchParams);
+    params.delete("reply");
+    setSearchParams(params, { replace: true });
+  }, [searchParams, times.timings, prayers, handlePrayerStatus, setSearchParams]);
 
   const handleAdhkarDone = useCallback(
     (kind: string, done: boolean) => {
@@ -921,6 +1004,13 @@ export default function Dashboard() {
               hijri={times.hijri}
               dayState={state}
               stats={stats}
+              oudLine={oud.line}
+              oudXp={{
+                total: oud.xp.total,
+                today: oud.xp.today,
+                levelLabel: oud.xp.levelLabel,
+              }}
+              mosque={{ state: oud.mosque.state, places: oud.mosque.places }}
               onSaveReview={handleReviewSave}
               reviewSaving={reviewSaving}
               onOpenSection={changeView}
@@ -1149,6 +1239,22 @@ export default function Dashboard() {
 
         {view === "developer" ? <DeveloperView /> : null}
 
+        {view === "chat" ? (
+          <Suspense fallback={<SectionLoading label="بنحضّر عود" />}>
+            <OudChatView
+              context={{
+                ...oud.context,
+                remainingSteps,
+                nextTaskTitle: dailyPlan?.primaryAction?.item.title,
+                xpTotal: oud.xp.total,
+                mosqueDistanceMeters: oud.mosque.nearest?.distanceMeters,
+                userName: user?.name ?? undefined,
+              }}
+              onOpenSection={changeView}
+            />
+          </Suspense>
+        ) : null}
+
         {view === "today" && !answers ? (
           <EmptyState
             title="لا توجد إجابات محفوظة بعد"
@@ -1194,6 +1300,13 @@ export default function Dashboard() {
         onOpenAdhkar={(group) => setAdhkarGroup(group)}
         onLogPrayer={handlePrayerStatus}
         onRequestNotifications={() => void reminders.requestPermission()}
+      />
+
+      {/* إعلان إنجاز واحد، ثم يختفي. الشارة كاملة في صفحة الإحصاءات. */}
+      <AchievementToast
+        achievement={oud.newUnlock}
+        onDismiss={oud.dismissUnlock}
+        onOpen={changeView}
       />
 
       {/* نافذة الافتتاح الموحّدة: صلاة على النبي ﷺ + دعاء لأهل غزة — عند كل تشغيل. */}

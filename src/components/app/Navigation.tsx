@@ -12,6 +12,7 @@ import {
   Fingerprint,
   HeartHandshake,
   Landmark,
+  MessageCircle,
   ScrollText,
   Settings,
   Sparkles,
@@ -26,6 +27,7 @@ import {
 
 export type DashView =
   | "today"
+  | "chat"
   | "prayers"
   | "adhkar"
   | "quran"
@@ -44,6 +46,7 @@ export type DashView =
 
 export const DASH_VIEWS: DashView[] = [
   "today",
+  "chat",
   "prayers",
   "adhkar",
   "quran",
@@ -67,6 +70,7 @@ export function isDashView(value: string | null): value is DashView {
 
 export const VIEW_LABELS: Record<DashView, string> = {
   today: "اليوم",
+  chat: "كلّم عود",
   prayers: "الصلاة",
   adhkar: "الأذكار",
   quran: "القرآن",
@@ -153,6 +157,12 @@ export const LIBRARY_GROUPS: NavGroup[] = [
     title: "التطبيق",
     hint: "إعدادات وطريقة الاستخدام",
     entries: [
+      {
+        key: "chat",
+        label: "كلّم عود",
+        hint: "شكوى أو سؤال أو طلب ترتيب",
+        icon: MessageCircle,
+      },
       { key: "settings", label: "الإعدادات", hint: "الإشعارات والمكان والبيانات", icon: Settings },
       // «المطوّر» هنا لا في الشريط السفلي: هو صفحة عن التطبيق،
       // والشريط السفلي للأقسام التي يستخدمها المستخدم كل يوم.

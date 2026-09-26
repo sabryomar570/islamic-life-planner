@@ -198,7 +198,7 @@ self.addEventListener("message", (event) => {
   }
 
   if (data.type === "NOTIFY") {
-    const { title, body, tag, url } = data;
+    const { title, body, tag, url, actions } = data;
     event.waitUntil(
       self.registration.showNotification(title || "عود", {
         body: body || "",
@@ -208,6 +208,9 @@ self.addEventListener("message", (event) => {
         badge: "/icon.svg",
         icon: "/icon.svg",
         vibrate: [40, 60, 40],
+        // أزرار الإشعار: تعمل على Chromium و Firefox-أندرويد فقط، وتُتجاهل
+        // بصمت في غيرها. لا ادّعاء لغير الموجود.
+        actions: Array.isArray(actions) ? actions : undefined,
         data: { url: url || "/dashboard" },
       }),
     );
@@ -228,7 +231,17 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || "/dashboard";
+  const base = (event.notification.data && event.notification.data.url) || "/dashboard";
+  /**
+   * الردّ من الإشعار — بأقصى ما تسمح به المنصة.
+   *
+   * لا يوجد في الويب حقل كتابة داخل الإشعار (`RemoteInput` لأندرويد أصلي
+   * وحده)، فلا نرسم صندوقا وهميا. البديل الواقعي: زرّان يفتحان التطبيق في
+   * الشاشة الصحيحة مع ردّ محفوظ في الرابط. فالنتيجة عملية فعلا: «صليت ولا»
+   * تصير «صليت» بضغطة، و«لسه» تبقى «لسه» — بلا كتابة.
+   */
+  const action = event.action || "";
+  const target = action ? `${base}${base.includes("?") ? "&" : "?"}reply=${encodeURIComponent(action)}` : base;
   event.waitUntil(
     (async () => {
       const clientList = await self.clients.matchAll({

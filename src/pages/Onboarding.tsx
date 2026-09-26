@@ -13,6 +13,7 @@ import {
 } from "@/data/questions";
 import { detectLocation } from "@/lib/location";
 import { askNotificationPermission, notificationPermission } from "@/lib/notify";
+import { PermissionReasonDialog } from "@/components/app/PermissionReasonDialog";
 import { arabicNumber, formatArabicTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
@@ -726,6 +727,8 @@ function SavedState({
   onAddDetails: () => void;
   onFinish: () => void;
 }) {
+  // نطلب الإذن **بعد** سبب مقروء، لا بنقرة عمياء على نافذة المتصفح.
+  const [notifyReasonOpen, setNotifyReasonOpen] = useState(false);
   return (
     <Panel className="motion-swap overflow-hidden">
       <div className="rule-b px-5 py-7 text-center sm:px-8">
@@ -750,7 +753,7 @@ function SavedState({
               إشعارات الصلاة والورد
             </p>
             <p className="label-body mt-1 text-muted-foreground">
-              لا يصل شيء قبل إذنك، ويمكنك تغيير الإعداد لاحقًا.
+              لا يصل شيء قبل إذنك. نشرح لك السبب أولا، وتقدر ترفض بلا أي ضرر.
             </p>
           </div>
           {notifyState === "granted" ? (
@@ -759,7 +762,10 @@ function SavedState({
               مفعّلة
             </span>
           ) : (
-            <PrimaryButton onClick={onAskNotifications} className="px-4 text-[12px]">
+            <PrimaryButton
+              onClick={() => setNotifyReasonOpen(true)}
+              className="px-4 text-[12px]"
+            >
               اسمح بالإشعارات
             </PrimaryButton>
           )}
@@ -790,6 +796,13 @@ function SavedState({
           <ChevronLeft className="size-4" />
         </PrimaryButton>
       </div>
+
+      <PermissionReasonDialog
+        kind="notifications"
+        open={notifyReasonOpen}
+        onOpenChange={setNotifyReasonOpen}
+        onAllow={onAskNotifications}
+      />
     </Panel>
   );
 }

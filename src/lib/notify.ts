@@ -9,7 +9,29 @@ export type NotifyPayload = {
   body?: string;
   tag?: string;
   url?: string;
+  /**
+   * أزرار الإشعار.
+   *
+   * **حقيقة المنصة، لا أمنية:** سمة `actions` تعمل على Chromium
+   * (Chrome و Edge و Opera) وعلى Firefox في أندرويد، ولا تعمل على Safari
+   * ولا على Firefox سطح المكتب. **ولا يوجد في الويب ردّ نصّي داخل الإشعار
+   * أصلا** — تلك سمة `RemoteInput` وهي لأندرويد أصلي وحده.
+   * فحين لا تعمل الأزرار يتجاهلها المتصفح بصمت، ونكمل بالضغط العادي.
+   * لذلك «الردّ من الإشعار» عندنا = زرّان يفتحان التطبيق في المكان
+   * الصحيح، لا صندوق كتابة يطفو فوق الشاشة.
+   */
+  actions?: { action: string; title: string }[];
 };
+
+/** هل هذه المنصة تعرض أزرار الإشعار؟ نفحص قبل أن ندّعي. */
+export function notificationActionsSupported(): boolean {
+  if (typeof Notification === "undefined") return false;
+  try {
+    return "actions" in Notification.prototype;
+  } catch {
+    return false;
+  }
+}
 
 export function notificationsSupported() {
   return typeof window !== "undefined" && "Notification" in window;
@@ -33,7 +55,7 @@ export async function askNotificationPermission(): Promise<
   }
 }
 
-export async function showNotification({ title, body, tag, url }: NotifyPayload) {
+export async function showNotification({ title, body, tag, url, actions }: NotifyPayload) {
   if (notificationPermission() !== "granted") return false;
 
   // نُفضّل المرور بعامل الخدمة: يظهر الإشعار حتى لو كان التبويب في الخلفية.
@@ -41,9 +63,11 @@ export async function showNotification({ title, body, tag, url }: NotifyPayload)
     const registration = await getServiceWorker();
     if (registration) {
       if (registration.active) {
-        registration.active.postMessage({ type: "NOTIFY", title, body, tag, url });
+        registration.active.postMessage({ type: "NOTIFY", title, body, tag, url, actions });
         return true;
       }
+      // `actions` سمة من المواصفةفعلتستعملها الأنواعالمحلية: نمررها
+      // كما هي، ومن يتجاهلها يتجاهلها بصمت ولا يكسر شيئا.
       await registration.showNotification(title, {
         body,
         tag: tag ?? `sakinah-${Date.now()}`,
@@ -51,8 +75,9 @@ export async function showNotification({ title, body, tag, url }: NotifyPayload)
         dir: "rtl",
         icon: "/icon.svg",
         badge: "/icon.svg",
+        actions,
         data: { url: url ?? "/dashboard" },
-      });
+      } as NotificationOptions);
       return true;
     }
   } catch {
@@ -60,7 +85,14 @@ export async function showNotification({ title, body, tag, url }: NotifyPayload)
   }
 
   try {
-    new Notification(title, { body, lang: "ar", dir: "rtl", tag, icon: "/icon.svg" });
+    new Notification(title, {
+      body,
+      lang: "ar",
+      dir: "rtl",
+      tag,
+      icon: "/icon.svg",
+      actions,
+    } as NotificationOptions);
     return true;
   } catch {
     return false;
