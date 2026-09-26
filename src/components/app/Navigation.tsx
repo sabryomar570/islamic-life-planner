@@ -132,6 +132,80 @@ export const ZONES: NavEntry[] = [
 /** الشريط الأفقي على سطح المكتب يعرض المناطق نفسها. */
 export const PRIMARY_NAV: NavEntry[] = ZONES;
 
+/* ═══════════════════ Service Hub — خريطة الخدمات ═══════════════════ */
+
+/**
+ * ترتيب الخدمات داخل «عبادتي».
+ *
+ * القاعدة: **لا شبكة متساوية.** كل خدمة تُؤدّى كل يوم كبيرة، وما يفتح
+ * مرة في الأسبوع أصغر، وما يقرأ فيه نادرا يُجمّع. الشبكة المتساوية تجعل
+ * fifteen خدمة يبدو five and fifteen.
+ *
+ * ثلاث درجات حضور فقط، والمنطق بسيط:
+ *   primary    تُفتح كل يوم: بطاقة كبيرة
+ *   secondary  تُفتح أسبوعيا: بطاقة متوسطة
+ *   compact    قراءة وتمنّع: صف صغير
+ */
+export type ServiceTier = "primary" | "secondary" | "compact";
+
+export type ServiceSection = {
+  id: string;
+  title: string;
+  hint?: string;
+  services: { key: DashView; tier: ServiceTier }[];
+};
+
+export const SERVICE_SECTIONS: ServiceSection[] = [
+  {
+    id: "base",
+    title: "الأساس",
+    services: [
+      { key: "prayers", tier: "primary" },
+      { key: "quran", tier: "primary" },
+      { key: "adhkar", tier: "primary" },
+    ],
+  },
+  {
+    id: "tools",
+    title: "أدوات العبادة",
+    services: [
+      { key: "tasbih", tier: "secondary" },
+      { key: "qibla", tier: "secondary" },
+      { key: "zakat", tier: "secondary" },
+    ],
+  },
+  {
+    id: "library",
+    title: "المحتوى",
+    services: [
+      { key: "hadith", tier: "secondary" },
+      { key: "duas", tier: "secondary" },
+      { key: "prophets", tier: "compact" },
+      { key: "occasions", tier: "compact" },
+      { key: "poetry", tier: "compact" },
+    ],
+  },
+  {
+    id: "tracking",
+    title: "المتابعة",
+    services: [
+      { key: "review", tier: "secondary" },
+      { key: "weekly", tier: "secondary" },
+      { key: "stats", tier: "secondary" },
+      { key: "saved", tier: "compact" },
+    ],
+  },
+];
+
+/**
+ * «ابدأ من هنا» — أربع خدمات في الأعلى.
+ *
+ * **ليس قياسًا للاستخدام:** لا بيانات استخدام في التطبيق، فمن يدّعي أنها
+ * الأشد استخدامًا يكذب. هذه_services الأساس التي يفتحها المسلم في يومه،
+ * والاختيار له بعد أن يرى الباقي تحتها.
+ */
+export const QUICK_SERVICES: DashView[] = ["prayers", "quran", "adhkar", "qibla"];
+
 export type NavGroup = {
   id: string;
   title: string;
@@ -200,3 +274,16 @@ export const LIBRARY_GROUPS: NavGroup[] = [
     ],
   },
 ];
+
+/* خريطة مفتاح ← مدخل. تُبنى هنا لا فوق، لأن `LIBRARY_GROUPS` يُعرَّف
+ * أسفله: البدء قبله يعني قراءة قيمة قبل تعريفها. */
+
+/** كل خدمة باسمها ووصفها، من مصدر واحد. لا نسخة ثانية في أي مكوّن. */
+export const SERVICE_BY_KEY: ReadonlyMap<DashView, NavEntry> = new Map(
+  LIBRARY_GROUPS.flatMap((group) => group.entries).map((entry) => [entry.key, entry]),
+);
+
+/** اسم خدمة أو صفها التوضيحي، أو `undefined` إن لم تكن خدمة. */
+export function serviceEntry(key: DashView): NavEntry | undefined {
+  return SERVICE_BY_KEY.get(key);
+}

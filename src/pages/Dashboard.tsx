@@ -1060,6 +1060,7 @@ export default function Dashboard() {
           <div className="motion-swap">
             <WorshipHubView
               onOpen={changeView}
+              onOpenAdhkar={setAdhkarGroup}
               onOpenAll={() => setMoreOpen(true)}
             />
           </div>
@@ -1111,7 +1112,13 @@ export default function Dashboard() {
         ) : null}
 
         {view === "qibla" ? (
-          <QiblaView coords={geo.coords} denied={geo.status === "denied"} />
+          <QiblaView
+            coords={geo.coords}
+            locationDenied={geo.status === "denied"}
+            onRequestLocation={() => void geo.request()}
+            onOpenSettings={() => changeView("settings")}
+            onOpenMosques={() => changeView("ibadat")}
+          />
         ) : null}
 
         {view === "zakat" ? <ZakatView /> : null}

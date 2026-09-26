@@ -1,38 +1,65 @@
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { LIBRARY_GROUPS, type DashView, type NavGroup } from "@/components/app/Navigation";
+import { cn } from "@/lib/utils";
+
+import {
+  QUICK_SERVICES,
+  SERVICE_SECTIONS,
+  serviceEntry,
+  type DashView,
+  type ServiceSection,
+  type ServiceTier,
+} from "@/components/app/Navigation";
 import {
   EmptyState,
   Field,
+  ListRow,
   ScreenTitle,
   SectionHeader,
   ServiceCard,
+  Surface,
   TextLink,
 } from "@/components/oud/primitives";
 
 /**
- * «عبادتي» — an index of worship services, not a dashboard.
+ * «عبادتي» — the service hub.
  *
- * **A grid, not a list.** These are things you might open, not steps you
- * follow, so each service is a square you reach for rather than a row
- * with a chevron. The chevron language is kept for lists that do have an
- * order.
+ * **The page answers one question: which tool do I need?** Not a dashboard,
+ * not a plan, not a report. So there is no score, no progress and no
+ * recommendation here — those belong to «يومي», and having them here too is
+ * how a hub stops being a hub.
  *
- * **One search field, not a title per card.** A hub with a heading above
- * every tile is a list pretending to be a grid.
+ * **Three prominence tiers, never one grid.** The services you perform every
+ * day are cards. The tools you reach for weekly are cards. What you read is
+ * a row. A flat grid of fifteen equal cards would look organised and read as
+ * noise.
  *
- * **No new copy.** Names and descriptions come from `LIBRARY_GROUPS`, the
- * same source the all-sections sheet reads, so the two can never disagree.
+ * **Every service appears exactly once.** «ابدأ من هنا» shows four, and the
+ * search filters the same list, so nothing is duplicated in two blocks.
+ *
+ * **No new copy.** Names and hints come from `serviceEntry`, the same source
+ * the all-sections sheet reads. The section titles are the names the product
+ * already agreed on.
  */
 
 type Props = {
   onOpen: (view: DashView) => void;
+  onOpenAdhkar: (group: "morning" | "evening" | "sleep") => void;
   onOpenAll: () => void;
 };
 
-const WORSHIP_GROUP: NavGroup = LIBRARY_GROUPS[0];
+/**
+ * درجات الحضور: البطاقة الكبيرة للأساس، والمتوسطة للأدوات الأسبوعية.
+ * الفرق مقصود لكنه صغير — الفارق الكبير يصنع فوضى، لا تدرجا.
+ */
+const TIER_CLASS: Record<ServiceTier, string> = {
+  primary: "py-6",
+  secondary: "py-4",
+  compact: "",
+};
 
+/** تطبيع عربي بسيط حتى يجد البحث «الاذكار» و«الأذكار» معا. */
 function normalize(value: string): string {
   return value
     .toLowerCase()
@@ -43,31 +70,73 @@ function normalize(value: string): string {
     .trim();
 }
 
-export function WorshipHubView({ onOpen, onOpenAll }: Props) {
+function openService(key: DashView, onOpen: Props["onOpen"], onOpenAdhkar: Props["onOpenAdhkar"]) {
+  if (key === "adhkar") onOpenAdhkar("morning");
+  else onOpen(key);
+}
+
+export function WorshipHubView({ onOpen, onOpenAdhkar, onOpenAll }: Props) {
   const [query, setQuery] = useState("");
 
-  const services = useMemo(() => {
-    const needle = normalize(query);
-    if (!needle) return WORSHIP_GROUP.entries;
-    return WORSHIP_GROUP.entries.filter(
-      (entry) =>
-        normalize(entry.label).includes(needle) || normalize(entry.hint).includes(needle),
-    );
-  }, [query]);
+  const needle = normalize(query);
+
+  const matches = useMemo(
+    () =>
+      SERVICE_SECTIONS.map((section) => ({
+        section,
+        services: section.services.filter(({ key }) => {
+          if (!needle) return true;
+          const entry = serviceEntry(key);
+          if (!entry) return false;
+          return (
+            normalize(entry.label).includes(needle) || normalize(entry.hint).includes(needle)
+          );
+        }),
+      })).filter((group) => group.services.length > 0),
+    [needle],
+  );
+
+  const quick = QUICK_SERVICES.map((key) => serviceEntry(key)).filter(
+    (entry): entry is NonNullable<typeof entry> => Boolean(entry),
+  );
+
+  const searching = needle.length > 0;
+  const total = SERVICE_SECTIONS.reduce((count, section) => count + section.services.length, 0);
 
   return (
     <div className="flex flex-col gap-5">
-      <ScreenTitle title={WORSHIP_GROUP.title} subtitle={WORSHIP_GROUP.hint} />
+      <ScreenTitle title="عبادتي" subtitle={`${total} خدمة، مجمّعة بحسب صلتها بيومك`} />
+
+      {/* 1 — the four you reach for, before anything else. */}
+      {!searching ? (
+        <section aria-label="ابدأ من هنا" className="flex flex-col gap-3">
+          <SectionHeader title="ابدأ من هنا" />
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {quick.map((entry) => (
+              <li key={entry.key}>
+                <ServiceCard
+                  icon={entry.icon}
+                  title={entry.label}
+                  description={entry.hint}
+                  onClick={() => openService(entry.key, onOpen, onOpenAdhkar)}
+                  className="h-full w-full"
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <Field
         label="ابحث في خدماتك"
         icon={Search}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder={WORSHIP_GROUP.entries[0]?.label ?? ""}
+        placeholder="الصلاة، القرآن، الأذكار…"
       />
 
-      {services.length === 0 ? (
+      {/* 2 — everything else, grouped and tiered. */}
+      {matches.length === 0 ? (
         <EmptyState
           icon={Search}
           title="لا توجد خدمة بهذا الاسم"
@@ -76,25 +145,89 @@ export function WorshipHubView({ onOpen, onOpenAll }: Props) {
         />
       ) : (
         <>
-          <SectionHeader
-            title="ما يؤدّيه كل يوم"
-            action={<TextLink onClick={onOpenAll}>كل الأقسام</TextLink>}
-          />
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {services.map((entry) => (
-              <li key={entry.key}>
+          {!searching ? (
+            <SectionHeader
+              title="كل عبادتك"
+              action={<TextLink onClick={onOpenAll}>كل الأقسام</TextLink>}
+            />
+          ) : null}
+
+          <div className="flex flex-col gap-5">
+            {matches.map(({ section, services }) => (
+              <ServiceGroup
+                key={section.id}
+                section={section}
+                services={services}
+                onOpen={onOpen}
+                onOpenAdhkar={onOpenAdhkar}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ServiceGroup({
+  section,
+  services,
+  onOpen,
+  onOpenAdhkar,
+}: {
+  section: ServiceSection;
+  services: { key: DashView; tier: ServiceTier }[];
+  onOpen: Props["onOpen"];
+  onOpenAdhkar: Props["onOpenAdhkar"];
+}) {
+  const cards = services.filter((service) => service.tier !== "compact");
+  const rows = services.filter((service) => service.tier === "compact");
+
+  return (
+    <section aria-label={section.title} className="flex flex-col gap-3">
+      <h3 className="text-[15px] font-bold text-foreground">{section.title}</h3>
+
+      {cards.length > 0 ? (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {cards.map((service) => {
+            const entry = serviceEntry(service.key);
+            if (!entry) return null;
+            return (
+              <li key={service.key}>
                 <ServiceCard
                   icon={entry.icon}
                   title={entry.label}
                   description={entry.hint}
-                  onClick={() => onOpen(entry.key)}
-                  className="h-full w-full"
+                  onClick={() => openService(service.key, onOpen, onOpenAdhkar)}
+                  className={cn("h-full w-full", TIER_CLASS[service.tier])}
                 />
               </li>
-            ))}
+            );
+          })}
+        </ul>
+      ) : null}
+
+      {rows.length > 0 ? (
+        <Surface className="overflow-hidden">
+          <ul>
+            {rows.map((service) => {
+              const entry = serviceEntry(service.key);
+              if (!entry) return null;
+              return (
+                <li key={service.key} className="border-b border-[var(--oud-line-soft)] last:border-b-0">
+                  <ListRow
+                    icon={entry.icon}
+                    title={entry.label}
+                    meta={entry.hint}
+                    flat
+                    onClick={() => openService(service.key, onOpen, onOpenAdhkar)}
+                  />
+                </li>
+              );
+            })}
           </ul>
-        </>
-      )}
-    </div>
+        </Surface>
+      ) : null}
+    </section>
   );
 }

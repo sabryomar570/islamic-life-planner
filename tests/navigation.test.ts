@@ -160,7 +160,8 @@ describe("الوجهة تُرسم فعلا في لوحة القيادة", () => 
   });
 
   test("القبلة تأخذ إحداثيات الموقع لا اسم المدينة", () => {
-    expect(dashboard).toContain("QiblaView coords={geo.coords}");
+    expect(dashboard).toContain("coords={geo.coords}");
+    expect(dashboard).toContain("locationDenied={geo.status === \"denied\"}");
   });
 });
 

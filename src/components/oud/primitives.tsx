@@ -131,11 +131,15 @@ export function IconTile({
 
 /* ══════════════════════════ Buttons ══════════════════════════ */
 
+export type ActionState = "default" | "success";
+
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: LucideIcon;
   iconEnd?: LucideIcon;
   loading?: boolean;
   full?: boolean;
+  /** `success` adds a tick and a green tint, so a confirm is not a guess. */
+  state?: ActionState;
 };
 
 const BUTTON_BASE =
@@ -148,6 +152,7 @@ export function ActionButton({
   iconEnd: IconEnd,
   loading = false,
   full = false,
+  state: _state = "default",
   className,
   disabled,
   ...rest
@@ -180,6 +185,7 @@ export function SecondaryButton({
   iconEnd: IconEnd,
   loading = false,
   full = false,
+  state = "default",
   className,
   disabled,
   ...rest
@@ -192,12 +198,19 @@ export function SecondaryButton({
       className={cn(
         BUTTON_BASE,
         "oud-surface text-foreground/85 hover:border-[var(--oud-line-strong)]",
+        state === "success" && "border-[var(--status-success)]/40 text-[var(--status-success)]",
         full && "w-full",
         className,
       )}
       {...rest}
     >
-      {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : Icon ? <Icon className="size-4" aria-hidden /> : null}
+      {state === "success" ? (
+        <Check className="size-4" aria-hidden />
+      ) : loading ? (
+        <Loader2 className="size-4 animate-spin" aria-hidden />
+      ) : Icon ? (
+        <Icon className="size-4" aria-hidden />
+      ) : null}
       <span>{children}</span>
       {IconEnd ? <IconEnd className="size-4" aria-hidden /> : null}
     </button>

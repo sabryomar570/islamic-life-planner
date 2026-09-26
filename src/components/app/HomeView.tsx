@@ -256,8 +256,6 @@ export function HomeView({
       />
       <QiblaCard
         coords={qibla.coords}
-        denied={qibla.denied}
-        onOpenSettings={() => onOpenSection("settings")}
         onOpenQibla={() => onOpenSection("qibla")}
       />
 

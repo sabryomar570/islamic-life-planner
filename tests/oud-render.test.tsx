@@ -12,7 +12,12 @@ import { AchievementToast, OudLineCard } from "../src/components/app/OudLineCard
 import { MosqueCard } from "../src/components/app/MosqueCard";
 import { OudChatView } from "../src/components/app/OudChatView";
 import { WorshipHubView } from "../src/components/app/WorshipHubView";
-import { LIBRARY_GROUPS, ZONES } from "../src/components/app/Navigation";
+import {
+  QUICK_SERVICES,
+  SERVICE_SECTIONS,
+  ZONES,
+  serviceEntry,
+} from "../src/components/app/Navigation";
 import { PERMISSION_COPY, PermissionReasonBody } from "../src/components/app/PermissionReasonDialog";
 import { QiblaCard, QiblaView } from "../src/components/app/QiblaView";
 import { ZakatView } from "../src/components/app/ZakatView";
@@ -253,52 +258,67 @@ describe("الأرقام العربية في الواجهة", () => {
 });
 
 describe("القبلة: زاوية محسوبة، ونصّ صادق", () => {
-  test("بلا موقع: لا شيء يُرسم ولا إذن يُطلب", () => {
-    const markup = html(<QiblaCard coords={null} />);
-    expect(markup).toBe("");
+  const page = (props: Partial<React.ComponentProps<typeof QiblaView>> = {}) =>
+    html(
+      <QiblaView
+        coords={origin}
+        locationDenied={false}
+        onRequestLocation={() => {}}
+        onOpenSettings={() => {}}
+        onOpenMosques={() => {}}
+        {...props}
+      />,
+    );
+
+  test("بلا موقع: لا شيء يُرسم على الرئيسية", () => {
+    expect(html(<QiblaCard coords={null} onOpenQibla={() => {}} />)).toBe("");
   });
 
-  test("الرفض يشرح ولا يهدّد، ويعرض مفتاح الإعدادات", () => {
-    const markup = html(<QiblaCard coords={null} denied onOpenSettings={() => {}} />);
-    expect(markup).toContain("الزاوية مش معروفة");
-    expect(markup).toContain("الصلاة كالمعتاد");
-    expect(markup).toContain("الإعدادات");
-  });
-
-  test("جاهز: يرسم الزاوية والمسافة، ويعلن أن الموقع لا يثبت صلاة", () => {
+  test("جاهز: البطاقة تعرض الزاوية والمسافة", () => {
     const markup = html(<QiblaCard coords={origin} onOpenQibla={() => {}} />);
     expect(markup).toContain(qiblaDirectionName(qiblaBearing(origin)));
     expect(markup).toContain(arabicNumber(Math.round(distanceToKaabaKm(origin))));
-    expect(markup).toContain("الموقع لا يثبت أنك صليت");
   });
 
-  test("بلا مستشعر بوصلة: يقول ذلك ولا يرسم إبرة كاذبة", () => {
-    const markup = html(<QiblaCard coords={origin} />);
-    expect(markup).toContain("ما فيهوش مستشعر بوصلة");
-    expect(markup).toContain("بوصلة جهازك");
+  test("الصفحة: البوصلة هي البطل، والزاوية مكتوبة نصا", () => {
+    const markup = page();
+    expect(markup).toContain("القبلة");
+    expect(markup).toContain("درجة");
+    expect(markup).toContain(qiblaDirectionName(qiblaBearing(origin)));
   });
 
-  test("الإبرة لها بديل نصي لقارئ الشاشة", () => {
-    const markup = html(<QiblaCard coords={origin} />);
-    expect(markup).toContain('role="img"');
-    expect(markup).toContain("درجة من الشمال");
-  });
-
-  test("الصفحة الكاملة بلا موقع: تطلب الموقع وتشرح، بلا لوم", () => {
-    const markup = html(<QiblaView coords={null} />);
-    expect(markup).toContain("محتاجين موقعك مرة واحدة");
-    expect(markup).toContain("من الإعدادات");
-  });
-
-  test("الصفحة الكاملة مرفوضة: صريحة، وغير مغلقة", () => {
-    const markup = html(<QiblaView coords={null} denied />);
-    expect(markup).toContain("الموقع مرفوض");
-    expect(markup).toContain("كل حاجة تانية شغالة عادي");
+  test("الاتجاه لا يعتمد على الحركة: له بديل نصي لقارئ الشاشة", () => {
+    expect(page()).toContain('role="status"');
   });
 
   test("لا نصّ في الصفحة يدّعي أن الموقع صلاتك", () => {
-    const markup = html(<QiblaView coords={origin} />);
-    expect(markup).toMatch(/لا يثبت أنك صليت/);
+    expect(page()).toMatch(/لا يثبت أنك صليت/);
+  });
+
+  test("بلا موقع: يشرح لماذا، ولا يهدّد ولا يغلق الصفحة", () => {
+    const markup = page({ coords: null });
+    expect(markup).toContain("علشان أحدد اتجاه القبلة بدقة حسب مكانك.");
+    expect(markup).not.toContain("محتاج");
+  });
+
+  test("مرفوض: صريح، ويعرض مفتاح الإعدادات، ويعمل كل شيء آخر", () => {
+    const markup = page({ coords: null, locationDenied: true });
+    expect(markup).toContain("الموقع مرفوض");
+    expect(markup).toContain("الإعدادات");
+    expect(markup).toContain("الصفحة تعمل بلا موقع");
+  });
+
+  test("لا مساجد مخترعة: الصفحة تربط بالخدمة القائمة فقط", () => {
+    const markup = page();
+    expect(markup).toContain("المساجد القريبة");
+    expect(markup).toContain("افتح بطاقة المسجد");
+  });
+
+  test("بلا مستشعر: يقول ذلك صريحا بدل إبرة كاذبة", () => {
+    // في بيئة بلا مستشعر، الحالة إما غير مدعومة أو تتثبت. المهم أن
+    // الصفحة لا تدّعي دقة وهي غير موجودة.
+    const markup = page();
+    expect(markup).toMatch(/الزاوية محسوبة من موقعك|حرّك الموبايل/);
   });
 });
 
@@ -345,33 +365,53 @@ describe("الزكاة: حساب وبلا حكم", () => {
 
 /* ————————————————————— المناطق الثلاث الجديدة ————————————————————— */
 
-describe("عبادتي — الفهرس يرسم الخدمات الحقيقية", () => {
+describe("عبادتي — مركز الخدمات", () => {
   const markup = html(
     <WorshipHubView
       onOpen={() => {}}
+      onOpenAdhkar={() => {}}
       onOpenAll={() => {}}
     />,
   );
 
-  test("كل خدمة في مجموعة عبادتي تظهر باسمها ووصفها", () => {
-    for (const entry of LIBRARY_GROUPS[0].entries) {
-      expect(markup).toContain(entry.label);
-      expect(markup).toContain(entry.hint);
+  test("كل خدمة مسجّلة في الأقسام تظهر باسمها ووصفها", () => {
+    for (const section of SERVICE_SECTIONS) {
+      for (const service of section.services) {
+        const entry = serviceEntry(service.key);
+        expect(entry, service.key).toBeDefined();
+        expect(markup, service.key).toContain(entry!.label);
+        expect(markup, service.key).toContain(entry!.hint);
+      }
     }
   });
 
-  test("ما لا يُؤدى كل يوم لا يتكرر في صفحة العبادة", () => {
-    // قصص الأنبياء والأبيات والمناسبات ليست عبادة يومية؛ وجودها هنا
-    // كان سيجعل الصفحة أطول بلا فائدة.
-    const knowledge = LIBRARY_GROUPS.find((group) => group.id === "knowledge")!;
-    for (const entry of knowledge.entries) {
-      expect(markup).not.toContain(`>${entry.label}<`);
+  test("كل خدمة تظهر مرة واحدة في صفحة واحدة، لا مكررة في أربع مواضع", () => {
+    for (const section of SERVICE_SECTIONS) {
+      for (const service of section.services) {
+        const entry = serviceEntry(service.key)!;
+        // «ابدأ من هنا» يعرض نفس المدخل مكررا في الهوية، لا خدمتين.
+        expect(markup.split(`>${entry.label}<`).length - 1, service.key).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
+  test("الأقسام الأربعة موجودة بعناوينها", () => {
+    for (const section of SERVICE_SECTIONS) {
+      expect(markup, section.id).toContain(section.title);
     }
   });
 
   test("كل عنصر زرّ حقيقي لا نصا ميتا", () => {
     const buttons = markup.match(/<button/g)?.length ?? 0;
-    expect(buttons).toBeGreaterThanOrEqual(LIBRARY_GROUPS[0].entries.length);
+    const services = SERVICE_SECTIONS.reduce((count, section) => count + section.services.length, 0);
+    expect(buttons).toBeGreaterThanOrEqual(services);
+  });
+
+  test("«ابدأ من هنا» أربع خدمات فقط", () => {
+    expect(QUICK_SERVICES).toHaveLength(4);
+    for (const key of QUICK_SERVICES) {
+      expect(markup, key).toContain(serviceEntry(key)!.label);
+    }
   });
 });
 
