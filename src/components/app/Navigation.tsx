@@ -29,6 +29,8 @@ import {
 
 export type DashView =
   | "today"
+  | "ibadat"
+  | "yawmy"
   | "chat"
   | "prayers"
   | "qibla"
@@ -50,6 +52,8 @@ export type DashView =
 
 export const DASH_VIEWS: DashView[] = [
   "today",
+  "ibadat",
+  "yawmy",
   "chat",
   "prayers",
   "qibla",
@@ -75,7 +79,9 @@ export function isDashView(value: string | null): value is DashView {
 }
 
 export const VIEW_LABELS: Record<DashView, string> = {
-  today: "اليوم",
+  today: "الرئيسية",
+  ibadat: "عبادتي",
+  yawmy: "يومي",
   chat: "كلّم عود",
   prayers: "الصلاة",
   qibla: "القبلة",
@@ -104,13 +110,27 @@ export type NavEntry = {
   icon: LucideIcon;
 };
 
-/** التنقّل الأساسي — خمسة وجهات على الموبايل، وشريط أفقي على سطح المكتب. */
-export const PRIMARY_NAV: NavEntry[] = [
-  { key: "today", label: "اليوم", hint: "الصلاة القادمة وخطة اليوم", icon: Sparkles },
-  { key: "prayers", label: "الصلاة", hint: "المواقيت والسجل", icon: Clock },
-  { key: "quran", label: "القرآن", hint: "المصحف كاملًا", icon: BookOpen },
-  { key: "adhkar", label: "الأذكار", hint: "أذكار الصباح والمساء والنوم", icon: Sparkles },
+/**
+ * المناطق الأربع — ما يراه المستخدم في الشريط السفلي.
+ *
+ * الفكرة: الشريط يحمل **مناطق** لا شاشات. كل منطقة يجيب سؤالا مختلفا:
+ *   الرئيسية: أين أنا الآن، وما أهم خطوة دلوقتي؟
+ *   عبادتي:   كل أدوات العبادة، من الصلاة إلى الحديث.
+ *   يومي:     اليوم ماشي إزاي، وما الذي أنجزته؟
+ *   الإعدادات: كل ما يضبط السلوك والخصوصية.
+ *
+ * أي شاشة أخرى (قرآن، أذكار، قبلة، زكاة، مراجعة) تدخل داخل منطقة،
+ * ولا تشغل خانة مستقلة في الشريط.
+ */
+export const ZONES: NavEntry[] = [
+  { key: "today", label: "الرئيسية", hint: "الصلاة القادمة وأهم خطوة", icon: Sparkles },
+  { key: "ibadat", label: "عبادتي", hint: "كل أدوات العبادة في مكان واحد", icon: Landmark },
+  { key: "yawmy", label: "يومي", hint: "خطة اليوم ومراجعته وتقدّمك", icon: ClipboardCheck },
+  { key: "settings", label: "الإعدادات", hint: "الإشعارات والصوت والخصوصية", icon: Settings },
 ];
+
+/** الشريط الأفقي على سطح المكتب يعرض المناطق نفسها. */
+export const PRIMARY_NAV: NavEntry[] = ZONES;
 
 export type NavGroup = {
   id: string;

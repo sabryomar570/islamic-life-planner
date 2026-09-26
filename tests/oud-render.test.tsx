@@ -11,6 +11,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AchievementToast, OudLineCard } from "../src/components/app/OudLineCard";
 import { MosqueCard } from "../src/components/app/MosqueCard";
 import { OudChatView } from "../src/components/app/OudChatView";
+import { WorshipHubView } from "../src/components/app/WorshipHubView";
+import { LIBRARY_GROUPS, ZONES } from "../src/components/app/Navigation";
 import { PERMISSION_COPY, PermissionReasonBody } from "../src/components/app/PermissionReasonDialog";
 import { QiblaCard, QiblaView } from "../src/components/app/QiblaView";
 import { ZakatView } from "../src/components/app/ZakatView";
@@ -337,5 +339,55 @@ describe("الزكاة: حساب وبلا حكم", () => {
     const markup = html(<ZakatView />);
     expect(markup).toContain("على جهازك وحده");
     expect(markup).toContain("مسح بيانات التطبيق يمحوه");
+  });
+});
+
+/* ————————————————————— المناطق الثلاث الجديدة ————————————————————— */
+
+describe("عبادتي — الفهرس يرسم الخدمات الحقيقية", () => {
+  const markup = html(
+    <WorshipHubView
+      onOpen={() => {}}
+      onOpenAll={() => {}}
+    />,
+  );
+
+  test("كل خدمة في مجموعة عبادتي تظهر باسمها ووصفها", () => {
+    for (const entry of LIBRARY_GROUPS[0].entries) {
+      expect(markup).toContain(entry.label);
+      expect(markup).toContain(entry.hint);
+    }
+  });
+
+  test("ما لا يُؤدى كل يوم لا يتكرر في صفحة العبادة", () => {
+    // قصص الأنبياء والأبيات والمناسبات ليست عبادة يومية؛ وجودها هنا
+    // كان سيجعل الصفحة أطول بلا فائدة.
+    const knowledge = LIBRARY_GROUPS.find((group) => group.id === "knowledge")!;
+    for (const entry of knowledge.entries) {
+      expect(markup).not.toContain(`>${entry.label}<`);
+    }
+  });
+
+  test("كل عنصر زرّ حقيقي لا نصا ميتا", () => {
+    const buttons = markup.match(/<button/g)?.length ?? 0;
+    expect(buttons).toBeGreaterThanOrEqual(LIBRARY_GROUPS[0].entries.length);
+  });
+});
+
+describe("المناطق الأربع في الشريط", () => {
+  test("أسماؤها هي خريطة المعلومات المعتمدة", () => {
+    expect(ZONES.map((zone) => zone.label)).toEqual([
+      "الرئيسية",
+      "عبادتي",
+      "يومي",
+      "الإعدادات",
+    ]);
+  });
+
+  test("كل منطقة لها أيقونة ووصف قصير", () => {
+    for (const zone of ZONES) {
+      expect(zone.icon, zone.key).toBeDefined();
+      expect(zone.hint.trim().length, zone.key).toBeGreaterThan(0);
+    }
   });
 });

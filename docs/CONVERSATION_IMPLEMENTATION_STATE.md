@@ -73,7 +73,7 @@ Non-goals that are decisions, not omissions:
 
 | Area | Where | State |
 | --- | --- | --- |
-| IA / nav | `src/components/app/Navigation.tsx` | 19 `DashView`s, 4 library groups, `PRIMARY_NAV` of 4 |
+| IA / nav | `src/components/app/Navigation.tsx` | 21 `DashView`s, 4 library groups, 4 zones in the bar |
 | Home | `src/components/app/HomeView.tsx` | Prayer hero → Oud line → mosque → qibla → plan |
 | Prayer | `src/components/app/PrayerView.tsx`, `src/lib/prayers.ts` | Times, log, missed detection |
 | Daily / weekly plan | `src/lib/daily-plan.ts`, `src/lib/weekly-plan.ts`, `src/convex/*` | Convex-backed |
@@ -91,7 +91,27 @@ Non-goals that are decisions, not omissions:
 | Developer | `src/lib/developer.ts`, `src/components/app/DeveloperView.tsx` | Identity, social (no usernames), support, share |
 | PWA / offline | `src/lib/pwa.ts`, `public/sw.js`, `src/lib/offline-store.ts` | SW registration, update flow, offline store |
 | Privacy | `src/lib/local-data.ts` | Owned key allowlist, guarded by a source-scanning test |
-| Design system | `src/components/app/Surfaces.tsx`, `src/index.css` | 5-step depth ladder, unified button states |
+| Design system | `src/components/app/Surfaces.tsx`, `src/index.css` | Depth ladder, unified button states |
+
+## 4.b Zones (the navigation decision)
+
+The bottom bar carries **zones, not screens**. Four destinations:
+
+| Zone | Question it answers | Screen |
+| --- | --- | --- |
+| الرئيسية | Where am I now, and what is the one next step? | `HomeView` |
+| عبادتي | Where is the prayer tool, the adhkar, the qibla? | `WorshipHubView` |
+| يومي | How is today going, and what did I finish? | `DayHubView` |
+| الإعدادات | What do I configure? | `SettingsView` |
+
+Consequences that are decisions, not accidents:
+
+- Prayer, Quran, adhkar, tasbih, qibla, zakat stopped being bottom tabs. They are services
+  inside عبادتي.
+- The day plan, daily review, weekly plan, stats and streaks moved to يومي.
+- Home no longer duplicates them. Home answers one question only.
+- `LIBRARY_GROUPS` stayed as the single source of service labels and hints, so the worship hub
+  and the all-sections sheet can never disagree.
 
 ---
 
@@ -100,6 +120,7 @@ Non-goals that are decisions, not omissions:
 | # | Item | Status |
 | --- | --- | --- |
 | 1 | **All user-visible personality copy is currently written by me** | Needs owner wording |
+| 1b | Whether knowledge content (prophets, poetry, occasions) belongs inside عبادتي | Not duplicated there by design; it stays in the all-sections sheet |
 | 2 | Notification / reminder / recovery / permission / empty / error copy | Needs owner wording |
 | 3 | Achievement names and level names | Needs owner wording |
 | 4 | UX states: `Skeleton` used in `Dashboard` only; explicit empty states missing in Home, Weekly, DailyReview, Stats, Occasions, AdhkarIndex, Quran, Tasbih | Partial |
@@ -109,17 +130,39 @@ Non-goals that are decisions, not omissions:
 | 8 | Bottom navigation does not match the owner's stated target IA (الرئيسية / عبادتي / يومي / الإعدادات) | Decision pending |
 | 9 | Browser QA not performed | Blocked |
 | 10 | Onboarding and Auth copy not reviewed for voice | Needs owner wording |
+| 11 | Browser QA still not performed | Blocked by the environment |
 
 ---
 
-## 6. UI Decisions Pending
+## 6. UI Decisions
 
-- Home composition and what is the single most prominent element.
-- Bottom navigation shape (see #8 above).
-- Whether `DeveloperView` should stay in the app group or move under Settings.
-- Depth intensity: whether the current five-step ladder is calm enough.
+Confirmed by the owner:
 
-None of these were executed unilaterally. They are waiting on the owner.
+- **Bottom bar: option A, quiet attached.** No floating pill, no heavy shadow, no glass blur,
+  no giant centre button. 22px icon, 11px label, active = primary icon + 5px dot + stronger
+  label, inactive = muted, 64px tall targets, safe-area aware, one subtle top border.
+- **Four zones** in the order الرئيسية, عبادتي, يومي, الإعدادات.
+- **Home hierarchy:** prayer hero, then the Oud line, then exactly one prominent step, then
+  the rest. Never three competing cards.
+- **Visual language:** light-first, soft blue primary accent, white and very light surfaces,
+  soft depth, elevated cards, subtle shadows, rounded corners, clean Arabic typography, spacious
+  layouts, clear hierarchy, soft tactile interactions. No neon, no cheap gradients, no
+  dashboard look, no glassmorphism for show.
+
+Applied to the token layer:
+
+- Surfaces became opaque. Glass made everything look like it floated above everything else.
+- New ladder: canvas, primary, elevated, secondary, sunken. A new `surface-elevated` level.
+- Real borders replaced the inner white hairline.
+- Three soft shadow tokens instead of one heavy one.
+- Typography grew: display 23, section 15, body 14.5, meta 12.5. Small text is metadata, not
+  a way to fit more.
+- Dark mode reuses the same ladder inverted, so depth reads identically in both modes.
+
+Still open, waiting on the owner:
+
+- Whether knowledge content moves into عبادتي.
+- Whether `DeveloperView` stays in the app group or moves under Settings.
 
 ---
 

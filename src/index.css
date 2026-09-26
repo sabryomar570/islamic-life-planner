@@ -85,17 +85,28 @@
     Glassmorphism يخدم المرحلتين الأولى والثانية فقط.
      ———————————————————————————————————————————————————————————— */
 
-  /* السطح: أربع درجات فقط، تُختار بالرتبة لا بالذوق. */
-  --surface-primary: rgba(255, 255, 255, 0.64);
-  --surface-secondary: rgba(255, 255, 255, 0.4);
-  --surface-sunken: rgba(243, 246, 252, 0.72);
-  --surface-quiet: rgba(255, 255, 255, 0.86);
-  --surface-veil: rgba(255, 255, 255, 0.94);
+  /* The surfaces are opaque, not glass.
+   *
+   * The visual direction is light-first: white or near-white, clear
+   * separation, soft shadows. Glass made everything look like it was
+   * floating above everything else, so the real depth comes from
+   * canvas, primary, elevated, secondary, then sunken. */
+  --surface-primary: oklch(0.998 0.0015 250);
+  --surface-elevated: oklch(1 0 0);
+  --surface-secondary: oklch(0.972 0.005 252);
+  --surface-sunken: oklch(0.951 0.008 253);
+  --surface-quiet: oklch(0.988 0.003 250);
+  --surface-veil: oklch(0.995 0.002 250);
 
-  /* الحواف: شعرة داخلية أفتح، وخط فاصل هادئ بين المناطق. */
-  --hairline: rgba(255, 255, 255, 0.72);
-  --hairline-soft: rgba(255, 255, 255, 0.52);
-  --rule: oklch(0.895 0.012 250);
+  /* The edges: a real border instead of an inner white hairline. */
+  --hairline: oklch(0.905 0.012 252);
+  --hairline-soft: oklch(0.925 0.008 252);
+  --rule: oklch(0.915 0.009 252);
+
+  /* Shadows: three levels only, all soft and cool. Never a heavy black one. */
+  --shadow-card: 0 1px 2px oklch(0.44 0.04 255 / 0.05), 0 8px 20px -14px oklch(0.44 0.06 255 / 0.16);
+  --shadow-elevated: 0 2px 4px oklch(0.44 0.04 255 / 0.06), 0 16px 32px -18px oklch(0.44 0.07 255 / 0.2);
+  --shadow-pressed: inset 0 1px 3px oklch(0.44 0.05 255 / 0.1);
 
   /* الحالات: تُستخدم في النقاط والشرطات، لا في تلوين الشاشة كلها. */
   --status-success: oklch(0.64 0.145 158);
@@ -156,6 +167,24 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Dark keeps the same ladder, inverted: the canvas is the darkest and
+   * the elevated card is the lightest. Borders and shadows still separate
+   * them, so the depth reads the same way in both modes. */
+  --surface-primary: oklch(0.208 0.012 258);
+  --surface-elevated: oklch(0.248 0.014 258);
+  --surface-secondary: oklch(0.268 0.013 258);
+  --surface-sunken: oklch(0.178 0.011 258);
+  --surface-quiet: oklch(0.226 0.012 258);
+  --surface-veil: oklch(0.238 0.013 258);
+  --hairline: oklch(1 0 0 / 11%);
+  --hairline-soft: oklch(1 0 0 / 7%);
+  --rule: oklch(1 0 0 / 9%);
+  --shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 20px -14px oklch(0 0 0 / 0.55);
+  --shadow-elevated: 0 2px 4px oklch(0 0 0 / 0.34), 0 16px 32px -18px oklch(0 0 0 / 0.6);
+  --shadow-pressed: inset 0 1px 3px oklch(0 0 0 / 0.4);
+  --editorial-wash: oklch(0.226 0.014 84);
+  --editorial-ink: oklch(0.93 0.02 84);
 }
 
 @layer base {
@@ -413,26 +442,29 @@
   /* Primary surface: اللوح الرئيسي للشاشة. واحد فقط في كل شاشة. */
   .surface-primary {
     background: var(--surface-primary);
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
     border: 1px solid var(--hairline);
-    box-shadow:
-      0 18px 40px -24px oklch(0.42 0.05 255 / 0.34),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    box-shadow: var(--shadow-card);
   }
 
-  /* Secondary surface: عنصر داخل اللوح — أخف، بلا ضباب مزدوج. */
+  /* Elevated: البطاقة التي يجب أن تسبق كل ما حولها بصريًا.
+   * The ladder is: canvas, then primary, then elevated, then secondary, then sunken. */
+  .surface-elevated {
+    background: var(--surface-elevated);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  /* Secondary surface: عنصر داخل اللوح — أخف، بلا ضباب. */
   .surface-secondary {
     background: var(--surface-secondary);
     border: 1px solid var(--hairline-soft);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
   }
 
   /* Sunken: حفرة أو حالة فارغة — بصريًا «أخفض». */
   .surface-sunken {
     background: var(--surface-sunken);
     border: 1px solid var(--rule);
-    box-shadow: inset 0 1px 2px oklch(0.6 0.03 255 / 0.06);
+    box-shadow: var(--shadow-pressed);
   }
 
   /* Quiet: أسطح القراءة والمصحف — أقرب للورق. */
@@ -463,38 +495,38 @@
 
   /* ———————————————————————————PHASE 2: الطباعة ——————————————————————————— */
 
-  /* تسمية القسم: 13px/600 — أعلى سلّم بصري من النص، أقل من h1. */
+  /* تسمية القسم: 15px/600 — أعلى سلّم بصري من النص، أقل من h1. */
   .label-section {
-    font-size: 0.8125rem;
-    line-height: 1.2rem;
-    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.4rem;
+    font-weight: 650;
     letter-spacing: -0.01em;
   }
 
-  /* عنوان الشاشة: 20px — لا عملاق. */
+  /* عنوان الشاشة: 23px — واضح بلا عملاق. */
   .label-display {
-    font-size: 1.25rem;
-    line-height: 1.75rem;
+    font-size: 1.4375rem;
+    line-height: 2rem;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
 
-  /* نص المحتوى: 13px/1.9 — مريح للعربية دون إ crowding. */
+  /* نص المحتوى: 14.5px/1.85 — العربية تحتاج مساحة، ولا نضغطها. */
   .label-body {
-    font-size: 0.8125rem;
-    line-height: 1.9;
+    font-size: 0.90625rem;
+    line-height: 1.85;
   }
 
-  /* بيانات دقيقة: 11px كحد أدنى (لا 10px — غير مقروء). */
+  /* بيانات دقيقة: 12.5px — لا 11px ولا 10px؛.Metadata لا تعني «غير مقروء». */
   .label-meta {
-    font-size: 0.6875rem;
-    line-height: 1rem;
+    font-size: 0.78125rem;
+    line-height: 1.15rem;
   }
 
   .eyebrow {
-    font-size: 0.6875rem;
-    line-height: 1rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    line-height: 1.1rem;
+    font-weight: 650;
     letter-spacing: 0.02em;
     color: var(--primary);
   }

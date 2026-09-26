@@ -98,6 +98,14 @@ export function AppHeader({
                   <Smartphone className="size-3.5" />
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={() => setMoreOpen(true)}
+                className={cn(iconButton, "size-9 lg:hidden")}
+                aria-label="كل الأقسام"
+              >
+                <LayoutGrid className="size-3.5" />
+              </button>
               {notifications}
               <button
                 type="button"
@@ -148,49 +156,51 @@ export function AppHeader({
         </div>
       </header>
 
-      {/* ——— الموبايل: خمسة وجهات + المزيد ——— */}
+      {/* ——— الموبايل: شريط ملتصق هادئ، أربع مناطق ———
+       *
+       * القرار البصري: **ملتصق لا طاف**. لا كبسولة عائمة، ولا ظل ثقيل،
+       * ولا ضباب زجاجي. سطح شبه أبيض بخط علوي واحد، وأربع وجهات.
+       * النشط: أيقونة بلون primary + نقطة ٥px تحتها + label أثقل.
+       * الساكن: رمادي هادئ بلا أي خلفية. الهدف وضوح وهدوء، لا استعراض. */}
       <nav
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
-        aria-label="التنقّل السريع"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--hairline)] bg-[var(--surface-veil)] pb-[env(safe-area-inset-bottom)]"
+        aria-label="التنقّل الرئيسي"
       >
-        <div className="glass-strong pointer-events-auto flex w-full max-w-md items-stretch gap-0.5 rounded-[1.6rem] border border-white/70 p-1.5">
+        <ul className="mx-auto flex max-w-md items-stretch px-1">
           {PRIMARY_NAV.map((item) => {
             const active = view === item.key;
             return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => onViewChange(item.key)}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "motion-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[1.15rem] px-1 py-2",
-                  active ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                <span
+              <li key={item.key} className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => onViewChange(item.key)}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex size-8 items-center justify-center rounded-xl transition-colors",
-                    active ? "bg-primary text-primary-foreground" : "",
+                    "motion-press flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2",
+                    active ? "text-primary" : "text-muted-foreground",
                   )}
                 >
-                  <item.icon className="size-[18px]" />
-                </span>
-                <span className="truncate text-[11px] font-medium leading-none">{item.label}</span>
-              </button>
+                  <item.icon className="size-[22px] shrink-0" aria-hidden />
+                  <span
+                    className={cn(
+                      "truncate text-[11px] leading-none",
+                      active ? "font-semibold" : "font-medium",
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-1.5 shrink-0 rounded-full transition-colors",
+                      active ? "bg-primary" : "bg-transparent",
+                    )}
+                  />
+                </button>
+              </li>
             );
           })}
-          <button
-            type="button"
-            onClick={() => setMoreOpen(true)}
-            className="motion-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[1.15rem] px-1 py-2 text-muted-foreground"
-            aria-label="كل الأقسام"
-          >
-            <span className="flex size-8 items-center justify-center rounded-xl">
-              <LayoutGrid className="size-[18px]" />
-            </span>
-            <span className="truncate text-[11px] font-medium leading-none">المزيد</span>
-          </button>
-        </div>
+        </ul>
       </nav>
 
       <LibrarySheet

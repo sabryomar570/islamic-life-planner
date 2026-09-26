@@ -17,6 +17,8 @@ import { audioPreferencesOf } from "@/hooks/use-preferences";
 import { toMinutes as toMinutesOfDay } from "@/lib/time";
 import { OpeningGreeting } from "@/components/app/OpeningGreeting";
 import { ViewBoundary } from "@/components/app/ViewBoundary";
+import { DayHubView } from "@/components/app/DayHubView";
+import { WorshipHubView } from "@/components/app/WorshipHubView";
 import { EmptyState, OfflineNote, Panel, PrimaryButton, Skeleton } from "@/components/app/Surfaces";
 import { WeeklyView } from "@/components/app/WeeklyView";
 import { Button } from "@/components/ui/button";
@@ -267,7 +269,7 @@ export default function Dashboard() {
     api.planner.getHistory,
     needsHistory ? { dates: lastWeek } : "skip",
   );
-  const needsStats = view === "today" || view === "prayers" || view === "stats";
+  const needsStats = view === "today" || view === "yawmy" || view === "prayers" || view === "stats";
   const stats = useQuery(api.planner.getStats, needsStats ? undefined : "skip");
 
   const setPrayerStatusMutation = useMutation(api.planner.setPrayerStatus);
@@ -1031,7 +1033,6 @@ export default function Dashboard() {
               timings={times.timings}
               hijri={times.hijri}
               dayState={state}
-              stats={stats}
               oudLine={oud.line}
               oudXp={{
                 total: oud.xp.total,
@@ -1040,24 +1041,48 @@ export default function Dashboard() {
               }}
               mosque={{ state: oud.mosque.state, places: oud.mosque.places }}
               qibla={{ coords: geo.coords, denied: geo.status === "denied" }}
-              onSaveReview={handleReviewSave}
-              reviewSaving={reviewSaving}
               onOpenSection={changeView}
               onOpenAdhkar={setAdhkarGroup}
               onLogPrayer={handlePrayerStatus}
               dailyPlan={dailyPlan}
               planOutcomes={planOutcomes}
               dailyScore={dailyScore}
-              lifeProgress={lifeProgress}
-              weeklyReview={(weeklyReviewDoc?.summary as WeeklyReview | undefined) ?? null}
               adaptiveSuggestions={adaptiveSuggestions ?? []}
               savingItemId={savingItemId}
               applyingSuggestion={applyingSuggestion}
-              reviewingWeek={reviewingWeek}
+              onSetPlanOutcome={handleSetPlanOutcome}
+              onApplySuggestion={handleApplySuggestion}
+            />
+          </div>
+        ) : null}
+
+        {view === "ibadat" ? (
+          <div className="motion-swap">
+            <WorshipHubView
+              onOpen={changeView}
+              onOpenAll={() => setMoreOpen(true)}
+            />
+          </div>
+        ) : null}
+
+        {view === "yawmy" && answers ? (
+          <div className="motion-swap">
+            <DayHubView
+              profile={answers}
+              dayState={state}
+              stats={stats ?? null}
+              lifeProgress={lifeProgress}
+              dailyPlan={dailyPlan}
+              planOutcomes={planOutcomes}
+              savingItemId={savingItemId}
               onSetPlanOutcome={handleSetPlanOutcome}
               onResetPlanOutcome={handleResetPlanOutcome}
+              reviewSaving={reviewSaving}
+              onSaveReview={handleReviewSave}
+              weeklyReview={(weeklyReviewDoc?.summary as WeeklyReview | undefined) ?? null}
+              reviewingWeek={reviewingWeek}
               onSaveWeeklyReview={handleSaveWeeklyReview}
-              onApplySuggestion={handleApplySuggestion}
+              onOpenSection={changeView}
             />
           </div>
         ) : null}

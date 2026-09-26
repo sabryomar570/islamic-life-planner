@@ -58,12 +58,13 @@ describe("الشبكة كاملة: كل وجهة تُفتح وتُسمّى", () 
 });
 
 describe("لا وجهة يتيمة: كل شاشة تُفتح من مكان معلوم", () => {
-  test("كل وجهة داخل مجموعة في القائمة الجانبية، عدا جذر «اليوم»", () => {
-    // `today` هي الجذر: لا تحتاج مدخلا في «المزيد» لأنها أول زر في
-    // الشريط السفلي وتُفتح تلقائيا. وأي وجهة أخرى يتيمةDestination لا
-    // يستطيع المستخدم أن يصل إليها من القائمة أيا كان.
+  test("كل وجهة داخل مجموعة في القائمة الجانبية، عدا جذور المناطق", () => {
+    // المناطق الأربع (الرئيسية، عبادتي، يومي، الإعدادات) جذور: كل منها
+    // زر في الشريط السفلي، فلا تحتاج مدخلا في «كل الأقسام». وأي وجهة
+    // أخرى يتيمة لا يستطيع المستخدم أن يصل إليها من أي مكان.
+    const roots = PRIMARY_NAV.map((entry) => entry.key);
     const missing = DASH_VIEWS.filter(
-      (view) => view !== "today" && !groupKeys.includes(view),
+      (view) => !roots.includes(view) && !groupKeys.includes(view),
     );
     expect(missing).toEqual([]);
     expect(PRIMARY_NAV.some((entry) => entry.key === "today")).toBe(true);
@@ -117,23 +118,30 @@ describe("الخدمات الجديدة تحت عبادتي، لا في الشر
     expect(primary).not.toContain("zakat");
   });
 
-  test("الشريط السفلي ما زال صغيرا: خمس وجهات كحد أقصى", () => {
-    expect(PRIMARY_NAV.length).toBeLessThanOrEqual(5);
+  test("الشريط السفلي أربع مناطق فقط، لا أكثر", () => {
+    expect(PRIMARY_NAV.length).toBe(4);
   });
 
-  test("الشريط السفلي ما زال يومي الاستعمال: فيه الصلاة والأذكار والقرآن", () => {
+  test("الشريط يحمل المناطق لا الشاشات: لا صلاة ولا قرآن ولا أذكار فيه", () => {
+    // تغيير مقصود: الشريط صار مناطق. الصلاة والقرآن والأذكار خدمات
+    // داخل «عبادتي»، ووجودها كأزرار مستقلة كان سبب تشتيت الخريطة.
     const keys = PRIMARY_NAV.map((entry) => entry.key);
-    expect(keys).toContain("today");
-    expect(keys).toContain("prayers");
-    expect(keys).toContain("quran");
-    expect(keys).toContain("adhkar");
+    expect(keys).toEqual(["today", "ibadat", "yawmy", "settings"]);
+    for (const service of ["prayers", "quran", "adhkar", "tasbih", "qibla", "zakat"]) {
+      expect(keys).not.toContain(service);
+    }
   });
 
-  test("الشريط السفلي كله موجود داخل المجموعات، فلا زر ميت", () => {
+  test("كل منطقة في الشريط شاشة حقيقية، فلا زر ميت", () => {
     for (const entry of PRIMARY_NAV) {
-      const inGroups = groupKeys.includes(entry.key);
-      const isRoot = entry.key === "today";
-      expect(inGroups || isRoot, entry.key).toBe(true);
+      expect(isDashView(entry.key), entry.key).toBe(true);
+    }
+  });
+
+  test("منطقتا الجذر تُكتبان في لوحة القيادة", () => {
+    const source = readFileSync("src/pages/Dashboard.tsx", "utf8");
+    for (const key of ["ibadat", "yawmy"]) {
+      expect(source.includes(`view === "${key}"`), key).toBe(true);
     }
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { groupByPrayerAnchor } from "../src/components/app/DayTimeline";
 import { prayerState } from "../src/components/app/NextPrayerHero";
 import {
@@ -50,11 +51,21 @@ const PLAN = buildDailyPlan({
 });
 
 describe("خريطة المعلومات", () => {
-  test("التنقّل الأساسي أربع وجهات (الرابع هو «المزيد») وكل واحدة في المكتبة", () => {
+  test("التنقّل الأساسي أربع مناطق: الرئيسية، عبادتي، يومي، الإعدادات", () => {
+    // تغيير الخريطة: الشريط صار يحمل **مناطق** لا شاشات. لذلك لم تعد
+    // «الرئيسية» وحدها بلا مدخل في المكتبة: «عبادتي» و«يومي» كذلك
+    // جذور، وكلاهما مكتوب فعلًا في لوحة القيادة.
     expect(PRIMARY_NAV).toHaveLength(4);
-    // «اليوم» هو المدخل ولا يُكرَّر داخل المكتبة؛ الباقي يجب أن يظهر فيها.
-    for (const item of PRIMARY_NAV.filter((entry) => entry.key !== "today")) {
-      expect(LIBRARY_GROUPS.some((group) => group.entries.some((e) => e.key === item.key))).toBe(true);
+    expect(PRIMARY_NAV.map((entry) => entry.label)).toEqual([
+      "الرئيسية",
+      "عبادتي",
+      "يومي",
+      "الإعدادات",
+    ]);
+    const source = readFileSync("src/pages/Dashboard.tsx", "utf8");
+    for (const key of ["ibadat", "yawmy"]) {
+      expect(isDashView(key), key).toBe(true);
+      expect(source.includes(`view === "${key}"`), key).toBe(true);
     }
   });
 
