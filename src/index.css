@@ -959,6 +959,228 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   OUD UI FOUNDATION — الأساس البصري الجديد
+   ═══════════════════════════════════════════════════════════════════
+   أربعة مستويات عمق لا غير، Everything else borrows one of them.
+   Level 0 canvas → Level 1 surface → Level 2 elevated card → Level 3 hero.
+   The prayer hero is the only element allowed Level 3 on a home screen.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ——— Depth: the four levels ——— */
+  --oud-canvas: oklch(0.972 0.008 250);
+  --oud-surface: oklch(0.995 0.002 250);
+  --oud-elevated: oklch(1 0 0);
+  --oud-hero: oklch(0.985 0.014 252);
+
+  /* ——— Lines: real separation, never a white inner hairline ——— */
+  --oud-line: oklch(0.905 0.014 252);
+  --oud-line-soft: oklch(0.932 0.008 252);
+  --oud-line-strong: oklch(0.87 0.02 252);
+
+  /* ——— Elevation: three soft cool shadows, never a black one ——— */
+  --oud-shadow-1: 0 1px 2px oklch(0.44 0.04 255 / 0.05);
+  --oud-shadow-2: 0 1px 2px oklch(0.44 0.04 255 / 0.05), 0 10px 24px -16px oklch(0.42 0.07 255 / 0.24);
+  --oud-shadow-3: 0 2px 4px oklch(0.44 0.04 255 / 0.06), 0 20px 40px -22px oklch(0.42 0.08 255 / 0.3);
+  --oud-inset-soft: inset 0 1px 2px oklch(0.45 0.05 255 / 0.08);
+
+  /* ——— Geometry ——— */
+  --oud-radius-tile: 1rem;
+  --oud-radius-card: 1.375rem;
+  --oud-radius-hero: 1.75rem;
+  --oud-radius-pill: 999px;
+  --oud-radius-sheet: 1.75rem;
+
+  /* ——— Rhythm ——— */
+  --oud-gap: 0.875rem;
+  --oud-pad-card: 1.25rem;
+
+  /* ——— Icon scale: one system, four sizes, none of them arbitrary ——— */
+  --oud-icon-sm: 2.25rem;
+  --oud-icon-md: 2.75rem;
+  --oud-icon-lg: 3.25rem;
+  --oud-icon-xl: 4.5rem;
+  --oud-glyph-sm: 1rem;
+  --oud-glyph-md: 1.25rem;
+  --oud-glyph-lg: 1.5rem;
+  --oud-glyph-xl: 2.25rem;
+
+  /* ——— Gel: the soft blue material used for icons and the active tab ——— */
+  --oud-gel-top: oklch(0.93 0.045 250);
+  --oud-gel-bottom: oklch(0.85 0.075 252);
+  --oud-gel-edge: oklch(0.8 0.08 252 / 0.85);
+  --oud-gel-highlight: oklch(0.99 0.012 250 / 0.9);
+  --oud-accent-top: oklch(0.7 0.19 256);
+  --oud-accent-bottom: oklch(0.56 0.19 258);
+
+  /* ——— Motion: calm, purposeful, never bouncy ——— */
+  --oud-motion-fast: 170ms;
+  --oud-motion-nav: 250ms;
+  --oud-motion-base: 240ms;
+  --oud-ease: cubic-bezier(0.32, 0.72, 0.28, 1);
+}
+
+.dark {
+  --oud-canvas: oklch(0.145 0.008 258);
+  --oud-surface: oklch(0.205 0.012 258);
+  --oud-elevated: oklch(0.252 0.014 258);
+  --oud-hero: oklch(0.225 0.02 256);
+  --oud-line: oklch(1 0 0 / 11%);
+  --oud-line-soft: oklch(1 0 0 / 7%);
+  --oud-line-strong: oklch(1 0 0 / 16%);
+  --oud-shadow-1: 0 1px 2px oklch(0 0 0 / 0.3);
+  --oud-shadow-2: 0 1px 2px oklch(0 0 0 / 0.32), 0 10px 24px -16px oklch(0 0 0 / 0.6);
+  --oud-shadow-3: 0 2px 4px oklch(0 0 0 / 0.36), 0 20px 40px -22px oklch(0 0 0 / 0.66);
+  --oud-inset-soft: inset 0 1px 3px oklch(0 0 0 / 0.4);
+  --oud-gel-top: oklch(0.33 0.04 252);
+  --oud-gel-bottom: oklch(0.25 0.05 254);
+  --oud-gel-edge: oklch(0.42 0.05 252 / 0.7);
+  --oud-gel-highlight: oklch(0.62 0.03 250 / 0.35);
+  --oud-accent-top: oklch(0.7 0.16 256);
+  --oud-accent-bottom: oklch(0.56 0.17 258);
+}
+
+@layer components {
+  /* Level 1 — the surface a screen is made of. */
+  .oud-surface {
+    background: var(--oud-surface);
+    border: 1px solid var(--oud-line);
+    box-shadow: var(--oud-shadow-1);
+  }
+
+  /* Level 2 — the elevated card. */
+  .oud-card {
+    background: var(--oud-elevated);
+    border: 1px solid var(--oud-line);
+    box-shadow: var(--oud-shadow-2);
+  }
+
+  /* Level 3 — hero. One per screen, never two. */
+  .oud-hero {
+    background:
+      radial-gradient(120% 100% at 88% 0%, oklch(0.94 0.045 250 / 0.9) 0%, transparent 62%),
+      linear-gradient(165deg, var(--oud-hero) 0%, var(--oud-surface) 100%);
+    border: 1px solid var(--oud-line-strong);
+    box-shadow: var(--oud-shadow-3);
+  }
+
+  /* Recessed — an empty state or a quiet read area. Never decorative. */
+  .oud-sunken {
+    background: var(--oud-canvas);
+    border: 1px solid var(--oud-line-soft);
+    box-shadow: var(--oud-inset-soft);
+  }
+
+  /* The icon container: gel with a highlight, an edge, and an inner shadow.
+     One class, four sizes, so no screen invents its own icon chip. */
+  .oud-icon-tile {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    border-radius: var(--oud-radius-tile);
+    background: linear-gradient(160deg, var(--oud-gel-top) 0%, var(--oud-gel-bottom) 100%);
+    border: 1px solid var(--oud-gel-edge);
+    box-shadow:
+      inset 0 1px 0 var(--oud-gel-highlight),
+      var(--oud-inset-soft),
+      0 4px 10px -8px oklch(0.42 0.08 255 / 0.4);
+    color: var(--primary);
+    overflow: hidden;
+  }
+  /* The gel highlight: a small skewed sheen in the top-left of the tile. */
+  .oud-icon-tile::after {
+    content: "";
+    position: absolute;
+    inset: 1px 55% 55% 1px;
+    border-radius: calc(var(--oud-radius-tile) - 1px);
+    background: linear-gradient(150deg, var(--oud-gel-highlight) 0%, transparent 100%);
+    pointer-events: none;
+  }
+  .oud-icon-tile > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Size modifiers: the only four that exist. */
+  .oud-icon-sm { width: var(--oud-icon-sm); height: var(--oud-icon-sm); }
+  .oud-icon-md { width: var(--oud-icon-md); height: var(--oud-icon-md); }
+  .oud-icon-lg { width: var(--oud-icon-lg); height: var(--oud-icon-lg); }
+  .oud-icon-xl { width: var(--oud-icon-xl); height: var(--oud-icon-xl); }
+
+  /* Flat tile for dense lists: same footprint, no gel. */
+  .oud-icon-flat {
+    background: var(--oud-canvas);
+    border: 1px solid var(--oud-line-soft);
+    color: var(--primary);
+  }
+
+  /* The active tab material: a soft translucent droplet, not a filled pill. */
+  .oud-gel-droplet {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--oud-radius-pill);
+    background: linear-gradient(155deg, var(--oud-gel-top) 0%, var(--oud-gel-bottom) 100%);
+    border: 1px solid var(--oud-gel-edge);
+    box-shadow:
+      inset 0 1px 0 var(--oud-gel-highlight),
+      inset 0 -3px 6px oklch(0.6 0.06 250 / 0.22),
+      0 3px 8px -6px oklch(0.42 0.08 255 / 0.5);
+  }
+  .oud-gel-droplet::after {
+    content: "";
+    position: absolute;
+    inset: 1px 58% 52% 1px;
+    border-radius: var(--oud-radius-pill);
+    background: linear-gradient(150deg, var(--oud-gel-highlight) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* Atmospheric background: soft light, never louder than the content. */
+  .oud-canvas {
+    background:
+      radial-gradient(60rem 34rem at 84% -8%, oklch(0.9 0.07 248 / 0.5) 0%, transparent 62%),
+      radial-gradient(46rem 30rem at 4% 6%, oklch(0.92 0.05 210 / 0.42) 0%, transparent 60%),
+      radial-gradient(40rem 30rem at 52% 112%, oklch(0.94 0.045 90 / 0.36) 0%, transparent 62%),
+      var(--oud-canvas);
+    background-attachment: fixed;
+  }
+
+  /* The touch target rule, restated once so no screen invents its own. */
+  .oud-tap {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Press: tactile but restrained. No bounce, no scale chaos. */
+  .oud-press {
+    transition:
+      transform var(--oud-motion-fast) var(--oud-ease),
+      box-shadow var(--oud-motion-fast) var(--oud-ease),
+      background-color var(--oud-motion-fast) var(--oud-ease),
+      border-color var(--oud-motion-fast) var(--oud-ease),
+      opacity var(--oud-motion-fast) var(--oud-ease);
+  }
+  .oud-press:active:not(:disabled) {
+    transform: scale(0.978);
+  }
+}
+
+/* Reduced motion: the droplet must not fly, cards must not breathe.
+   The states themselves stay — only the movement is removed. */
+@media (prefers-reduced-motion: reduce) {
+  .oud-press,
+  .oud-press:active:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
+  .oud-gel-droplet,
+  .oud-icon-tile {
+    transition: none;
+  }
+}
+
 /* طباعة صفحة المصحف كما هي بلا عناصر التنقل. */
 @media print {
   header,
