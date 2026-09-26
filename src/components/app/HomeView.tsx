@@ -260,45 +260,7 @@ export function HomeView({
         xp={oudXp}
         onOpen={(view) => onOpenSection(view as HomeSection)}
       />
-      <MosqueCard
-        state={mosque.state}
-        places={mosque.places}
-        onOpenSettings={() => onOpenSection("settings")}
-        onRetry={() => onOpenSection("settings")}
-      />
-      <QiblaCard
-        coords={qibla.coords}
-        denied={qibla.denied}
-        onOpenSettings={() => onOpenSection("settings")}
-        onOpenQibla={() => onOpenSection("qibla")}
-      />
-
-      {/* ——— 2.7) إحصاء اليوم: اقتباس واحد ثابت، لا شريط إعلانات ——— */}
-      <Suspense fallback={null}>
-        <InsightSlot area="today" onNavigate={(view) => onOpenSection(view as HomeSection)} />
-      </Suspense>
-
-      {/* ——— 3) خطة اليوم، مرتسية بالصلاة ——— */}
-      {dailyPlan ? (
-        <DayTimeline
-          plan={dailyPlan}
-          outcomes={planOutcomes}
-          currentTime={nowLabel}
-          savingItemId={savingItemId}
-          onSetOutcome={onSetPlanOutcome}
-          onResetOutcome={onResetPlanOutcome}
-        />
-      ) : (
-        <Panel className="px-5 py-6 sm:px-6">
-          <SectionHead
-            eyebrow="خطة اليوم"
-            title="نجهّز خطتك من نموذج حياتك"
-            hint="لن نضيف مهمة لم تخترها — انتظر لحظة واحدة."
-          />
-        </Panel>
-      )}
-
-      {/* ——— 4) تركيزك اليوم: جملة واحدة، لا صندوق توصيات ——— */}
+      {/* ——— 3) تركيزك اليوم: جملة واحدة، لا صندوق توصيات ——— */}
       <Panel className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -369,6 +331,45 @@ export function HomeView({
           </div>
         ) : null}
       </Panel>
+
+      {/* ——— 4) الباقي بعد الخطوة الأهم: المسجد، القبلة، اقتباس اليوم، ثم خطة اليوم ——— */}
+      <MosqueCard
+        state={mosque.state}
+        places={mosque.places}
+        onOpenSettings={() => onOpenSection("settings")}
+        onRetry={() => onOpenSection("settings")}
+      />
+      <QiblaCard
+        coords={qibla.coords}
+        denied={qibla.denied}
+        onOpenSettings={() => onOpenSection("settings")}
+        onOpenQibla={() => onOpenSection("qibla")}
+      />
+
+      {/* اقتباس واحد ثابت، لا شريط إعلانات. */}
+      <Suspense fallback={null}>
+        <InsightSlot area="today" onNavigate={(view) => onOpenSection(view as HomeSection)} />
+      </Suspense>
+
+      {/* خطة اليوم، مرتسية بالصلاة. */}
+      {dailyPlan ? (
+        <DayTimeline
+          plan={dailyPlan}
+          outcomes={planOutcomes}
+          currentTime={nowLabel}
+          savingItemId={savingItemId}
+          onSetOutcome={onSetPlanOutcome}
+          onResetOutcome={onResetPlanOutcome}
+        />
+      ) : (
+        <Panel className="px-5 py-6 sm:px-6">
+          <SectionHead
+            eyebrow="خطة اليوم"
+            title="نجهّز خطتك من نموذج حياتك"
+            hint="لن نضيف مهمة لم تخترها — انتظر لحظة واحدة."
+          />
+        </Panel>
+      )}
 
       {/* ——— 5) القرآن والأذكار: وصفتان لا بطاقتان ضخمتان ——— */}
       <section aria-labelledby="today-readings">
