@@ -35,20 +35,26 @@ type ShellProps = {
   className?: string;
   as?: "section" | "div" | "article" | "aside" | "li";
   role?: string;
+  /** Anchor target, for a section index that scrolls instead of paging. */
+  id?: string;
 };
 
 /** Level 1 — the surface a screen is made of. */
-export function Surface({ children, className, as: Tag = "section", role }: ShellProps) {
+export function Surface({ children, className, as: Tag = "section", role, id }: ShellProps) {
   return (
-    <Tag role={role} className={cn("oud-surface rounded-3xl", className)}>
+    <Tag id={id} role={role} className={cn("oud-surface rounded-3xl", className)}>
       {children}
     </Tag>
   );
 }
 
 /** Level 2 — the elevated card. */
-export function ElevatedCard({ children, className, as: Tag = "div" }: ShellProps) {
-  return <Tag className={cn("oud-card rounded-3xl", className)}>{children}</Tag>;
+export function ElevatedCard({ children, className, as: Tag = "div", id }: ShellProps) {
+  return (
+    <Tag id={id} className={cn("oud-card rounded-3xl", className)}>
+      {children}
+    </Tag>
+  );
 }
 
 /** Level 3 — hero. One per screen. */
@@ -152,7 +158,7 @@ export function ActionButton({
   iconEnd: IconEnd,
   loading = false,
   full = false,
-  state: _state = "default",
+  state = "default",
   className,
   disabled,
   ...rest
@@ -166,6 +172,7 @@ export function ActionButton({
         BUTTON_BASE,
         "bg-[linear-gradient(135deg,var(--oud-accent-top),var(--oud-accent-bottom))] text-white",
         "shadow-[0_8px_22px_-12px_oklch(0.5_0.16_257/0.55)]",
+        state === "success" && "ring-2 ring-[var(--status-success)]/60",
         full && "w-full",
         className,
       )}
@@ -177,7 +184,6 @@ export function ActionButton({
     </button>
   );
 }
-
 /** Level 2 interaction: the secondary action. Quiet, never competing. */
 export function SecondaryButton({
   children,

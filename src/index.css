@@ -199,6 +199,9 @@
   body {
     @apply text-foreground;
     min-width: 320px;
+    /* لا نمنع التكبير: `user-scalable=no` يكسر الوصولية. لكن التخطيط
+       يجب أن يصمد عند التكبير، وهذا ما يضمنه `overflow-x: clip` مع
+       `clamp` في المقاسات أدناه، لا منع التكبير. */
     overflow-x: clip;
     font-family: "IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont,
       "SF Pro Text", "Segoe UI", system-ui, sans-serif;

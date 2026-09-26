@@ -23,10 +23,6 @@ import {
   SecondaryButton,
   SectionHeader,
 } from "@/components/oud/primitives";
-
-/** عناوين الأقسام تقنية، لا شخصية. */
-const SOCIAL_TITLE = "تواصل معي";
-const SOCIAL_HINT = "ثلاث قنوات مفتوحة. اختار ما يناسبك.";
 import { APP_VERSION } from "@/lib/app-meta";
 import {
   APP_CREDITS,
@@ -46,6 +42,10 @@ import {
 import { ArrowUpLeft, Instagram, Music2, Send, Share2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useState } from "react";
+
+/** عناوين الأقسام تقنية، لا شخصية. */
+const SOCIAL_TITLE = "تواصل معي";
+const SOCIAL_HINT = "ثلاث قنوات مفتوحة. اختار ما يناسبك.";
 
 /**
  * أيقونة كل منصة. مكتبة الأيقونات لا تحمل شعارات تجارية، فهذه رموز مجردة
@@ -78,7 +78,7 @@ function SocialCard({ platform }: { platform: SocialPlatform }) {
         aria-label={`${label} — ${description}. الرابط قيد الإضافة`}
       >
         <span className="oud-icon-tile oud-icon-md shrink-0" aria-hidden>
-          <Icon className="size-5" />
+          <Icon className="size-5" aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-bold text-foreground">{label}</span>
@@ -95,10 +95,10 @@ function SocialCard({ platform }: { platform: SocialPlatform }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`${label} — ${description}. يفتح في تطبيق جديد`}
-      className="oud-press oud-card oud-tap flex items-center gap-3.5 rounded-3xl p-4"
+      className="oud-press oud-card oud-tap focus-ring flex items-center gap-3.5 rounded-3xl p-4"
     >
       <span className="oud-icon-tile oud-icon-md shrink-0" aria-hidden>
-        <Icon className="size-5" />
+        <Icon className="size-5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-bold text-foreground">{label}</span>
@@ -154,7 +154,7 @@ export function DeveloperView() {
         </p>
       </Editorial>
 
-      {/* ٣ — Social. ثلاث بطاقات كبيرة. لا اسم مستخدم، ولا GitHub. */}
+      {/* ٣ — Social. ثلاث بطاقات كبيرة. اسم المنصة فقط، ولا شيفرة مستودع. */}
       <section aria-label={SOCIAL_TITLE} className="flex flex-col gap-3">
         <SectionHeader title={SOCIAL_TITLE} subtitle={SOCIAL_HINT} />
         <ul className="flex flex-col gap-2.5">
@@ -180,7 +180,8 @@ export function DeveloperView() {
       <ElevatedCard className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-[17px] leading-7 font-bold text-foreground">{SUPPORT.title}</h2>
+            <p className="label-meta text-muted-foreground">مساهمة في استمرار المشروع</p>
+            <h2 className="mt-0.5 text-[17px] leading-7 font-bold text-foreground">{SUPPORT.title}</h2>
             <p className="label-body mt-1 text-muted-foreground">{SUPPORT.lead}</p>
             <p className="label-meta mt-1 text-muted-foreground">{SUPPORT.note}</p>
           </div>

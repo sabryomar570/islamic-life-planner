@@ -100,27 +100,43 @@ function Row({
 
 /** مجموعة إعدادات: عنوان واحد، ثم صفوفه بلا صناديق إضافية. */
 function Group({
-  eyebrow,
+  id,
   title,
   hint,
   action,
   children,
 }: {
-  eyebrow?: string;
+  id: string;
   title: string;
   hint?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <ElevatedCard className="overflow-hidden">
+    <ElevatedCard id={id} className="scroll-mt-24 overflow-hidden">
       <div className="p-5 sm:p-6">
-        <SectionHeader title={eyebrow ? `${eyebrow} · ${title}` : title} subtitle={hint} action={action} />
+        <SectionHeader title={title} subtitle={hint} action={action} />
       </div>
       <div className="border-t border-[var(--oud-line-soft)] px-5 pb-4 sm:px-6">{children}</div>
     </ElevatedCard>
   );
 }
+
+/**
+ * فهرس مجموعات الإعدادات.
+ *
+ * **لماذا فهرس:** صفحة الإعدادات كانت أطول من أن تُقرأ في جلسة واحدة.
+ * الفهرس لا يختصر الصفحة، بل يخبر المستخدم أينيجد ما يريد قبل أن
+ * يمرّر. كلما طالت القائمة، صار الدخول إليها أهم من تصفّحها.
+ */
+const SETTINGS_SECTIONS = [
+  { id: "account", label: "حسابك" },
+  { id: "notifications", label: "التنبيهات" },
+  { id: "prayer", label: "الصلاة" },
+  { id: "experience", label: "تجربتك" },
+  { id: "app", label: "التطبيق" },
+  { id: "data", label: "بياناتك" },
+] as const;
 
 export function SettingsView({
   prefs,
@@ -221,9 +237,21 @@ export function SettingsView({
 
   return (
     <div className="stack">
-      <Panel className="p-5 sm:p-6">
+      <nav aria-label="أقسام الإعدادات" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        {SETTINGS_SECTIONS.map((section) => (
+          <a
+            key={section.id}
+            href={`#settings-${section.id}`}
+            className="oud-press oud-card oud-tap inline-flex shrink-0 items-center rounded-full px-4 text-[13px] font-semibold text-foreground/85"
+          >
+            {section.label}
+          </a>
+        ))}
+      </nav>
+
+      <Panel id="settings-account" className="scroll-mt-24 p-5 sm:p-6">
         <SectionHead
-          eyebrow="الحساب"
+          eyebrow="حسابك"
           title="فهم يومك"
           hint="عدّل أوقاتك وهدفك، أو أضف التفاصيل الاختيارية التي تجعل فهم عود ليومك أدق."
           action={
@@ -235,8 +263,8 @@ export function SettingsView({
       </Panel>
 
       <Group
-        eyebrow="التطبيق"
-        title="الإشعارات والتذكيرات"
+        id="settings-notifications"
+        title="التنبيهات والتذكيرات"
         hint="أذّن لك عند دخول وقت الصلاة، وأذكّرك بوردك وبأذكار الصباح والمساء والنوم."
         action={
           <span className="label-meta shrink-0 text-muted-foreground">{permissionLabel}</span>
@@ -587,8 +615,8 @@ export function SettingsView({
       </Group>
 
       <Group
-        eyebrow="الصلاة"
-        title="الموقع ومواقيت دقيقة"
+        id="settings-prayer"
+        title="الصلاة — الموقع ومواقيت دقيقة"
         hint="إذن الموقع يجعل الحساب على إحداثياتك مباشرة، وهو أدق من اسم المدينة."
         action={
           <span className="label-meta shrink-0 text-muted-foreground">
@@ -648,7 +676,7 @@ export function SettingsView({
       </Group>
 
       <Group
-        eyebrow="التطبيق"
+        id="settings-app"
         title="التطبيق والعمل دون إنترنت"
         hint="ثبّت عود على شاشتك، ونزّل المصحف كاملًا ليُقرأ دون شبكة."
         action={
@@ -754,8 +782,8 @@ export function SettingsView({
       </Group>
 
       <Group
-        eyebrow="التطبيق"
-        title="النوافذ المنبثقة والقراءة"
+        id="settings-experience"
+        title="تجربتك — النوافذ والقراءة"
         hint="نافذة واحدة كل مرة، تظهر إذا لم تدخل القسم المعني أو فات وقت عبادة — وبإمكانك إيقافها."
       >
         <div>
@@ -814,7 +842,7 @@ export function SettingsView({
       </Group>
 
       <Group
-        eyebrow="البيانات"
+        id="settings-data"
         title="بياناتك وخصوصيتك"
         hint="بياناتك محفوظة في حسابك، وما يُخزَّن في جهازك يخصّك وحدك."
       >

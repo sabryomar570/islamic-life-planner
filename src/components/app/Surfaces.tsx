@@ -15,12 +15,14 @@ type SurfaceProps = {
   className?: string;
   as?: "section" | "div" | "article" | "aside";
   role?: string;
+  id?: string;
 };
 
 /** Primary surface — اللوح الرئيسي للشاشة. واحد فقط في كل شاشة. */
-export function Panel({ children, className, as: Tag = "section", role }: SurfaceProps) {
+export function Panel({ children, className, as: Tag = "section", role, id }: SurfaceProps) {
   return (
     <Tag
+      id={id}
       role={role}
       className={cn(
         "oud-card rounded-3xl",

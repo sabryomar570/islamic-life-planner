@@ -497,15 +497,18 @@ describe("الوصولية", () => {
   });
 
   test("أزرار الصفحة عبر نظام التصميم، لا أزرارًا مبنية يدويًا", () => {
-    // `QuietButton` و`PrimaryButton` يحملان `touch-target` و`aria-busy`.
-    expect(view).toContain("<PrimaryButton");
-    expect(view).toContain("<QuietButton");
+    // `ActionButton` و`SecondaryButton` من النظام الجديد يحملان هدف اللمس
+    // و`aria-busy`. فلا `<button>` مكتوب يدويا داخل الصفحة.
+    expect(view).toContain("<ActionButton");
+    expect(view).toContain("<SecondaryButton");
     expect(view).not.toMatch(/<button/);
   });
 
   test("حلقة تركيز واحدة على البطاقات القابلة للضغط", () => {
+    // `motion-press` صار `oud-press` في نظام التصميم الجديد: صنف واحد
+    // للضغط في كل التطبيق. المعنى محفوظ، والاسم تغيّر مع جيل الواجهة.
     expect(view).toContain("focus-ring");
-    expect(view).toContain("motion-press");
+    expect(view).toContain("oud-press");
   });
 
   test("النافذة عنوانها ووصفها وبياناتها كاملة", () => {
