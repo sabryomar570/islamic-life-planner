@@ -94,8 +94,8 @@ export function NextPrayerHero({
   const awaiting = nextState === "missed" && nextMinutes <= nowMinutes;
 
   return (
-    <Panel className="overflow-hidden">
-      <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+    <Panel className="overflow-hidden shadow-[var(--shadow-elevated)] ring-1 ring-primary/10">
+      <div className="flex flex-col gap-5 bg-gradient-to-b from-primary/8 to-transparent p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
         <div className="min-w-0">
           <p className="eyebrow flex items-center gap-1.5">
             {next.key === "fajr" || next.key === "isha" ? (

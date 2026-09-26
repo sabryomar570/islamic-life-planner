@@ -16,6 +16,7 @@ import { LIBRARY_GROUPS, ZONES } from "../src/components/app/Navigation";
 import { PERMISSION_COPY, PermissionReasonBody } from "../src/components/app/PermissionReasonDialog";
 import { QiblaCard, QiblaView } from "../src/components/app/QiblaView";
 import { ZakatView } from "../src/components/app/ZakatView";
+import { Ring } from "../src/components/app/Surfaces";
 import { distanceToKaabaKm, qiblaBearing, qiblaDirectionName } from "../src/lib/qibla";
 import { oudLine } from "../src/lib/oud-voice";
 import { arabicNumber } from "../src/lib/time";
@@ -389,5 +390,23 @@ describe("المناطق الأربع في الشريط", () => {
       expect(zone.icon, zone.key).toBeDefined();
       expect(zone.hint.trim().length, zone.key).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("الحلقة — تقدم دائري مقروء بلا ألوان وحدها", () => {
+  test("تحمل قيمة ودور مقياس، وتقرأ لقارئ الشاشة", () => {
+    const markup = html(<Ring value={40} label="تقدم اليوم" />);
+    expect(markup).toContain('role="meter"');
+    expect(markup).toContain('aria-valuenow="40"');
+    expect(markup).toContain('aria-label="تقدم اليوم"');
+  });
+
+  test("القيمة خارج المدى تُقصّ بدل أن ترسم حلقة غريبة", () => {
+    expect(html(<Ring value={-20} />)).toContain('stroke-dashoffset');
+    expect(html(<Ring value={999} />)).toContain('stroke-dashoffset="0"');
+  });
+
+  test("الرقم في الوسط هو ما يراه المستخدم", () => {
+    expect(html(<Ring value={62}>{arabicNumber(62)}</Ring>)).toContain(arabicNumber(62));
   });
 });

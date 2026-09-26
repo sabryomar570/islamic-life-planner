@@ -6,7 +6,7 @@ import { MosqueCard } from "@/components/app/MosqueCard";
 import { NextPrayerHero } from "@/components/app/NextPrayerHero";
 import { OudLineCard } from "@/components/app/OudLineCard";
 import { QiblaCard } from "@/components/app/QiblaView";
-import { Panel, PrimaryButton, QuietButton } from "@/components/app/Surfaces";
+import { Panel, PrimaryButton, QuietButton, Ring } from "@/components/app/Surfaces";
 import type { ProfileAnswers } from "@/data/questions";
 import { useNow } from "@/hooks/use-clock";
 import type { MosqueState } from "@/hooks/use-oud";
@@ -212,10 +212,20 @@ export function HomeView({
             ) : null}
           </div>
           {dailyScore ? (
-            <div className="shrink-0 text-end">
-              <p className="text-2xl font-bold text-primary">{arabicNumber(dailyScore.score)}</p>
+            <div className="flex shrink-0 flex-col items-center gap-1.5">
+              <Ring
+                value={dailyScore.score}
+                tone="primary"
+                size={68}
+                stroke={6}
+                label="تقدم اليوم"
+              >
+                <span className="text-[19px] leading-none font-bold text-primary">
+                  {arabicNumber(dailyScore.score)}
+                </span>
+              </Ring>
               <p className="label-meta text-muted-foreground">تقدم اليوم</p>
-              <p className="label-meta mt-1 text-muted-foreground">
+              <p className="label-meta text-muted-foreground">
                 {arabicNumber(prayedCount)} من {arabicNumber(PRAYERS.length)}
               </p>
             </div>

@@ -158,6 +158,15 @@ Applied to the token layer:
 - Typography grew: display 23, section 15, body 14.5, meta 12.5. Small text is metadata, not
   a way to fit more.
 - Dark mode reuses the same ladder inverted, so depth reads identically in both modes.
+- The primary button traded its hard 2px bevel for a soft diagonal blue gradient plus a blue
+  glow. The bevel was neumorphic and read as dated; the light now comes from the gradient and
+  the press, not from an edge that shouts.
+- The prayer hero is the one element allowed a blue tint and the elevated shadow, so the eye
+  knows what matters before it reads a single word.
+- A `Ring` progress primitive joins `Meter`: a single number that owns a card gets a circle, not
+  a bar. Bars stay for three metrics side by side.
+- The header now shows the screen title, so every screen reads as one titled surface of the
+  same product.
 
 Still open, waiting on the owner:
 

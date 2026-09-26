@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   LIBRARY_GROUPS,
   PRIMARY_NAV,
+  VIEW_LABELS,
   type DashView,
   type NavEntry,
 } from "@/components/app/Navigation";
@@ -77,8 +78,8 @@ export function AppHeader({
               >
                 عود
               </button>
-              <span className="truncate text-[13px] font-semibold text-foreground/80">
-                {userName ? userName.split(" ")[0] : "الصلاة القادمة"}
+              <span className="truncate text-[15px] font-semibold text-foreground">
+                {VIEW_LABELS[view]}
               </span>
             </div>
 
@@ -176,11 +177,18 @@ export function AppHeader({
                   onClick={() => onViewChange(item.key)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "motion-press flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2",
-                    active ? "text-primary" : "text-muted-foreground",
+                    "motion-press flex min-h-16 w-full flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-2",
+                    active ? "text-primary" : "text-muted-foreground hover:text-foreground/80",
                   )}
                 >
-                  <item.icon className="size-[22px] shrink-0" aria-hidden />
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                      active && "bg-primary/10",
+                    )}
+                  >
+                    <item.icon className="size-[22px] shrink-0" aria-hidden />
+                  </span>
                   <span
                     className={cn(
                       "truncate text-[11px] leading-none",
