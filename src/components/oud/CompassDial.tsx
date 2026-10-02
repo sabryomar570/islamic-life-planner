@@ -1,5 +1,6 @@
 import { Compass, LocateFixed, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,13 @@ import { cn } from "@/lib/utils";
  * **Calibration instead of a spinner.** An unstable sensor is not an error
  * and not a reason to show a fake value. The dial says what to do: move the
  * phone gently until the reading settles.
+ *
+ * **The dial is the one object in the app with real volume.** It is the
+ * thing a user holds up in the air, so it is the thing that gets two back
+ * plates, a tilted rose, a needle standing 18px off the face, and a shadow
+ * of that needle lying on the rose. Nothing about the reading changes: the
+ * number in the middle stays upright and the status line stays text, so the
+ * third dimension is presentation and never information.
  */
 
 export type CompassState =
@@ -158,6 +166,14 @@ export function useDeviceHeading(active: boolean): {
   return { state, heading, samples };
 }
 
+/** Centres a fixed-size SVG in a full-bleed wrapper without touching
+ *  `transform`, which belongs to the 3D layers here. */
+const NEEDLE_CENTRED: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  margin: "auto",
+};
+
 const CARDINALS = [
   { label: "ش", at: 0 },
   { label: "ق", at: 90 },
@@ -189,15 +205,36 @@ export function CompassDial({
 
   return (
     <div
-      className={cn("relative grid place-items-center", className)}
+      className={cn("oud-3d-dial relative grid place-items-center", className)}
       style={{ width: size, height: size }}
     >
+      {/* The thickness of the disc: two plates behind the face, each a
+          little further from the eye, so the dial has a rim instead of a
+          painted circle. Decorative, and marked as such. */}
+      <span
+        aria-hidden
+        className="oud-3d-dial-slab"
+        style={{
+          inset: 2,
+          transform: "translateZ(calc(-1 * var(--oud-3d-thickness-card)))",
+        }}
+      />
+      <span
+        aria-hidden
+        className="oud-3d-dial-slab"
+        style={{ inset: 5, transform: "translateZ(calc(-1 * 14px))" }}
+      />
+
       {/* The rose. It rotates, so the cardinal letters must rotate with it
-          or the dial would lie about which way is north. */}
+          or the dial would lie about which way is north. The tilt is
+          applied first, so the spin happens inside the tilted plane and
+          the north mark never leaves the rim. */}
       <div
         aria-hidden
         className="oud-hero absolute inset-0 rounded-full transition-transform duration-300 ease-out"
-        style={{ transform: `rotate(${dialRotation}deg)` }}
+        style={{
+          transform: `rotateX(var(--oud-3d-tilt-dial)) rotate(${dialRotation}deg)`,
+        }}
       >
         <span className="absolute inset-2 rounded-full border border-[var(--oud-line-soft)]" />
         {CARDINALS.map((mark) => (
@@ -218,18 +255,40 @@ export function CompassDial({
         <span className="absolute inset-6 rounded-full border border-dashed border-[var(--oud-line-soft)]" />
       </div>
 
-      {/* The needle: the one thing that answers the question. */}
+      {/* The needle: the one thing that answers the question. Its shadow
+          is drawn as a second needle just above the rose, so the lift is
+          proved by a shadow rather than asserted by a number. */}
       <div
-        className="absolute inset-0 grid place-items-center transition-transform duration-300 ease-out"
-        style={{ transform: `rotate(${needleRotation}deg)` }}
+        className="absolute inset-0 transition-transform duration-300 ease-out"
+        style={{
+          transform: `rotateX(var(--oud-3d-tilt-dial)) rotate(${needleRotation}deg)`,
+        }}
       >
-        <svg width={size * 0.66} height={size * 0.66} viewBox="0 0 100 100" aria-hidden className="text-primary">
+        <svg
+          width={size * 0.66}
+          height={size * 0.66}
+          viewBox="0 0 100 100"
+          aria-hidden
+          className="oud-3d-needle-shadow text-primary"
+          style={NEEDLE_CENTRED}
+        >
+          <path d="M50 6 62 54 50 46 38 54Z" fill="currentColor" />
+        </svg>
+        <svg
+          width={size * 0.66}
+          height={size * 0.66}
+          viewBox="0 0 100 100"
+          aria-hidden
+          className="oud-3d-needle text-primary"
+          style={NEEDLE_CENTRED}
+        >
           <path d="M50 6 62 54 50 46 38 54Z" fill="currentColor" />
           <path d="M50 94 38 46 50 54 62 46Z" fill="currentColor" opacity={live ? 0.18 : 0.12} />
         </svg>
       </div>
 
-      {/* The centre is text, not decoration: it states the reading. */}
+      {/* The centre is text, not decoration: it states the reading, so it
+          stays flat and upright while the disc around it is tilted. */}
       <div className="relative z-10 flex flex-col items-center">
         <span className="oud-icon-tile oud-icon-md" aria-hidden>
           <Compass className="size-[1.25rem]" />

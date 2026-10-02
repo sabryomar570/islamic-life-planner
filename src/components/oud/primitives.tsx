@@ -22,7 +22,13 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react
  * **Icons are a system too:** one gel tile class, four sizes. The tile gives
  * the glyph a surface, a highlight, an edge and an inner shadow, so an icon
  * reads as an object rather than as ink. The meaning of an icon never
- * changes here, only its material.
+ * changes here, only its material. In 3D the tile is a gel base with a
+ * visible side and the glyph stands 12px off it, which is why the tile
+ * keeps its own short lens instead of borrowing the screen's.
+ *
+ * **3D is presentation, never information.** Nothing in this file is
+ * readable only because of a transform, and every lift has a text
+ * equivalent next to it. Depth is how the app feels, not how it speaks.
  *
  * **No user-facing copy lives in this file.** Every string arrives as a prop
  * or comes from a data source. Placeholders are marked as such.
@@ -149,7 +155,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const BUTTON_BASE =
-  "oud-press oud-tap inline-flex items-center justify-center gap-2 rounded-full px-5 text-[14px] font-semibold disabled:pointer-events-none disabled:opacity-55";
+  "oud-press oud-3d-lift oud-tap inline-flex items-center justify-center gap-2 rounded-full px-5 text-[14px] font-semibold disabled:pointer-events-none disabled:opacity-55";
 
 /** Level 3 interaction: the primary action. At most one per screen region. */
 export function ActionButton({

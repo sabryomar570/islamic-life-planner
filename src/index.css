@@ -1168,8 +1168,225 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   OUD 3D FOUNDATION — العمق صار حجمًا حقيقيًا
+   The four levels are no longer four shades of the same colour. Each one
+   has thickness, a lit top edge, a shaded side, and a real transform.
+
+   **Why there is no document-level perspective.** One `perspective` on
+   the app root looks like the obvious answer, and it is wrong here: the
+   root is as tall as the whole document, so its perspective-origin would
+   sit thousands of pixels above whatever the user is looking at, and the
+   same `translateZ` would mean one thing at the top of Home and another
+   at the bottom of Settings. Depth that changes meaning with scroll
+   position is not depth, it is a bug. So every object carries its own
+   small perspective: a scale that is constant everywhere, and a cost
+   that exists only where something is actually drawn in 3D.
+
+   **What is genuinely 3D here:** the glyph floating above its gel tile,
+   the nav droplet swelling toward the eye, the compass needle lifted off
+   the rose and casting its own shadow, the tilt of a card under a real
+   pointer. **What is thickness:** a hard `0 Npx 0` edge under every
+   level, because a slab with only a soft shadow still reads as paper.
+
+   **No WebGL, no canvas, no new dependency.** The 3D is transform
+   arithmetic; the battery cost is a compositor hint, not a second frame.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ——— One lamp, high and slightly to the right, for every object ——— */
+  --oud-3d-light: oklch(1 0 0 / 0.55);
+  --oud-3d-edge: oklch(0.885 0.022 252);
+  --oud-3d-rim: oklch(0.42 0.06 255 / 0.16);
+
+  /* ——— Thickness, in screen millimetres: how deep each slab is ——— */
+  --oud-3d-thickness-surface: 3px;
+  --oud-3d-thickness-card: 6px;
+  --oud-3d-thickness-hero: 10px;
+  --oud-3d-thickness-tile: 3px;
+
+  /* ——— The cameras. Small on purpose: a short lens exaggerates. ——— */
+  --oud-3d-lens-tile: 260px;
+  --oud-3d-lens-card: 900px;
+  --oud-3d-lens-nav: 520px;
+  --oud-3d-lens-dial: 900px;
+
+  /* ——— How far a part stands off its own surface ——— */
+  --oud-3d-lift-glyph: 12px;
+  --oud-3d-lift-needle: 18px;
+  --oud-3d-lift-droplet: 10px;
+  --oud-3d-lift-nav-icon: 20px;
+  --oud-3d-lift-hover: 6px;
+  --oud-3d-dip-press: 2px;
+
+  /* ——— Tilt, in degrees, and only ever small ——— */
+  --oud-3d-tilt-card: 3deg;
+  --oud-3d-tilt-hero: 2deg;
+  --oud-3d-tilt-nav: 7deg;
+  --oud-3d-tilt-dial: 10deg;
+}
+
+.dark {
+  --oud-3d-light: oklch(1 0 0 / 0.1);
+  --oud-3d-edge: oklch(1 0 0 / 13%);
+  --oud-3d-rim: oklch(0 0 0 / 0.45);
+}
+
+@layer components {
+  /* Level 1 — a shallow slab: one thin edge and a soft lift. */
+  .oud-surface {
+    box-shadow:
+      var(--oud-shadow-1),
+      0 var(--oud-3d-thickness-surface) 0 -1px var(--oud-3d-edge);
+  }
+
+  /* Level 2 — an object you could pick up. The hard edge is what says
+     "this has a side to it"; the soft shadow only says "this is above". */
+  .oud-card {
+    transition:
+      transform var(--oud-motion-base) var(--oud-ease),
+      box-shadow var(--oud-motion-base) var(--oud-ease),
+      background-color var(--oud-motion-base) var(--oud-ease),
+      border-color var(--oud-motion-base) var(--oud-ease);
+    box-shadow:
+      var(--oud-shadow-2),
+      0 var(--oud-3d-thickness-card) 0 -1px var(--oud-3d-edge);
+  }
+
+  /* Level 3 — the thickest thing in the room, lit along its top edge. */
+  .oud-hero {
+    transition:
+      transform var(--oud-motion-base) var(--oud-ease),
+      box-shadow var(--oud-motion-base) var(--oud-ease),
+      background-color var(--oud-motion-base) var(--oud-ease);
+    box-shadow:
+      var(--oud-shadow-3),
+      0 var(--oud-3d-thickness-hero) 0 -1px var(--oud-3d-edge),
+      inset 0 1px 0 var(--oud-3d-light);
+  }
+
+  /* Raised controls (the pill buttons) tilt like cards do. */
+  .oud-3d-lift {
+    transition: transform var(--oud-motion-base) var(--oud-ease);
+  }
+
+  /* The press pushes the surface into the screen, not sideways: two
+     millimetres down, and the slab edge disappears under the finger. */
+  .oud-3d-lift:active:not(:disabled) {
+    transform: translateY(var(--oud-3d-dip-press)) scale(0.978);
+  }
+
+  /* The gel tile becomes a real object: a base with a side, and a glyph
+     that stands 12px off it. `overflow: hidden` is deliberately gone —
+     it flattens the tile's own 3D context, and the tile's sheen already
+     sits inside its own bounds. */
+  .oud-icon-tile {
+    transform: perspective(var(--oud-3d-lens-tile));
+    transition: transform var(--oud-motion-base) var(--oud-ease);
+    box-shadow:
+      inset 0 1px 0 var(--oud-gel-highlight),
+      var(--oud-inset-soft),
+      0 var(--oud-3d-thickness-tile) 0 -1px var(--oud-gel-edge),
+      0 4px 10px -8px oklch(0.42 0.08 255 / 0.4);
+  }
+  /* The glyph is the part that floats. A flat tile has no depth to lift
+     into, so its glyph stays in the plane with the rest of the row. */
+  .oud-icon-tile > * {
+    transform: translateZ(var(--oud-3d-lift-glyph));
+  }
+  .oud-icon-flat {
+    transform: none;
+  }
+  .oud-icon-flat > * {
+    transform: none;
+  }
+
+  /* The nav bar is a short lens above the droplet, so the droplet can
+     swell toward the eye instead of only changing colour. `perspective`
+     only reaches direct children, so the chain down to the droplet is
+     opened explicitly. */
+  .oud-3d-nav-slab {
+    perspective: var(--oud-3d-lens-nav);
+    perspective-origin: 50% 120%;
+  }
+  .oud-3d-nav-slab > li,
+  .oud-3d-nav-slab button {
+    transform-style: preserve-3d;
+  }
+  .oud-3d-droplet {
+    position: absolute;
+    inset: 0;
+  }
+  .oud-3d-droplet-skin {
+    transform:
+      translateZ(var(--oud-3d-lift-droplet))
+      rotateX(var(--oud-3d-tilt-nav));
+    transform-origin: 50% 100%;
+  }
+  .oud-3d-nav-icon {
+    transform: translateZ(var(--oud-3d-lift-nav-icon));
+  }
+
+  /* The dial: a tilted disc, a needle standing off it, and a shadow that
+     proves the needle is above the rose and not painted on it. */
+  .oud-3d-dial {
+    perspective: var(--oud-3d-lens-dial);
+    perspective-origin: 50% 40%;
+  }
+  .oud-3d-dial > * {
+    transform-style: preserve-3d;
+  }
+  .oud-3d-dial-slab {
+    position: absolute;
+    border-radius: 9999px;
+    background: var(--oud-3d-edge);
+  }
+  .oud-3d-needle {
+    transform: translateZ(var(--oud-3d-lift-needle));
+  }
+  .oud-3d-needle-shadow {
+    transform: translateZ(2px);
+    filter: blur(2px);
+    opacity: 0.22;
+  }
+}
+
+/* Tilt only where there is a real pointer to tilt towards, and only when
+   the user has not asked for stillness. A phone that never sees this
+   block still gets all the depth, because all the depth above is static. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .oud-card:hover {
+    transform:
+      perspective(var(--oud-3d-lens-card))
+      rotateX(var(--oud-3d-tilt-card))
+      translateY(calc(-1 * var(--oud-3d-lift-hover)));
+  }
+  .oud-hero:hover {
+    transform:
+      perspective(var(--oud-3d-lens-card))
+      rotateX(var(--oud-3d-tilt-hero))
+      translateY(calc(-1 * var(--oud-3d-lift-hover)));
+  }
+  .oud-icon-tile:hover {
+    transform:
+      perspective(var(--oud-3d-lens-tile))
+      rotateX(calc(var(--oud-3d-tilt-card) * 1.6))
+      translateY(-1px);
+  }
+  /* A pill is thick enough to be worth tilting. A list row is not: a long
+     row at 3° swings its edges up into the row above it, so rows keep the
+     2D press and nothing more. */
+  .oud-3d-lift:hover {
+    transform:
+      perspective(var(--oud-3d-lens-card))
+      rotateX(var(--oud-3d-tilt-card))
+      translateY(calc(-1 * var(--oud-3d-lift-hover)));
+  }
+}
+
 /* Reduced motion: the droplet must not fly, cards must not breathe.
-   The states themselves stay — only the movement is removed. */
+   The states themselves stay — only the movement is removed. The static
+   depth stays too, because a fixed thickness is not an animation. */
 @media (prefers-reduced-motion: reduce) {
   .oud-press,
   .oud-press:active:not(:disabled) {
@@ -1177,8 +1394,22 @@
     transform: none;
   }
   .oud-gel-droplet,
-  .oud-icon-tile {
+  .oud-icon-tile,
+  .oud-icon-tile > *,
+  .oud-card,
+  .oud-hero,
+  .oud-3d-lift,
+  .oud-3d-lift:active:not(:disabled),
+  .oud-3d-nav-icon,
+  .oud-3d-needle,
+  .oud-3d-needle-shadow {
     transition: none;
+  }
+  .oud-card:hover,
+  .oud-hero:hover,
+  .oud-icon-tile:hover,
+  .oud-3d-lift:hover {
+    transform: none;
   }
 }
 

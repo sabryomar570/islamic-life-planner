@@ -22,6 +22,12 @@ import type { LucideIcon } from "lucide-react";
  * button in the middle of a navigation bar is a shortcut to something the
  * product has not decided on.
  *
+ * **The droplet is 3D, and the measurement is not.** The element framer
+ * motion measures and animates is an empty, correctly sized box. The gel
+ * body inside it carries the material and the real `translateZ`, so the
+ * droplet swells toward the eye on its own short lens. Two elements, two
+ * jobs, and neither overwrites the other's transform.
+ *
  * **Reduced motion:** the droplet still moves, because moving it is the
  * only way to show where the selection went. What disappears is the spring
  * and the overshoot, not the meaning. With motion fully reduced the change
@@ -58,7 +64,7 @@ export function BottomNav({ view, onChange, trailing, className }: BottomNavProp
         className,
       )}
     >
-      <ul className="mx-auto flex max-w-lg items-stretch gap-1 px-2 pt-1.5 pb-1">
+      <ul className="oud-3d-nav-slab mx-auto flex max-w-lg items-stretch gap-1 px-2 pt-1.5 pb-1">
         {ZONES.map((zone) => (
           <li key={zone.key} className="min-w-0 flex-1">
             <NavItem
@@ -110,17 +116,18 @@ function NavItem({
         <motion.span
           aria-hidden
           layoutId="oud-nav-droplet"
-          className="oud-gel-droplet"
-          style={{ inset: 0 }}
+          className="oud-3d-droplet"
           transition={
             reduced
               ? { duration: 0 }
               : { type: "spring", stiffness: 420, damping: 34, mass: 0.7 }
           }
-        />
+        >
+          <span className="oud-gel-droplet oud-3d-droplet-skin" />
+        </motion.span>
       ) : null}
 
-      <span className="relative z-10 grid size-7 place-items-center">
+      <span className="oud-3d-nav-icon relative z-10 grid size-7 place-items-center">
         <Icon
           className={cn("size-[22px] transition-transform duration-200", active && "scale-105")}
           strokeWidth={active ? 2.1 : 1.75}
